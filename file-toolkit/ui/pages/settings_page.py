@@ -28,7 +28,7 @@ class SettingsPage(ft.Column):
                 font_family="Manrope",
                 weight=ft.FontWeight.W_600,
             ),
-            padding=ft.padding.fromLTRB(28, 28, 28, 20),
+            padding=ft.padding.only(left=28, top=28, right=28, bottom=20),
         )
 
     # ── 外观 ────────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ class SettingsPage(ft.Column):
                 ft.dropdown.Option("100", "最近 100 条"),
             ],
             width=180,
-            on_change=lambda e: settings_service.set("history_limit", e.data),
+            on_select=lambda e: settings_service.set("history_limit", e.control.value),
         )
 
         return self._build_section(
@@ -146,7 +146,7 @@ class SettingsPage(ft.Column):
                 ft.dropdown.Option("tencent", "腾讯 OCR"),
             ],
             width=180,
-            on_change=lambda e: settings_service.set("ocr_provider", e.data),
+            on_select=lambda e: settings_service.set("ocr_provider", e.control.value),
         )
 
         self._api_key_field = ft.TextField(
@@ -235,7 +235,7 @@ class SettingsPage(ft.Column):
                 ],
                 spacing=10,
             ),
-            padding=ft.padding.fromLTRB(28, 8, 28, 8),
+            padding=ft.padding.only(left=28, top=8, right=28, bottom=8),
         )
 
     def _build_row(self, label: str, control: ft.Control) -> ft.Control:

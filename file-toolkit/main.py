@@ -55,7 +55,7 @@ def main(page: ft.Page) -> None:
 
 def main_entry() -> None:
     """pyproject.toml [project.scripts] 入口点"""
-    ft.run(target=main, assets_dir="assets")
+    ft.run(main, assets_dir="assets")
 
 
 if __name__ == "__main__":

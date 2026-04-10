@@ -53,7 +53,7 @@ class HomePage(ft.Column):
                 ],
                 spacing=4,
             ),
-            padding=ft.padding.fromLTRB(28, 28, 28, 20),
+            padding=ft.padding.only(left=28, top=28, right=28, bottom=20),
         )
 
     # ── 快速入口 ────────────────────────────────────────────────────
@@ -115,7 +115,7 @@ class HomePage(ft.Column):
                 spacing=8,
             ),
             padding=ft.padding.symmetric(vertical=32),
-            alignment=ft.alignment.center,
+            alignment=ft.alignment.Alignment(0, 0),
         )
 
         return ft.Container(
@@ -143,7 +143,7 @@ class HomePage(ft.Column):
                 ],
                 spacing=12,
             ),
-            padding=ft.padding.fromLTRB(28, 16, 28, 28),
+            padding=ft.padding.only(left=28, top=16, right=28, bottom=28),
         )
 
     # ── 数据加载 ────────────────────────────────────────────────────

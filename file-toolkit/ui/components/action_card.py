@@ -39,7 +39,7 @@ class ActionCard(ft.Container):
                 controls=[
                     ft.Container(
                         content=ft.Icon(
-                            name=icon,
+                            icon,
                             color=self._icon_color,
                             size=32,
                         ),
@@ -47,7 +47,7 @@ class ActionCard(ft.Container):
                         height=56,
                         border_radius=ft.border_radius.all(16),
                         bgcolor=ft.Colors.with_opacity(0.08, self._icon_color),
-                        alignment=ft.alignment.center,
+                        alignment=ft.alignment.Alignment(0, 0),
                     ),
                     ft.Column(
                         controls=[
@@ -82,7 +82,7 @@ class ActionCard(ft.Container):
             bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
             on_click=on_click,
             on_hover=self._on_hover,
-            animate=ft.animation.Animation(200, ft.AnimationCurve.EASE_OUT),
+            animate=ft.Animation(200, ft.AnimationCurve.EASE_OUT),
         )
 
     def _on_hover(self, e: ft.ControlEvent) -> None:
