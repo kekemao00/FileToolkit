@@ -15,6 +15,8 @@ def build_color_scheme() -> ft.ColorScheme:
     基于设计稿配置 Material You 色彩体系。
     Flet ColorScheme 参数名与 Material Design 3 Token 对应。
     """
+    # flet 0.80+ 的 ColorScheme 移除了 background/surface_variant/inverse_on_surface
+    # surface 承担了原 background 的职责，surface_container_* 替代了 surface_variant
     return ft.ColorScheme(
         primary="#004d64",
         on_primary="#ffffff",
@@ -28,12 +30,16 @@ def build_color_scheme() -> ft.ColorScheme:
         on_tertiary="#ffffff",
         tertiary_container="#006969",
         on_tertiary_container="#95e5e5",
-        background="#f7f9fe",
-        on_background="#181c1f",
         surface="#f7f9fe",
         on_surface="#181c1f",
-        surface_variant="#e0e3e7",
         on_surface_variant="#3f484d",
+        surface_container_low="#f1f4f8",
+        surface_container="#ebeef3",
+        surface_container_high="#e5e8ed",
+        surface_container_highest="#e0e3e7",
+        surface_container_lowest="#ffffff",
+        surface_bright="#f7f9fe",
+        surface_dim="#d7dadf",
         outline="#70787e",
         outline_variant="#bfc8cd",
         error="#ba1a1a",
@@ -41,7 +47,6 @@ def build_color_scheme() -> ft.ColorScheme:
         error_container="#ffdad6",
         on_error_container="#93000a",
         inverse_surface="#2d3134",
-        inverse_on_surface="#eef1f6",
         inverse_primary="#87d0f2",
     )
 
