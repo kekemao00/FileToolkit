@@ -1,0 +1,71 @@
+[project]
+name = "file-toolkit"
+version = "1.0.0"
+description = "File Toolkit — Local file processing desktop application"
+readme = { text = "File Toolkit — Local file processing desktop application", content-type = "text/plain" }
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "kekemao00" },
+]
+
+dependencies = [
+    "flet>=0.24,<1.0",
+    "pypdf>=4.0,<5.0",
+    "pikepdf>=9.0,<10.0",
+    "pdf2docx>=0.5.8,<0.6.0",
+    "Pillow>=10.0,<11.0",
+    "pillow-heif>=0.16,<1.0",
+    "ffmpeg-python>=0.2.0,<0.3.0",
+    "py7zr>=0.21,<0.22",
+    "rarfile>=4.1,<5.0",
+    "httpx>=0.27,<1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# 这是 Flet 应用，不作为 Python 包分发
+# 明确指定包含的目录，避免 hatchling 自动检测失败
+packages = ["core", "services", "ui"]
+
+[tool.uv]
+constraint-dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
