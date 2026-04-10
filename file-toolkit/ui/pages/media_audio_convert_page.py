@@ -2,9 +2,19 @@
 import flet as ft
 
 
-class AudioConvertPage(ft.View):
-    def __init__(self) -> None:
-        super().__init__(route="/media/audio-convert")
+class AudioConvertPage(ft.Column):
+    """音频格式转换操作页"""
+
+    def __init__(self, page: ft.Page) -> None:
+        super().__init__(expand=True)
+        self._page = page
         self.controls = [
-            ft.Text("音频格式转换操作页 — 待实现", style=ft.TextThemeStyle.BODY_LARGE),
+            ft.Container(
+                content=ft.Text(
+                    "音频格式转换操作页 — 待实现",
+                    style=ft.TextThemeStyle.BODY_LARGE,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                ),
+                padding=ft.padding.all(24),
+            ),
         ]

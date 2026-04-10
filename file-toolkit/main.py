@@ -2,12 +2,28 @@
 File Toolkit — Flet 应用入口
 """
 import flet as ft
+from pathlib import Path
 
+from services import history_service, settings_service
 from ui.theme import get_app_theme
 from ui.router import setup_router
 
+# 运行时数据目录（开发环境放项目根，打包后用 flet 提供的用户目录）
+_DATA_DIR = Path(__file__).parent / ".data"
+_DB_FILE  = _DATA_DIR / "file_toolkit.db"
+
+
+def _init_services() -> None:
+    """初始化数据库和设置服务（幂等，应用启动时调用一次）。"""
+    _DATA_DIR.mkdir(exist_ok=True)
+    history_service.init_db(_DB_FILE)
+    settings_service.init_settings(_DB_FILE)
+
 
 def main(page: ft.Page) -> None:
+    # 数据服务初始化
+    _init_services()
+
     # 窗口配置
     page.title = "File Toolkit"
     page.window_width = 1280
@@ -21,11 +37,16 @@ def main(page: ft.Page) -> None:
         "Inter": "fonts/Inter-VariableFont_opsz,wght.ttf",
     }
 
-    # 主题配置
+    # 主题配置（从设置读取持久化的模式）
     light_theme, dark_theme = get_app_theme()
     page.theme = light_theme
     page.dark_theme = dark_theme
-    page.theme_mode = ft.ThemeMode.SYSTEM
+    saved_mode = settings_service.get("theme_mode", "system")
+    page.theme_mode = {
+        "system": ft.ThemeMode.SYSTEM,
+        "light":  ft.ThemeMode.LIGHT,
+        "dark":   ft.ThemeMode.DARK,
+    }.get(saved_mode, ft.ThemeMode.SYSTEM)
 
     # 路由初始化
     setup_router(page)

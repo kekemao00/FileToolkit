@@ -2,9 +2,19 @@
 import flet as ft
 
 
-class PdfPage(ft.View):
-    def __init__(self) -> None:
-        super().__init__(route="/pdf")
+class PdfPage(ft.Column):
+    """PDF 工具集列表"""
+
+    def __init__(self, page: ft.Page) -> None:
+        super().__init__(expand=True)
+        self._page = page
         self.controls = [
-            ft.Text("PDF 工具集列表 — 待实现", style=ft.TextThemeStyle.BODY_LARGE),
+            ft.Container(
+                content=ft.Text(
+                    "PDF 工具集列表 — 待实现",
+                    style=ft.TextThemeStyle.BODY_LARGE,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                ),
+                padding=ft.padding.all(24),
+            ),
         ]
