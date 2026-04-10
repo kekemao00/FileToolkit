@@ -1,0 +1,86 @@
+# =============================================================
+# File Toolkit — .gitignore
+# =============================================================
+
+# ─── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[codz]
+*$py.class
+*.so
+*.pyd
+*.egg-info/
+*.egg
+MANIFEST
+dist/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+
+# ─── 虚拟环境 ──────────────────────────────────────────────────
+.venv/
+venv/
+ENV/
+env/
+.env
+.env.local
+.uv/
+
+# ─── Flet / PyInstaller ────────────────────────────────────────
+.flet/
+flet_build/
+*.spec
+
+# ─── 大型外部二进制（构建时下载，不入库）─────────────────────────
+file-toolkit/assets/bin/
+
+# ─── PyInstaller 打包输出 ──────────────────────────────────────
+file-toolkit/build/windows/
+file-toolkit/build/macos/
+file-toolkit/build/linux/
+
+# ─── 运行时数据库 ──────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ─── 测试产物 ──────────────────────────────────────────────────
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.cache
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# ─── 类型检查缓存 ──────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+
+# ─── 编辑器 / IDE ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── 系统文件 ──────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+
+# ─── Claude ​Code 工作文件（用户私有）──────────────────────────────
+.claude/
+
+# ─── 大文件（Stitch 设计导出包，42MB）─────────────────────────────
+stitch_tao-v2.zip
+
+# ─── Claude 工作草稿 ───────────────────────────────────────────
+plan.md
