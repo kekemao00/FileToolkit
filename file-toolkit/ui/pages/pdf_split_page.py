@@ -190,16 +190,19 @@ class PdfSplitPage(ft.Column):
         self._mode_extra.update()
 
     def _pick_output_dir(self, _: ft.ControlEvent) -> None:
-        def on_result(e: ft.FilePickerResultEvent) -> None:
-            if e.path:
-                self._output_dir = Path(e.path)
-                self._output_dir_text.value = e.path
-                self._output_dir_text.update()
+        self._page.run_task(self._pick_output_dir_async)
 
-        picker = ft.FilePicker(on_result=on_result)
+    async def _pick_output_dir_async(self) -> None:
+        picker = ft.FilePicker()
         self._page.overlay.append(picker)
         self._page.update()
-        picker.get_directory_path(dialog_title="选择输出目录")
+        path = await picker.get_directory_path(dialog_title="选择输出目录")
+        self._page.overlay.remove(picker)
+        if path:
+            self._output_dir = Path(path)
+            self._output_dir_text.value = path
+            self._output_dir_text.update()
+        self._page.update()
 
     def _start_task(self, _: ft.ControlEvent) -> None:
         if not self._input_file:
