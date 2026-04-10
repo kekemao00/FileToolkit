@@ -1,9 +1,8 @@
 """
 File Toolkit — 路由管理
 
-采用「Shell + Content」布局模式：
-- Shell（NavRail + 顶栏）全局常驻，不随路由销毁重建
-- Content 区域根据路由动态替换
+布局策略：直接操作 page.controls，不使用 page.views 多视图栈。
+Shell（NavRail）常驻，content_area 随路由动态替换内容。
 
 路由表（共 21 个路由）：
   /                         → HomePage
@@ -97,7 +96,6 @@ def _resolve_page(route: str, page: ft.Page) -> ft.Control:
         return ArchivePage(page)
     if route == "/settings":
         return SettingsPage(page)
-    # 未知路由回退到首页
     return HomePage(page)
 
 
@@ -105,14 +103,24 @@ def setup_router(page: ft.Page) -> None:
     """
     初始化路由体系。
 
-    布局结构：
-      Row(
-        NavRail,           # 左侧导航，常驻
-        VerticalDivider,   # 1px 分隔（通过背景色区分，No-Line 规则可选隐藏）
-        content_area,      # 右侧内容，随路由切换
-      )
+    布局：直接在 page 上放置一个全屏 Row，不使用 page.views 多视图栈。
+    NavRail 常驻左侧，content_area 是右侧可替换的 Container。
+
+    page
+    └── Row(expand=True)
+        ├── NavRail(固定宽度，可折叠)
+        ├── VerticalDivider
+        └── content_area(expand=True) ← 随路由替换 content
     """
-    content_area = ft.Container(expand=True)
+    # page 级别设置：无 padding，充满窗口
+    page.padding = 0
+    page.spacing = 0
+
+    content_area = ft.Container(
+        expand=True,
+        height=page.height,  # 初始高度，后续 expand 接管
+    )
+
     nav = NavRail(on_navigate=lambda route: page.go(route))
 
     shell = ft.Row(
@@ -126,32 +134,14 @@ def setup_router(page: ft.Page) -> None:
         vertical_alignment=ft.CrossAxisAlignment.START,
     )
 
+    # 直接挂载到 page，不用 page.views
+    page.add(shell)
+
     def route_change(e: ft.RouteChangeEvent) -> None:
         route = e.route
-        # 更新导航栏高亮
         nav.sync_selected(route)
-        # 替换内容区域
-        content_area.content = ft.Column(
-            controls=[_resolve_page(route, page)],
-            expand=True,
-            scroll=ft.ScrollMode.AUTO,
-        )
-        page.views.clear()
-        page.views.append(
-            ft.View(
-                route=route,
-                controls=[shell],
-                padding=ft.padding.all(0),
-                bgcolor=ft.Colors.SURFACE,
-            )
-        )
+        content_area.content = _resolve_page(route, page)
         page.update()
 
-    def view_pop(e: ft.ViewPopEvent) -> None:
-        page.views.pop()
-        if page.views:
-            page.go(page.views[-1].route)
-
     page.on_route_change = route_change
-    page.on_view_pop = view_pop
     page.go("/")

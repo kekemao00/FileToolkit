@@ -25,11 +25,11 @@ def main(page: ft.Page) -> None:
     _init_services()
 
     # 窗口配置
-    page.title = "File Toolkit"
-    page.window_width = 1280
-    page.window_height = 800
-    page.window_min_width = 900
-    page.window_min_height = 600
+    page.title = "File Toolkit"   # 窗口标题栏文字（OS 级别）
+    page.window.width = 1280
+    page.window.height = 800
+    page.window.min_width = 900
+    page.window.min_height = 600
 
     # 字体注册（Manrope + Inter，从 assets/fonts/ 加载）
     page.fonts = {
