@@ -1,4 +1,4 @@
-"""PDF↔Office 转换操作页"""
+"""PDF↔Office 转换 — Figma 设计语言统一"""
 import asyncio
 from pathlib import Path
 from typing import Literal
@@ -9,6 +9,7 @@ from core.pdf.converter import pdf_to_docx, pdf_to_xlsx, pdf_to_pptx, office_to_
 from services import history_service, settings_service
 from services.task_service import run_task
 from ui.components.drop_zone import DropZone
+from ui.components.sub_page_header import SubPageHeader
 from ui.components.progress_card import ProgressCard
 from ui.components.result_card import ResultCard
 
@@ -50,74 +51,33 @@ class PdfConvertPage(ft.Column):
                     ft.dropdown.Option("xlsx", "Excel (.xlsx)"),
                     ft.dropdown.Option("pptx", "PowerPoint (.pptx)"),
                 ],
-                width=200,
-                border_radius=8,
-                label="目标格式",
+                width=200, border_radius=12,
+                bgcolor="#f8fafc", border_color="transparent",
             )
         else:
             self._format_dropdown = None
 
         self._output_dir_text = ft.Text(
             "（与输入文件同级 output/ 目录）",
-            size=12,
-            color="#455c7f",
-            expand=True,
+            size=12, color="#455c7f", expand=True,
         )
 
         self._progress = ProgressCard(on_cancel=self._cancel)
         self._result = ResultCard(on_reset=self._reset)
-        self._run_btn = ft.FilledButton(
-            "开始转换",
-            icon=ft.Icons.SWAP_HORIZ,
-            on_click=self._start_task,
-            disabled=True,
-        )
 
-        self._title = title
-        self._icon_color = icon_color
-        self._icon_bg = icon_bg
-        self._icon = icon
-
-        self.controls = [self._build_header(), self._build_body()]
-
-    def _build_header(self) -> ft.Control:
-        return ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.IconButton(
-                        ft.Icons.ARROW_BACK,
-                        on_click=lambda _: self._page.go("/pdf"),
-                        icon_color="#455c7f",
-                    ),
-                    ft.Container(
-                        content=ft.Icon(self._icon, color=self._icon_color, size=20),
-                        width=40,
-                        height=40,
-                        bgcolor=self._icon_bg,
-                        border_radius=10,
-                        alignment=ft.Alignment(0, 0),
-                    ),
-                    ft.Text(
-                        self._title,
-                        size=20,
-                        weight=ft.FontWeight.W_600,
-                        color="#162f50",
-                        font_family="Manrope",
-                    ),
-                ],
-                spacing=12,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        self.controls = [
+            SubPageHeader(
+                title=title, icon=icon,
+                icon_color=icon_color, icon_bg=icon_bg,
+                on_back=lambda: self._page.go("/pdf"),
             ),
-            padding=ft.padding.only(left=28, top=24, right=40, bottom=16),
-        )
+            self._build_body(),
+        ]
 
     def _build_body(self) -> ft.Control:
-        sections = [
-            self._section("选择文件", self._drop_zone),
-        ]
+        sections = [self._section("选择文件", self._drop_zone)]
         if self._format_dropdown:
             sections.append(self._section("目标格式", self._format_dropdown))
-
         sections.append(
             self._section(
                 "输出设置",
@@ -125,21 +85,24 @@ class PdfConvertPage(ft.Column):
                     controls=[
                         ft.Icon(ft.Icons.FOLDER_OUTLINED, color="#455c7f", size=18),
                         self._output_dir_text,
-                        ft.OutlinedButton("更改", on_click=self._pick_output_dir, icon=ft.Icons.FOLDER_OPEN),
+                        ft.OutlinedButton(
+                            "更改", on_click=self._pick_output_dir,
+                            icon=ft.Icons.FOLDER_OPEN,
+                            style=ft.ButtonStyle(
+                                color="#005f98",
+                                side=ft.BorderSide(1, "#d5e3ff"),
+                                shape=ft.RoundedRectangleBorder(radius=12),
+                            ),
+                        ),
                     ],
                     spacing=8,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-            )
+            ),
         )
         sections.extend([
-            self._progress,
-            self._result,
-            ft.Container(
-                content=self._run_btn,
-                alignment=ft.Alignment(0, 0),
-                padding=ft.padding.symmetric(vertical=8),
-            ),
+            self._progress, self._result,
+            ft.Container(content=self._build_run_button(), padding=ft.padding.symmetric(vertical=8)),
         ])
 
         return ft.Container(
@@ -156,10 +119,24 @@ class PdfConvertPage(ft.Column):
                 ],
                 spacing=10,
             ),
-            bgcolor="#ffffff",
-            border_radius=16,
-            padding=ft.padding.all(20),
+            bgcolor="#ffffff", border_radius=16, padding=ft.padding.all(20),
             shadow=ft.BoxShadow(blur_radius=1, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1)),
+        )
+
+    def _build_run_button(self) -> ft.Control:
+        return ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.SWAP_HORIZ, color="#ffffff", size=18),
+                    ft.Text("开始转换", size=16, color="#ffffff", font_family="Manrope", weight=ft.FontWeight.W_500),
+                ],
+                spacing=8, alignment=ft.MainAxisAlignment.CENTER,
+            ),
+            bgcolor="#005f98",
+            gradient=ft.LinearGradient(begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0), colors=["#005f98", "#2aa7ff"]),
+            border_radius=16, padding=ft.padding.symmetric(vertical=14),
+            shadow=ft.BoxShadow(blur_radius=20, spread_radius=-5, color=ft.Colors.with_opacity(0.2, "#005f98"), offset=ft.Offset(0, 10)),
+            on_click=self._start_task, ink=True,
         )
 
     def _on_file_selected(self, paths: list[Path]) -> None:
@@ -168,8 +145,6 @@ class PdfConvertPage(ft.Column):
             self._output_dir = settings_service.resolve_output_dir(self._input_file)
             self._output_dir_text.value = str(self._output_dir)
             self._output_dir_text.update()
-        self._run_btn.disabled = self._input_file is None
-        self._run_btn.update()
 
     def _pick_output_dir(self, _) -> None:
         self._page.run_task(self._pick_output_dir_async)
@@ -178,8 +153,12 @@ class PdfConvertPage(ft.Column):
         picker = ft.FilePicker()
         self._page.overlay.append(picker)
         self._page.update()
-        path = await picker.get_directory_path(dialog_title="选择输出目录")
-        self._page.overlay.remove(picker)
+        try:
+            path = await picker.get_directory_path(dialog_title="选择输出目录")
+        except RuntimeError:
+            path = None
+        finally:
+            self._page.overlay.remove(picker)
         if path:
             self._output_dir = Path(path)
             self._output_dir_text.value = path
@@ -190,15 +169,10 @@ class PdfConvertPage(ft.Column):
         if not self._input_file:
             return
         out_dir = self._output_dir or settings_service.resolve_output_dir(self._input_file)
-        kwargs = {
-            "input_file": self._input_file,
-            "output_dir": out_dir,
-            "mode": self._mode,
-        }
+        kwargs = {"input_file": self._input_file, "output_dir": out_dir, "mode": self._mode}
         if self._format_dropdown:
             kwargs["target_format"] = self._format_dropdown.value
 
-        self._run_btn.disabled = True
         self._result.hide()
         self._progress.show(self._input_file.name, "正在转换...")
 
@@ -217,21 +191,15 @@ class PdfConvertPage(ft.Column):
     def _on_complete(self, result):
         self._progress.hide()
         self._result.show(result, "转换完成！")
-        self._run_btn.disabled = False
-        self._run_btn.update()
         history_service.save_task("pdf", "convert", result, input_desc=self._input_file.name if self._input_file else "")
 
     def _cancel(self) -> None:
         if self._task and not self._task.done():
             self._task.cancel()
         self._progress.hide()
-        self._run_btn.disabled = False
-        self._run_btn.update()
 
     def _reset(self) -> None:
         self._input_file = None
         self._output_dir = None
         self._drop_zone.clear()
         self._drop_zone.update()
-        self._run_btn.disabled = True
-        self._run_btn.update()

@@ -1,4 +1,4 @@
-"""PDF 合并操作页"""
+"""PDF 合并 — Figma 设计语言统一"""
 import asyncio
 from pathlib import Path
 
@@ -9,6 +9,7 @@ from services import history_service, settings_service
 from services.task_service import run_task
 from ui.components.drop_zone import DropZone
 from ui.components.file_list import FileList
+from ui.components.sub_page_header import SubPageHeader
 from ui.components.progress_card import ProgressCard
 from ui.components.result_card import ResultCard
 
@@ -17,7 +18,7 @@ class PdfMergePage(ft.Column):
     """PDF 合并：拖入多个文件 → 拖拽排序 → 设置输出文件名 → 执行合并"""
 
     def __init__(self, page: ft.Page) -> None:
-        super().__init__(expand=True, scroll=ft.ScrollMode.AUTO)
+        super().__init__(expand=True, scroll=ft.ScrollMode.AUTO, spacing=0)
         self._page = page
         self._output_dir: Path | None = None
         self._task: asyncio.Task | None = None
@@ -38,64 +39,54 @@ class PdfMergePage(ft.Column):
         )
 
         self._file_count_text = ft.Text(
-            "已选 0 个文件",
-            size=12,
-            color=ft.Colors.ON_SURFACE_VARIANT,
+            "已选 0 个文件", size=12, color="#455c7f",
         )
 
         self._output_name_field = ft.TextField(
-            value="merged.pdf",
-            label="输出文件名",
-            width=240,
-            border_radius=8,
+            value="merged.pdf", label="输出文件名",
+            width=240, border_radius=12,
+            bgcolor="#f8fafc", border_color="transparent",
         )
         self._output_dir_text = ft.Text(
             "（与第一个输入文件同级目录）",
-            size=12,
-            color=ft.Colors.ON_SURFACE_VARIANT,
-            expand=True,
+            size=12, color="#455c7f", expand=True,
         )
 
         self._progress_card = ProgressCard(on_cancel=self._cancel_task)
         self._result_card = ResultCard(on_reset=self._reset)
 
-        self._run_btn = ft.FilledButton(
-            "开始合并",
-            icon=ft.Icons.MERGE,
-            on_click=self._start_task,
-            disabled=True,
-        )
+        self._run_btn = self._build_run_button()
 
-        self.spacing = 0
-        self.controls = [self._build_header(), self._build_body()]
-
-    def _build_header(self) -> ft.Control:
-        return ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.IconButton(ft.Icons.ARROW_BACK, on_click=lambda _: self._page.go("/pdf"),
-                                  icon_color=ft.Colors.ON_SURFACE_VARIANT),
-                    ft.Text("🔗 PDF 合并", style=ft.TextThemeStyle.HEADLINE_SMALL,
-                            font_family="Manrope", weight=ft.FontWeight.W_600),
-                ],
-                spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        self.controls = [
+            SubPageHeader(
+                title="PDF 合并",
+                icon=ft.Icons.MERGE,
+                icon_color="#2563eb",
+                icon_bg="#eff6ff",
+                on_back=lambda: self._page.go("/pdf"),
             ),
-            padding=ft.padding.only(left=16, top=20, right=28, bottom=12),
-        )
+            self._build_body(),
+        ]
 
     def _build_body(self) -> ft.Control:
         return ft.Container(
             content=ft.Column(
                 controls=[
                     self._section(
-                        "Step 1  添加 PDF 文件",
+                        "添加 PDF 文件",
                         ft.Column(
                             controls=[
                                 self._drop_zone,
                                 ft.Row(
-                                    controls=[self._file_count_text, ft.Container(expand=True),
-                                              ft.TextButton("清空列表", on_click=self._clear_list,
-                                                            style=ft.ButtonStyle(color=ft.Colors.ERROR))],
+                                    controls=[
+                                        self._file_count_text,
+                                        ft.Container(expand=True),
+                                        ft.TextButton(
+                                            "清空列表",
+                                            on_click=self._clear_list,
+                                            style=ft.ButtonStyle(color="#dc2626"),
+                                        ),
+                                    ],
                                 ),
                                 self._file_list,
                             ],
@@ -103,18 +94,30 @@ class PdfMergePage(ft.Column):
                         ),
                     ),
                     self._section(
-                        "Step 2  输出设置",
+                        "输出设置",
                         ft.Column(
                             controls=[
                                 self._output_name_field,
                                 ft.Row(
                                     controls=[
-                                        ft.Icon(ft.Icons.FOLDER_OUTLINED, color=ft.Colors.ON_SURFACE_VARIANT, size=18),
+                                        ft.Icon(
+                                            ft.Icons.FOLDER_OUTLINED,
+                                            color="#455c7f", size=18,
+                                        ),
                                         self._output_dir_text,
-                                        ft.OutlinedButton("更改", on_click=self._pick_output_dir,
-                                                          icon=ft.Icons.FOLDER_OPEN),
+                                        ft.OutlinedButton(
+                                            "更改",
+                                            on_click=self._pick_output_dir,
+                                            icon=ft.Icons.FOLDER_OPEN,
+                                            style=ft.ButtonStyle(
+                                                color="#005f98",
+                                                side=ft.BorderSide(1, "#d5e3ff"),
+                                                shape=ft.RoundedRectangleBorder(radius=12),
+                                            ),
+                                        ),
                                     ],
-                                    spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                    spacing=8,
+                                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
                                 ),
                             ],
                             spacing=12,
@@ -124,26 +127,67 @@ class PdfMergePage(ft.Column):
                     self._result_card,
                     ft.Container(
                         content=self._run_btn,
-                        alignment=ft.alignment.Alignment(0, 0),
                         padding=ft.padding.symmetric(vertical=8),
                     ),
                 ],
                 spacing=16,
             ),
-            padding=ft.padding.symmetric(horizontal=28, vertical=8),
+            padding=ft.padding.symmetric(horizontal=40, vertical=8),
         )
 
     def _section(self, title: str, content: ft.Control) -> ft.Control:
         return ft.Container(
             content=ft.Column(
-                controls=[ft.Text(title, size=14, weight=ft.FontWeight.W_600), content],
+                controls=[
+                    ft.Text(
+                        title, size=14, weight=ft.FontWeight.W_600,
+                        color="#162f50", font_family="Manrope",
+                    ),
+                    content,
+                ],
                 spacing=10,
             ),
-            bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
-            border_radius=ft.border_radius.all(16),
+            bgcolor="#ffffff",
+            border_radius=16,
             padding=ft.padding.all(20),
+            shadow=ft.BoxShadow(
+                blur_radius=1,
+                color=ft.Colors.with_opacity(0.05, "#000000"),
+                offset=ft.Offset(0, 1),
+            ),
         )
 
+    def _build_run_button(self) -> ft.Control:
+        return ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.MERGE, color="#ffffff", size=18),
+                    ft.Text(
+                        "开始合并", size=16, color="#ffffff",
+                        font_family="Manrope", weight=ft.FontWeight.W_500,
+                    ),
+                ],
+                spacing=8,
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+            bgcolor="#005f98",
+            gradient=ft.LinearGradient(
+                begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
+                colors=["#005f98", "#2aa7ff"],
+            ),
+            border_radius=16,
+            padding=ft.padding.symmetric(vertical=14),
+            shadow=ft.BoxShadow(
+                blur_radius=20, spread_radius=-5,
+                color=ft.Colors.with_opacity(0.2, "#005f98"),
+                offset=ft.Offset(0, 10),
+            ),
+            on_click=self._start_task,
+            ink=True,
+            opacity=0.5,
+        )
+
+    # ── 交互 ─────────────────────────────────────────────
     def _on_files_added(self, paths: list[Path]) -> None:
         self._file_list.add_files(paths)
         self._sync_state()
@@ -154,7 +198,7 @@ class PdfMergePage(ft.Column):
     def _on_file_removed(self, path: Path) -> None:
         self._sync_state()
 
-    def _clear_list(self, _: ft.ControlEvent) -> None:
+    def _clear_list(self, _) -> None:
         self._file_list.clear()
         self._file_list.update()
         self._drop_zone.clear()
@@ -165,29 +209,35 @@ class PdfMergePage(ft.Column):
         count = len(self._file_list.files)
         self._file_count_text.value = f"已选 {count} 个文件"
         self._file_count_text.update()
-        self._run_btn.disabled = count < 2
+        self._run_btn.opacity = 1.0 if count >= 2 else 0.5
         self._run_btn.update()
         if count > 0 and self._output_dir is None:
-            self._output_dir = settings_service.resolve_output_dir(self._file_list.files[0])
+            self._output_dir = settings_service.resolve_output_dir(
+                self._file_list.files[0],
+            )
             self._output_dir_text.value = str(self._output_dir)
             self._output_dir_text.update()
 
-    def _pick_output_dir(self, _: ft.ControlEvent) -> None:
+    def _pick_output_dir(self, _) -> None:
         self._page.run_task(self._pick_output_dir_async)
 
     async def _pick_output_dir_async(self) -> None:
         picker = ft.FilePicker()
         self._page.overlay.append(picker)
         self._page.update()
-        path = await picker.get_directory_path(dialog_title="选择输出目录")
-        self._page.overlay.remove(picker)
+        try:
+            path = await picker.get_directory_path(dialog_title="选择输出目录")
+        except RuntimeError:
+            path = None
+        finally:
+            self._page.overlay.remove(picker)
         if path:
             self._output_dir = Path(path)
             self._output_dir_text.value = path
             self._output_dir_text.update()
         self._page.update()
 
-    def _start_task(self, _: ft.ControlEvent) -> None:
+    def _start_task(self, _) -> None:
         files = self._file_list.files
         if len(files) < 2:
             return
@@ -197,7 +247,8 @@ class PdfMergePage(ft.Column):
             out_name += ".pdf"
         output_file = out_dir / out_name
 
-        self._run_btn.disabled = True
+        self._run_btn.opacity = 0.5
+        self._run_btn.update()
         self._result_card.hide()
         self._progress_card.show(f"合并 {len(files)} 个文件", "正在合并...")
 
@@ -208,7 +259,6 @@ class PdfMergePage(ft.Column):
                 self._on_progress,
                 self._on_complete,
             )
-
         self._task = self._page.run_task(_run)
 
     def _on_progress(self, current: int, total: int, desc: str) -> None:
@@ -217,17 +267,19 @@ class PdfMergePage(ft.Column):
     def _on_complete(self, result) -> None:
         self._progress_card.hide()
         self._result_card.show(result, "合并完成！")
-        self._run_btn.disabled = False
+        self._run_btn.opacity = 1.0
         self._run_btn.update()
         files = self._file_list.files
-        history_service.save_task("pdf", "merge", result,
-                                  input_desc=f"{len(files)} 个文件")
+        history_service.save_task(
+            "pdf", "merge", result,
+            input_desc=f"{len(files)} 个文件",
+        )
 
     def _cancel_task(self) -> None:
         if self._task and not self._task.done():
             self._task.cancel()
         self._progress_card.hide()
-        self._run_btn.disabled = False
+        self._run_btn.opacity = 1.0
         self._run_btn.update()
 
     def _reset(self) -> None:
@@ -236,5 +288,5 @@ class PdfMergePage(ft.Column):
         self._drop_zone.clear()
         self._drop_zone.update()
         self._output_dir = None
-        self._run_btn.disabled = True
+        self._run_btn.opacity = 0.5
         self._run_btn.update()
