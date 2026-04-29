@@ -37,7 +37,6 @@
 </tr>
 </table>
 
-> 💡 截图待补充：运行应用后截取各页面，保存至 `docs/screenshots/` 目录
 
 </div>
 
