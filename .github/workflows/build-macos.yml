@@ -45,9 +45,19 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "file-toolkit/uv.lock"
 
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.4"
+          channel: stable
+          cache: true
+
       - name: Ensure macOS build tools
         run: |
           xcodebuild -version
+          flutter --version
+          flutter config --no-analytics
+          flutter precache --macos
           if ! command -v pod >/dev/null 2>&1; then
             sudo gem install cocoapods -v ">=1.16,<2.0"
           fi
