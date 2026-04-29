@@ -1,0 +1,79 @@
+name: Build macOS Preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: "Target architecture"
+        required: true
+        default: "arm64"
+        type: choice
+        options:
+          - arm64
+          - x86_64
+          - universal
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-macos.yml"
+      - "file-toolkit/**"
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    timeout-minutes: 60
+    env:
+      MACOS_ARCH: ${{ github.event.inputs.arch || 'arm64' }}
+      FLET_CLI_NO_RICH_OUTPUT: "1"
+    defaults:
+      run:
+        working-directory: file-toolkit
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "file-toolkit/uv.lock"
+
+      - name: Ensure macOS build tools
+        run: |
+          xcodebuild -version
+          if ! command -v pod >/dev/null 2>&1; then
+            sudo gem install cocoapods -v ">=1.16,<2.0"
+          fi
+          pod --version
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras
+          uv pip install "flet-cli==0.84.0"
+
+      - name: Build macOS app
+        run: uv run bash build/build_macos.sh
+
+      - name: Zip app bundle
+        run: |
+          app_path="$(find build/macos -maxdepth 1 -name '*.app' -print -quit)"
+          if [ -z "$app_path" ]; then
+            echo "No .app bundle found in build/macos"
+            find build/macos -maxdepth 3 -print
+            exit 1
+          fi
+          ditto -c -k --sequesterRsrc --keepParent "$app_path" "../FileToolkit-macos-${MACOS_ARCH}.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FileToolkit-macos-${{ env.MACOS_ARCH }}
+          path: FileToolkit-macos-${{ env.MACOS_ARCH }}.zip
+          if-no-files-found: error

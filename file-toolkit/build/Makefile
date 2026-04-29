@@ -1,7 +1,7 @@
 # File Toolkit — 多平台打包 Makefile
 # 在 file-toolkit/ 目录下执行
 
-.PHONY: all run deps lint test clean windows
+.PHONY: all run deps lint test clean windows macos
 
 all: windows
 
@@ -21,6 +21,10 @@ windows:
 		--company-name "FileToolkit" \
 		--copyright "MIT License" \
 		--icon assets/icons/app_icon.ico
+
+# macOS 打包（需在 macOS 原生环境或 GitHub Actions macOS runner 执行）
+macos:
+	uv run bash build/build_macos.sh
 
 # 代码检查
 lint:
