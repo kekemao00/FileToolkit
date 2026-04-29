@@ -29,9 +29,11 @@ flet build windows --product-name "File Toolkit" --product-version "1.0.0"
 
 ## 文档
 
-- [需求文档](File%20Toolkit%20完整需求文档.md)
-- [技术开发文档](File%20Toolkit%20技术开发文档.md)
-- [设计原型文档](File%20Toolkit%20设计原型文档.md)
+- [需求文档](docs/File%20Toolkit%20完整需求文档.md)
+- [技术开发文档](docs/File%20Toolkit%20技术开发文档.md)
+- [设计原型文档](docs/File%20Toolkit%20设计原型文档.md)
+- [产品全景图](docs/File%20Toolkit%20产品全景.png)
+- [产品全景脑图](docs/File%20Toolkit%20产品全景.xmind)
 
 ## 授权
 
