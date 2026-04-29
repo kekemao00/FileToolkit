@@ -4,7 +4,7 @@ File Toolkit — 路由管理
 布局策略：page.add(shell) 挂载一次，内容区通过 controls 列表动态切换。
 不使用 page.views / page.go() 路由栈，避免 Flet 0.84 的白屏和渲染问题。
 
-路由表（共 21 个路由）：
+路由表（共 23 个路由）：
   /                         → HomePage
   /pdf                      → PdfPage
   /pdf/split                → PdfSplitPage
@@ -25,6 +25,8 @@ File Toolkit — 路由管理
   /media/audio-convert      → AudioConvertPage
   /media/video-cut          → VideoCutPage
   /archive                  → ArchivePage
+  /ai                       → AiTaskPage
+  /history                  → HistoryPage
   /settings                 → SettingsPage
 """
 import flet as ft
@@ -49,6 +51,8 @@ from ui.pages.media_audio_convert_page import AudioConvertPage
 from ui.pages.media_video_cut_page import VideoCutPage
 from ui.pages.archive_page import ArchivePage
 from ui.pages.ocr_page import OcrPage
+from ui.pages.ai_task_page import AiTaskPage
+from ui.pages.history_page import HistoryPage
 from ui.pages.settings_page import SettingsPage
 
 
@@ -94,6 +98,10 @@ def _resolve_page(route: str, page: ft.Page) -> ft.Control:
         return VideoCutPage(page)
     if route == "/archive":
         return ArchivePage(page)
+    if route == "/ai":
+        return AiTaskPage(page)
+    if route == "/history":
+        return HistoryPage(page)
     if route == "/settings":
         return SettingsPage(page)
     return HomePage(page)

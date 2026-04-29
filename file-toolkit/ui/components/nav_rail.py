@@ -24,11 +24,11 @@ _NAV_ITEMS = [
 
 # 不在主导航中但需要 sync 的路由前缀映射
 _ROUTE_PREFIX_MAP = {
-    "/pdf":     1,  # index in _NAV_ITEMS
-    "/image":   2,
-    "/media":   3,
-    "/archive": 4,
-    "/ocr":     5,
+    "/pdf":     2,
+    "/image":   3,
+    "/media":   4,
+    "/archive": 5,
+    "/ocr":     6,
 }
 
 
