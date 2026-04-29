@@ -141,15 +141,19 @@ class DropZone(ft.Container):
             else ft.FilePickerFileType.ANY
         )
 
-        files = await picker.pick_files(
-            dialog_title=self._label,
-            file_type=file_type,
-            allowed_extensions=self._allowed_ext or None,
-            allow_multiple=self._allow_multiple,
-        )
-
-        # 清理 overlay
-        self._page_ref.overlay.remove(picker)
+        try:
+            files = await picker.pick_files(
+                dialog_title=self._label,
+                file_type=file_type,
+                allowed_extensions=self._allowed_ext or None,
+                allow_multiple=self._allow_multiple,
+            )
+        except RuntimeError:
+            # WSL/无头环境下 FilePicker 超时，静默忽略
+            files = None
+        finally:
+            # 清理 overlay
+            self._page_ref.overlay.remove(picker)
 
         if not files:
             self._page_ref.update()

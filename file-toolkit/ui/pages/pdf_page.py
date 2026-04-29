@@ -357,7 +357,7 @@ class PdfPage(ft.Column):
 
     def _section(self, label: str, content: ft.Control) -> ft.Control:
         return ft.Column(controls=[
-            ft.Text(label.upper(), size=12, color="#455c7f", font_family="Manrope", letter_spacing=0.6),
+            ft.Text(label.upper(), size=12, color="#455c7f", font_family="Manrope"),
             content,
         ], spacing=12)
 
