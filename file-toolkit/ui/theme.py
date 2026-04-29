@@ -1,58 +1,52 @@
 """
-File Toolkit — 全局主题配置
+File Toolkit — 全局主题配置（基于 Figma 设计稿）
 
-实现「The Fluid Architect」设计系统：
-- 主色调：深青蓝 #004d64（Military-grade security 感）
-- 模块色彩映射：PDF=primary, 图片=secondary, 音视频=tertiary
-- No-Line 规则：禁用 1px border，用背景色变化区分层级
-- 圆角规范：功能卡片 24px，标准卡片 16px，按钮 full pill
+配色系统（浅蓝白系）：
+  主色：#005f98（深蓝）
+  背景：#f4f6ff（浅蓝白）
+  深色文字：#162f50
+  次级文字：#455c7f
+  强调色：#00a3ff（激活态）
 """
 import flet as ft
 
 
 def build_color_scheme() -> ft.ColorScheme:
-    """
-    基于设计稿配置 Material You 色彩体系。
-    Flet ColorScheme 参数名与 Material Design 3 Token 对应。
-    """
-    # flet 0.80+ 的 ColorScheme 移除了 background/surface_variant/inverse_on_surface
-    # surface 承担了原 background 的职责，surface_container_* 替代了 surface_variant
     return ft.ColorScheme(
-        primary="#004d64",
+        primary="#005f98",
         on_primary="#ffffff",
-        primary_container="#006684",
-        on_primary_container="#a2e1ff",
-        secondary="#4d616c",
+        primary_container="#cbdeff",
+        on_primary_container="#162f50",
+        secondary="#455c7f",
         on_secondary="#ffffff",
-        secondary_container="#d0e6f3",
-        on_secondary_container="#536772",
-        tertiary="#004f4f",
+        secondary_container="#dee9ff",
+        on_secondary_container="#162f50",
+        tertiary="#00a3ff",
         on_tertiary="#ffffff",
-        tertiary_container="#006969",
-        on_tertiary_container="#95e5e5",
-        surface="#f7f9fe",
-        on_surface="#181c1f",
-        on_surface_variant="#3f484d",
-        surface_container_low="#f1f4f8",
-        surface_container="#ebeef3",
-        surface_container_high="#e5e8ed",
-        surface_container_highest="#e0e3e7",
+        tertiary_container="#e0f4ff",
+        on_tertiary_container="#001d33",
+        surface="#f4f6ff",
+        on_surface="#162f50",
+        on_surface_variant="#455c7f",
+        surface_container_low="#f8fafc",
+        surface_container="#f1f5f9",
+        surface_container_high="#e2e8f0",
+        surface_container_highest="#dee9ff",
         surface_container_lowest="#ffffff",
-        surface_bright="#f7f9fe",
-        surface_dim="#d7dadf",
-        outline="#70787e",
-        outline_variant="#bfc8cd",
-        error="#ba1a1a",
+        surface_bright="#ffffff",
+        surface_dim="#e2e8f0",
+        outline="#94a3b8",
+        outline_variant="#e2e8f0",
+        error="#b91c1c",
         on_error="#ffffff",
-        error_container="#ffdad6",
-        on_error_container="#93000a",
-        inverse_surface="#2d3134",
-        inverse_primary="#87d0f2",
+        error_container="#fee2e2",
+        on_error_container="#7f1d1d",
+        inverse_surface="#162f50",
+        inverse_primary="#cbdeff",
     )
 
 
 def build_text_theme() -> ft.TextTheme:
-    """字体规范：标题使用 Manrope，正文使用 Inter。"""
     return ft.TextTheme(
         display_large=ft.TextStyle(font_family="Manrope", weight=ft.FontWeight.BOLD),
         display_medium=ft.TextStyle(font_family="Manrope", weight=ft.FontWeight.BOLD),
@@ -70,10 +64,6 @@ def build_text_theme() -> ft.TextTheme:
 
 
 def get_app_theme() -> tuple[ft.Theme, ft.Theme]:
-    """
-    返回 (light_theme, dark_theme)。
-    深色模式下 Flet 基于 color_scheme 自动生成反转色系。
-    """
     color_scheme = build_color_scheme()
     text_theme = build_text_theme()
 

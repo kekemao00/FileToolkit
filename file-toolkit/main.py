@@ -25,11 +25,12 @@ def main(page: ft.Page) -> None:
     _init_services()
 
     # 窗口配置
-    page.title = "File Toolkit"   # 窗口标题栏文字（OS 级别）
+    page.title = "文件全能王"
     page.window.width = 1280
     page.window.height = 800
-    page.window.min_width = 900
-    page.window.min_height = 600
+    page.window.min_width = 1024
+    page.window.min_height = 640
+    page.bgcolor = "#f4f6ff"
 
     # 字体注册（Manrope + Inter，从 assets/fonts/ 加载）
     page.fonts = {
@@ -55,7 +56,12 @@ def main(page: ft.Page) -> None:
 
 def main_entry() -> None:
     """pyproject.toml [project.scripts] 入口点"""
-    ft.run(main, assets_dir="assets")
+    import os
+    # WSL 无 display 时自动降级到浏览器模式
+    if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
+        ft.run(main, assets_dir="assets", view=ft.AppView.WEB_BROWSER)
+    else:
+        ft.run(main, assets_dir="assets")
 
 
 if __name__ == "__main__":

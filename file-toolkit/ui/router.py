@@ -1,8 +1,8 @@
 """
 File Toolkit — 路由管理
 
-布局策略：直接操作 page.controls，不使用 page.views 多视图栈。
-Shell（NavRail）常驻，content_area 随路由动态替换内容。
+布局策略：page.add(shell) 挂载一次，内容区通过 controls 列表动态切换。
+不使用 page.views / page.go() 路由栈，避免 Flet 0.84 的白屏和渲染问题。
 
 路由表（共 21 个路由）：
   /                         → HomePage
@@ -103,45 +103,42 @@ def setup_router(page: ft.Page) -> None:
     """
     初始化路由体系。
 
-    布局：直接在 page 上放置一个全屏 Row，不使用 page.views 多视图栈。
-    NavRail 常驻左侧，content_area 是右侧可替换的 Container。
+    不使用 page.go() / page.views 路由栈（Flet 0.84 下会导致
+    白屏或内容替换失效）。改为手动管理导航：
+      - NavRail / ActionCard 的 page.go() 调用全部替换为 navigate()
+      - navigate() 直接操作 content_area.controls 完成页面切换
 
     page
     └── Row(expand=True)
         ├── NavRail(固定宽度，可折叠)
         ├── VerticalDivider
-        └── content_area(expand=True) ← 随路由替换 content
+        └── content_area(expand=True) ← 随路由替换 controls
     """
-    # page 级别设置：无 padding，充满窗口
     page.padding = 0
     page.spacing = 0
 
-    content_area = ft.Container(
-        expand=True,
-        height=page.height,  # 初始高度，后续 expand 接管
-    )
+    # 内容区域用 Column，通过 controls 列表切换
+    content_area = ft.Column(expand=True)
 
-    nav = NavRail(on_navigate=lambda route: page.go(route))
+    def navigate(route: str) -> None:
+        """手动导航：切换内容区 + 同步 NavRail 高亮。"""
+        nav.sync_selected(route)
+        content_area.controls = [_resolve_page(route, page)]
+        page.update()
+
+    # 将 navigate 挂到 page 上，供子页面调用 page.go() 的替代
+    page.go = navigate  # type: ignore[assignment]
+
+    nav = NavRail(on_navigate=navigate)
 
     shell = ft.Row(
         controls=[
             nav,
-            ft.VerticalDivider(width=1, color=ft.Colors.OUTLINE_VARIANT),
             content_area,
         ],
         expand=True,
         spacing=0,
-        vertical_alignment=ft.CrossAxisAlignment.START,
     )
 
-    # 直接挂载到 page，不用 page.views
     page.add(shell)
-
-    def route_change(e: ft.RouteChangeEvent) -> None:
-        route = e.route
-        nav.sync_selected(route)
-        content_area.content = _resolve_page(route, page)
-        page.update()
-
-    page.on_route_change = route_change
-    page.go("/")
+    navigate("/")
