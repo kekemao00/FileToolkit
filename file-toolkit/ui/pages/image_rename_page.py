@@ -1,4 +1,4 @@
-"""批量重命名操作页"""
+"""批量重命名 — Figma 设计语言统一"""
 import asyncio
 from pathlib import Path
 
@@ -8,6 +8,7 @@ from core.image.renamer import batch_rename
 from services import history_service, settings_service
 from services.task_service import run_task
 from ui.components.drop_zone import DropZone
+from ui.components.sub_page_header import SubPageHeader
 from ui.components.progress_card import ProgressCard
 from ui.components.result_card import ResultCard
 
@@ -35,35 +36,39 @@ class ImageRenamePage(ft.Column):
             value="{name}_{n:03d}",
             label="命名模板",
             hint_text="{name} 原名  {n} 序号  {date} 日期  {ext} 扩展名",
-            expand=True,
-            border_radius=8,
+            expand=True, border_radius=12,
+            bgcolor="#f8fafc", border_color="transparent",
         )
-        self._start_num = ft.TextField(value="1", label="起始序号", width=100, keyboard_type=ft.KeyboardType.NUMBER, border_radius=8)
+        self._start_num = ft.TextField(
+            value="1", label="起始序号", width=100,
+            keyboard_type=ft.KeyboardType.NUMBER,
+            border_radius=12, bgcolor="#f8fafc", border_color="transparent",
+        )
 
         self._preview_list = ft.Column(spacing=4, visible=False)
 
         self._progress = ProgressCard(on_cancel=self._cancel)
         self._result = ResultCard(on_reset=self._reset)
-        self._run_btn = ft.FilledButton("开始重命名", icon=ft.Icons.DRIVE_FILE_RENAME_OUTLINE, on_click=self._start, disabled=True)
-        self._preview_btn = ft.OutlinedButton("预览", icon=ft.Icons.PREVIEW, on_click=self._preview)
-
-        self.controls = [self._build_header(), self._build_body()]
-
-    def _build_header(self) -> ft.Control:
-        return ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.IconButton(ft.Icons.ARROW_BACK, on_click=lambda _: self._page.go("/image"), icon_color="#455c7f"),
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.DRIVE_FILE_RENAME_OUTLINE, color="#ea580c", size=20),
-                        width=40, height=40, bgcolor="#fff7ed", border_radius=10, alignment=ft.Alignment(0, 0),
-                    ),
-                    ft.Text("批量重命名", size=20, weight=ft.FontWeight.W_600, color="#162f50", font_family="Manrope"),
-                ],
-                spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        self._run_btn = self._build_run_button("开始重命名", ft.Icons.DRIVE_FILE_RENAME_OUTLINE)
+        self._preview_btn = ft.OutlinedButton(
+            "预览", icon=ft.Icons.PREVIEW, on_click=self._preview,
+            style=ft.ButtonStyle(
+                color="#005f98",
+                side=ft.BorderSide(1, "#d5e3ff"),
+                shape=ft.RoundedRectangleBorder(radius=12),
             ),
-            padding=ft.padding.only(left=28, top=24, right=40, bottom=16),
         )
+
+        self.controls = [
+            SubPageHeader(
+                title="批量重命名",
+                icon=ft.Icons.DRIVE_FILE_RENAME_OUTLINE,
+                icon_color="#ea580c",
+                icon_bg="#fff7ed",
+                on_back=lambda: self._page.go("/image"),
+            ),
+            self._build_body(),
+        ]
 
     def _build_body(self) -> ft.Control:
         return ft.Container(
@@ -79,26 +84,74 @@ class ImageRenamePage(ft.Column):
                         self._preview_btn,
                     ], spacing=10)),
                     self._section("预览", self._preview_list),
-                    self._progress, self._result,
-                    ft.Container(content=self._run_btn, alignment=ft.Alignment(0, 0), padding=ft.padding.symmetric(vertical=8)),
+                    self._progress,
+                    self._result,
+                    ft.Container(
+                        content=self._run_btn,
+                        padding=ft.padding.symmetric(vertical=8),
+                    ),
                 ],
                 spacing=16,
             ),
             padding=ft.padding.symmetric(horizontal=40, vertical=8),
         )
 
-    def _section(self, title, content):
+    def _section(self, title: str, content: ft.Control) -> ft.Control:
         return ft.Container(
-            content=ft.Column(controls=[
-                ft.Text(title, size=14, weight=ft.FontWeight.W_600, color="#162f50", font_family="Manrope"), content,
-            ], spacing=10),
-            bgcolor="#ffffff", border_radius=16, padding=ft.padding.all(20),
-            shadow=ft.BoxShadow(blur_radius=1, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1)),
+            content=ft.Column(
+                controls=[
+                    ft.Text(
+                        title, size=14, weight=ft.FontWeight.W_600,
+                        color="#162f50", font_family="Manrope",
+                    ),
+                    content,
+                ],
+                spacing=10,
+            ),
+            bgcolor="#ffffff",
+            border_radius=16,
+            padding=ft.padding.all(20),
+            shadow=ft.BoxShadow(
+                blur_radius=1,
+                color=ft.Colors.with_opacity(0.05, "#000000"),
+                offset=ft.Offset(0, 1),
+            ),
         )
 
+    def _build_run_button(self, label: str, icon: str) -> ft.Control:
+        return ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(icon, color="#ffffff", size=18),
+                    ft.Text(
+                        label, size=16, color="#ffffff",
+                        font_family="Manrope", weight=ft.FontWeight.W_500,
+                    ),
+                ],
+                spacing=8,
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+            bgcolor="#005f98",
+            gradient=ft.LinearGradient(
+                begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
+                colors=["#005f98", "#2aa7ff"],
+            ),
+            border_radius=16,
+            padding=ft.padding.symmetric(vertical=14),
+            shadow=ft.BoxShadow(
+                blur_radius=20, spread_radius=-5,
+                color=ft.Colors.with_opacity(0.2, "#005f98"),
+                offset=ft.Offset(0, 10),
+            ),
+            on_click=self._start,
+            ink=True,
+            opacity=0.5,
+        )
+
+    # ── 交互 ─────────────────────────────────────────────
     def _on_files(self, paths):
         self._input_files = paths
-        self._run_btn.disabled = not paths
+        self._run_btn.opacity = 1.0 if paths else 0.5
         self._run_btn.update()
 
     def _preview(self, _):
@@ -150,26 +203,30 @@ class ImageRenamePage(ft.Column):
             "template": self._template.value or "{name}_{n:03d}",
             "start_number": start,
         }
-        self._run_btn.disabled = True
+        self._run_btn.opacity = 0.5
+        self._run_btn.update()
         self._result.hide()
         self._progress.show(f"{len(self._input_files)} 个文件", "正在重命名...")
+
         async def _run():
             await run_task(batch_rename, kwargs, self._on_progress, self._on_complete)
         self._task = self._page.run_task(_run)
 
-    def _on_progress(self, c, t, d): self._progress.update_progress(c, t, d)
+    def _on_progress(self, c, t, d):
+        self._progress.update_progress(c, t, d)
 
     def _on_complete(self, result):
         self._progress.hide()
         self._result.show(result, "重命名完成！")
-        self._run_btn.disabled = False
+        self._run_btn.opacity = 1.0
         self._run_btn.update()
         history_service.save_task("image", "rename", result, input_desc=f"{len(self._input_files)} 个文件")
 
     def _cancel(self):
-        if self._task and not self._task.done(): self._task.cancel()
+        if self._task and not self._task.done():
+            self._task.cancel()
         self._progress.hide()
-        self._run_btn.disabled = False
+        self._run_btn.opacity = 1.0
         self._run_btn.update()
 
     def _reset(self):
@@ -178,5 +235,5 @@ class ImageRenamePage(ft.Column):
         self._drop_zone.update()
         self._preview_list.controls.clear()
         self._preview_list.visible = False
-        self._run_btn.disabled = True
+        self._run_btn.opacity = 0.5
         self._run_btn.update()
