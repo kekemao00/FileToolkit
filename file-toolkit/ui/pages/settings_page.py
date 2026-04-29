@@ -1,4 +1,4 @@
-"""设置页 — 基于 Figma 设计稿风格重写"""
+"""设置页 — Figma 设计语言统一"""
 import flet as ft
 
 from services import settings_service
@@ -92,13 +92,21 @@ class SettingsPage(ft.Column):
                 ft.dropdown.Option("50", "最近 50 条"),
                 ft.dropdown.Option("100", "最近 100 条"),
             ],
-            width=180, border_radius=8,
+            width=180, border_radius=12,
             on_select=lambda e: settings_service.set("history_limit", e.control.value),
         )
         return self._card("文件", ft.Icons.FOLDER_OUTLINED, "#2563eb", "#eff6ff", [
             self._row("默认输出目录", ft.Row(controls=[
                 self._output_dir_text,
-                ft.OutlinedButton("更改", on_click=self._pick_output_dir, icon=ft.Icons.FOLDER_OPEN),
+                ft.OutlinedButton(
+                    "更改", on_click=self._pick_output_dir,
+                    icon=ft.Icons.FOLDER_OPEN,
+                    style=ft.ButtonStyle(
+                        color="#005f98",
+                        side=ft.BorderSide(1, "#d5e3ff"),
+                        shape=ft.RoundedRectangleBorder(radius=12),
+                    ),
+                ),
             ], spacing=12)),
             self._row("处理完成后", self._after_radio),
             self._row("保留任务历史", self._history_limit),
@@ -111,8 +119,12 @@ class SettingsPage(ft.Column):
         picker = ft.FilePicker()
         self._page.overlay.append(picker)
         self._page.update()
-        path = await picker.get_directory_path(dialog_title="选择默认输出目录")
-        self._page.overlay.remove(picker)
+        try:
+            path = await picker.get_directory_path(dialog_title="选择默认输出目录")
+        except RuntimeError:
+            path = None
+        finally:
+            self._page.overlay.remove(picker)
         if path:
             settings_service.set("default_output_dir", path)
             self._output_dir_text.value = path
@@ -128,26 +140,57 @@ class SettingsPage(ft.Column):
                 ft.dropdown.Option("baidu", "百度 OCR"),
                 ft.dropdown.Option("tencent", "腾讯 OCR"),
             ],
-            width=180, border_radius=8,
+            width=180, border_radius=12,
             on_select=lambda e: settings_service.set("ocr_provider", e.control.value),
         )
         self._api_key_field = ft.TextField(
             value="", password=True, can_reveal_password=True,
-            hint_text="API Key", border_radius=8, expand=True,
+            hint_text="API Key", border_radius=12, expand=True,
+            bgcolor="#f8fafc", border_color="transparent",
         )
         self._secret_key_field = ft.TextField(
             value="", password=True, can_reveal_password=True,
-            hint_text="Secret Key", border_radius=8, expand=True,
+            hint_text="Secret Key", border_radius=12, expand=True,
+            bgcolor="#f8fafc", border_color="transparent",
         )
         return self._card("网络（OCR 高级功能）", ft.Icons.LANGUAGE, "#0891b2", "#ecfeff", [
             self._row("OCR 服务商", self._ocr_provider),
             self._row("API Key", self._api_key_field),
             self._row("Secret Key", self._secret_key_field),
             ft.Container(
-                content=ft.FilledButton("保存 API 配置", icon=ft.Icons.SAVE, on_click=self._save_api_keys),
+                content=self._build_save_button(),
                 padding=ft.padding.only(left=156, top=4),
             ),
         ])
+
+    def _build_save_button(self) -> ft.Control:
+        return ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.SAVE, color="#ffffff", size=16),
+                    ft.Text(
+                        "保存 API 配置", size=14, color="#ffffff",
+                        font_family="Manrope", weight=ft.FontWeight.W_500,
+                    ),
+                ],
+                spacing=8,
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+            bgcolor="#005f98",
+            gradient=ft.LinearGradient(
+                begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
+                colors=["#005f98", "#2aa7ff"],
+            ),
+            border_radius=12,
+            padding=ft.padding.symmetric(vertical=10, horizontal=20),
+            shadow=ft.BoxShadow(
+                blur_radius=12, spread_radius=-3,
+                color=ft.Colors.with_opacity(0.15, "#005f98"),
+                offset=ft.Offset(0, 6),
+            ),
+            on_click=self._save_api_keys,
+            ink=True,
+        )
 
     def _save_api_keys(self, _) -> None:
         settings_service.set("ocr_api_key", self._api_key_field.value or "")
