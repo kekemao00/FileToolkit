@@ -151,7 +151,7 @@ jobs:
       - name: Build Windows app
         shell: pwsh
         run: |
-          uv run flet build windows `
+          uv run -- flet build windows `
             --product-name "File Toolkit" `
             --product-version "1.0.0" `
             --company-name "FileToolkit" `
@@ -234,7 +234,7 @@ jobs:
       - name: Build Linux app
         run: |
           cd file-toolkit
-          uv run flet build linux \
+          uv run -- flet build linux \
             --product-name "File Toolkit" \
             --product-version "1.0.0" \
             --icon assets/icons/app_icon.png
