@@ -25,8 +25,11 @@ class AiTaskPage(ft.Column):
 
         self._input_field = ft.TextField(
             hint_text="描述您想完成的任务...",
-            hint_style=ft.TextStyle(color="#97aed5", size=16),
+            hint_style=ft.TextStyle(color="#455c7f", size=16),
+            text_style=ft.TextStyle(color="#162f50", size=16),
             border=ft.InputBorder.NONE,
+            cursor_color="#005f98",
+            selection_color=ft.Colors.with_opacity(0.15, "#005f98"),
             expand=True,
             multiline=True,
             min_lines=1,
@@ -244,13 +247,12 @@ class AiTaskPage(ft.Column):
 
     def _build_input_console(self) -> ft.Control:
         """毛玻璃风格主输入控制台"""
-        # 附件按钮
+        # 附件按钮（功能未实现，视觉禁用）
         attach_btn = ft.Container(
             padding=8,
             border_radius=8,
-            ink=True,
-            on_click=self._on_attach,
-            content=ft.Icon(ft.Icons.ATTACH_FILE, color="#455c7f", size=20),
+            tooltip="文件附件即将上线",
+            content=ft.Icon(ft.Icons.ATTACH_FILE, color=ft.Colors.with_opacity(0.3, "#455c7f"), size=20),
         )
         # 麦克风按钮（功能未实现，视觉禁用）
         mic_btn = ft.Container(
@@ -296,16 +298,15 @@ class AiTaskPage(ft.Column):
             ),
         )
 
-        # 外层毛玻璃容器
+        # 外层容器：不透明背景 + 明确边框，避免浅色叠浅色
         return ft.Container(
             border_radius=16,
-            border=ft.border.all(1, "#ffffff"),
-            bgcolor=ft.Colors.with_opacity(0.7, "#ffffff"),
-            blur=ft.Blur(8, 8),
+            border=ft.border.all(1, "#d5e3ff"),
+            bgcolor="#f8fafc",
             shadow=ft.BoxShadow(
                 blur_radius=50,
                 spread_radius=-12,
-                color=ft.Colors.with_opacity(0.05, "#005f98"),
+                color=ft.Colors.with_opacity(0.08, "#005f98"),
                 offset=ft.Offset(0, 25),
             ),
             padding=9,
