@@ -16,21 +16,22 @@
 
 ---
 
-
 <div align="center">
 <table>
 <tr>
 <td align="center"><b>首页</b></td>
+<td align="center"><b>AI 智能任务</b></td>
 </tr>
 <tr>
 <td><img src="docs/screenshots/home.png" alt="首页" width="400"></td>
+<td><img src="docs/screenshots/ai.png" alt="AI 智能任务" width="400"></td>
 </tr>
 <tr>
-<td align="center"><b>AI 智能任务</b></td>
+<td align="center"><b>最近操作</b></td>
 <td align="center"><b>PDF 工具</b></td>
 </tr>
 <tr>
-<td><img src="docs/screenshots/ai.png" alt="AI 智能任务" width="400"></td>
+<td><img src="docs/screenshots/history.png" alt="最近操作" width="400"></td>
 <td><img src="docs/screenshots/pdf.png" alt="PDF 工具" width="400"></td>
 </tr>
 <tr>
@@ -42,6 +43,7 @@
 <td><img src="docs/screenshots/media.png" alt="音视频工具" width="400"></td>
 </tr>
 </table>
+
 
 
 
