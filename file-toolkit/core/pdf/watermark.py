@@ -1,14 +1,26 @@
 """PDF 水印模块"""
 import io
+import tempfile
 import time
 from pathlib import Path
 
 import pikepdf
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
 from core.models import ProgressCallback, TaskResult, TaskStatus
+
+
+def _overlay_watermark(pdf: pikepdf.Pdf, page: pikepdf.Page, wm_buf: io.BytesIO) -> None:
+    """将 BytesIO 中的水印 PDF 叠加到目标页面（通过临时文件避免 direct object 问题）。"""
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+        f.write(wm_buf.getvalue())
+        tmp_path = f.name
+    try:
+        wm_pdf = pikepdf.open(tmp_path)
+        wm_page = wm_pdf.pages[0]
+        page.add_overlay(wm_page)
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
 
 
 def add_text_watermark(
@@ -33,19 +45,14 @@ def add_text_watermark(
             total_pages = len(pdf.pages)
 
             for page_num, page in enumerate(pdf.pages, start=1):
-                # 获取页面尺寸
                 mediabox = page.mediabox
                 page_w = float(mediabox[2]) - float(mediabox[0])
                 page_h = float(mediabox[3]) - float(mediabox[1])
 
-                # 用 reportlab 生成水印 PDF 页
-                wm_pdf = _create_text_watermark(
+                wm_buf = _create_text_watermark(
                     text, page_w, page_h, font_size, opacity, rotation, position,
                 )
-
-                # 叠加水印
-                wm_page = pikepdf.open(wm_pdf).pages[0]
-                page.add_overlay(wm_page)
+                _overlay_watermark(pdf, page, wm_buf)
 
                 if progress_callback:
                     progress_callback(page_num, total_pages, f"水印第 {page_num}/{total_pages} 页")
@@ -94,12 +101,10 @@ def add_image_watermark(
                 page_w = float(mediabox[2]) - float(mediabox[0])
                 page_h = float(mediabox[3]) - float(mediabox[1])
 
-                wm_pdf = _create_image_watermark(
+                wm_buf = _create_image_watermark(
                     watermark_image, page_w, page_h, opacity, position,
                 )
-
-                wm_page = pikepdf.open(wm_pdf).pages[0]
-                page.add_overlay(wm_page)
+                _overlay_watermark(pdf, page, wm_buf)
 
                 if progress_callback:
                     progress_callback(page_num, total_pages, f"水印第 {page_num}/{total_pages} 页")

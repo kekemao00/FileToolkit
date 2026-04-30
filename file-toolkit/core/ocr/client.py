@@ -31,8 +31,14 @@ def recognize(
         if progress_callback:
             progress_callback(0, 1, "正在初始化 OCR...")
 
-        # 尝试本地 Tesseract
-        text = _try_tesseract(input_file, language, progress_callback)
+        ext = input_file.suffix.lower()
+
+        # PDF 文件优先用 pypdf 直接提取文本（不需要 Tesseract）
+        if ext == ".pdf":
+            text = _extract_pdf_text(input_file, progress_callback)
+        else:
+            # 图片文件尝试本地 Tesseract
+            text = _try_tesseract(input_file, language, progress_callback)
 
         if text is None:
             return TaskResult(
@@ -74,15 +80,10 @@ def _try_tesseract(
     language: str,
     progress_callback: ProgressCallback | None,
 ) -> str | None:
-    """尝试使用 pytesseract 进行本地 OCR，不可用返回 None。"""
+    """尝试使用 pytesseract 进行本地 OCR（仅图片），不可用返回 None。"""
     try:
         import pytesseract
         from PIL import Image
-
-        ext = input_file.suffix.lower()
-        if ext == ".pdf":
-            # PDF 需要先转为图片
-            return _tesseract_pdf(input_file, language, progress_callback)
 
         if progress_callback:
             progress_callback(0, 1, "正在识别文字...")
@@ -97,12 +98,11 @@ def _try_tesseract(
         return None
 
 
-def _tesseract_pdf(
+def _extract_pdf_text(
     input_file: Path,
-    language: str,
     progress_callback: ProgressCallback | None,
 ) -> str:
-    """对 PDF 文件逐页提取文本（先尝试直接提取，再 OCR）。"""
+    """从 PDF 文件逐页提取文本（使用 pypdf，不需要 Tesseract）。"""
     import pypdf
 
     reader = pypdf.PdfReader(str(input_file))
