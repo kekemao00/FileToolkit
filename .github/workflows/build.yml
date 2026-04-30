@@ -129,6 +129,12 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "file-toolkit/uv.lock"
 
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.4"
+          channel: stable
+          cache: true
+
       - name: Download FFmpeg
         shell: pwsh
         run: |
@@ -153,7 +159,8 @@ jobs:
             --product "File Toolkit" `
             --build-version "1.0.0" `
             --company "FileToolkit" `
-            --copyright "MIT License"
+            --copyright "MIT License" `
+            --yes
 
       - name: Zip installer
         shell: pwsh
@@ -196,6 +203,12 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "file-toolkit/uv.lock"
 
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.4"
+          channel: stable
+          cache: true
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -225,7 +238,8 @@ jobs:
           cd file-toolkit
           uv run -- flet build linux \
             --product "File Toolkit" \
-            --build-version "1.0.0"
+            --build-version "1.0.0" \
+            --yes
 
       - name: Zip app bundle
         run: |
