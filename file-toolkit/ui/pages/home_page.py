@@ -4,6 +4,9 @@
 布局：
   顶部栏（毛玻璃）+ Hero 区域 + 工具卡片网格（5列）+ 最近操作表格
 """
+import subprocess
+import sys
+
 import flet as ft
 
 from services import history_service
@@ -51,7 +54,7 @@ _STATUS_COLORS = {
 
 _STATUS_LABELS = {
     "success":   "已完成",
-    "failed":    "解析失败",
+    "failed":    "失败",
     "cancelled": "已取消",
     "running":   "处理中",
 }
@@ -109,12 +112,13 @@ class HomePage(ft.Column):
                                     border_radius=18,
                                     padding=ft.padding.symmetric(horizontal=15),
                                 ),
-                                # 通知按钮
+                                # 通知按钮（功能未实现）
                                 ft.IconButton(
                                     icon=ft.Icons.NOTIFICATIONS_OUTLINED,
-                                    icon_color="#475569",
+                                    icon_color=ft.Colors.with_opacity(0.35, "#475569"),
                                     icon_size=20,
-                                    tooltip="通知",
+                                    tooltip="通知功能即将上线",
+                                    disabled=True,
                                 ),
                                 # 设置按钮
                                 ft.IconButton(
@@ -162,10 +166,10 @@ class HomePage(ft.Column):
     # ── Hero 区域 ─────────────────────────────────────────────────────────
     def _build_hero(self) -> ft.Control:
         feature_cards = [
-            ("智能推荐", ft.Icons.LIGHTBULB_OUTLINED),
             ("极速处理", ft.Icons.BOLT_OUTLINED),
             ("隐私保护", ft.Icons.LOCK_OUTLINED),
-            ("多端同步", ft.Icons.SYNC_OUTLINED),
+            ("批量操作", ft.Icons.LAYERS_OUTLINED),
+            ("格式丰富", ft.Icons.SWAP_HORIZ_OUTLINED),
         ]
         feature_grid = ft.Container(
             content=ft.Column(
@@ -176,6 +180,7 @@ class HomePage(ft.Column):
                             for label, icon in feature_cards[:2]
                         ],
                         spacing=16,
+                        expand=True,
                     ),
                     ft.Row(
                         controls=[
@@ -183,11 +188,13 @@ class HomePage(ft.Column):
                             for label, icon in feature_cards[2:]
                         ],
                         spacing=16,
+                        expand=True,
                     ),
                 ],
                 spacing=16,
+                expand=True,
             ),
-            width=409,
+            expand=True,
             height=320,
             bgcolor=ft.Colors.with_opacity(0.4, "#ffffff"),
             border=ft.border.all(1, ft.Colors.with_opacity(0.2, "#ffffff")),
@@ -262,6 +269,7 @@ class HomePage(ft.Column):
                                                 padding=ft.padding.symmetric(horizontal=32, vertical=12),
                                                 elevation={"": 0},
                                             ),
+                                            on_click=lambda e: self._page.go("/pdf"),
                                         ),
                                     ],
                                     spacing=16,
@@ -269,7 +277,7 @@ class HomePage(ft.Column):
                             ],
                             spacing=16,
                         ),
-                        width=407,
+                        expand=True,
                     ),
                     # 右侧特性卡片
                     feature_grid,
@@ -348,6 +356,7 @@ class HomePage(ft.Column):
                                 spacing=4,
                                 tight=True,
                             ),
+                            on_click=lambda e: self._page.go("/pdf"),
                         ),
                     ],
                 ),
@@ -502,6 +511,7 @@ class HomePage(ft.Column):
                     ft.Container(
                         content=ft.TextButton(
                             "查看所有历史记录",
+                            on_click=lambda e: self._page.go("/history"),
                             style=ft.ButtonStyle(
                                 color="#455c7f",
                                 shape=ft.RoundedRectangleBorder(radius=12),
@@ -612,10 +622,14 @@ class HomePage(ft.Column):
         icon_bg, icon_name = module_colors.get(module, ("#dee9ff", ft.Icons.DESCRIPTION))
 
         def _open_dir(_, d=output_dir):
-            if d:
-                import subprocess, sys
-                if sys.platform == "win32":
-                    subprocess.Popen(["explorer", d])
+            if not d:
+                return
+            if sys.platform == "win32":
+                subprocess.Popen(["explorer", d])
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", d])
+            else:
+                subprocess.Popen(["xdg-open", d])
 
         # 进度条（running 状态）
         progress_widget: ft.Control
@@ -680,7 +694,7 @@ class HomePage(ft.Column):
                                             overflow=ft.TextOverflow.ELLIPSIS,
                                         ),
                                         ft.Text(
-                                            task.get("input_desc", ""),
+                                            f"{module} · {action}",
                                             size=10,
                                             color="#455c7f",
                                             font_family="Manrope",
