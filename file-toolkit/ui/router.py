@@ -32,27 +32,27 @@ File Toolkit — 路由管理
 import flet as ft
 
 from ui.components.nav_rail import NavRail
+from ui.pages.ai_task_page import AiTaskPage
+from ui.pages.archive_page import ArchivePage
+from ui.pages.history_page import HistoryPage
 from ui.pages.home_page import HomePage
-from ui.pages.pdf_page import PdfPage
-from ui.pages.pdf_split_page import PdfSplitPage
-from ui.pages.pdf_merge_page import PdfMergePage
+from ui.pages.image_compress_page import ImageCompressPage
+from ui.pages.image_convert_page import ImageConvertPage
+from ui.pages.image_page import ImagePage
+from ui.pages.image_rename_page import ImageRenamePage
+from ui.pages.image_watermark_page import ImageWatermarkPage
+from ui.pages.media_audio_convert_page import AudioConvertPage
+from ui.pages.media_audio_extract_page import AudioExtractPage
+from ui.pages.media_page import MediaPage
+from ui.pages.media_video_compress_page import VideoCompressPage
+from ui.pages.media_video_convert_page import VideoConvertPage
+from ui.pages.media_video_cut_page import VideoCutPage
+from ui.pages.ocr_page import OcrPage
 from ui.pages.pdf_compress_page import PdfCompressPage
 from ui.pages.pdf_convert_page import PdfConvertPage
-from ui.pages.image_page import ImagePage
-from ui.pages.image_convert_page import ImageConvertPage
-from ui.pages.image_compress_page import ImageCompressPage
-from ui.pages.image_watermark_page import ImageWatermarkPage
-from ui.pages.image_rename_page import ImageRenamePage
-from ui.pages.media_page import MediaPage
-from ui.pages.media_video_convert_page import VideoConvertPage
-from ui.pages.media_video_compress_page import VideoCompressPage
-from ui.pages.media_audio_extract_page import AudioExtractPage
-from ui.pages.media_audio_convert_page import AudioConvertPage
-from ui.pages.media_video_cut_page import VideoCutPage
-from ui.pages.archive_page import ArchivePage
-from ui.pages.ocr_page import OcrPage
-from ui.pages.ai_task_page import AiTaskPage
-from ui.pages.history_page import HistoryPage
+from ui.pages.pdf_merge_page import PdfMergePage
+from ui.pages.pdf_page import PdfPage
+from ui.pages.pdf_split_page import PdfSplitPage
 from ui.pages.settings_page import SettingsPage
 
 

@@ -1,7 +1,6 @@
 """AI 智能任务页 — 基于 Figma 设计稿 1:325 的 1:1 复刻"""
 import flet as ft
 
-
 # Prompt 建议按钮数据
 _PROMPT_SUGGESTIONS = [
     {"icon": ft.Icons.IMAGE, "label": "图片转PDF并加水印"},
@@ -99,8 +98,7 @@ class AiTaskPage(ft.Column):
                     ),
                     # 副标题
                     ft.Container(
-                        width=512,
-                        padding=ft.padding.symmetric(horizontal=4),
+                        padding=ft.padding.symmetric(horizontal=24),
                         content=ft.Text(
                             "一个软件，搞定所有文件。请告诉我您的需求，\n我将为您自动编排并执行最复杂的文件处理流程。",
                             size=18,
@@ -189,22 +187,18 @@ class AiTaskPage(ft.Column):
     # ── 交互区域 ──────────────────────────────────────
     def _build_interaction_area(self) -> ft.Control:
         return ft.Container(
-            padding=ft.padding.symmetric(horizontal=64),
-            content=ft.Container(
-                width=896,
-                padding=ft.padding.symmetric(horizontal=24),
-                content=ft.Column(
-                    spacing=24,
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    controls=[
-                        # Prompt 建议按钮
-                        self._build_prompt_suggestions(),
-                        # 主输入控制台
-                        self._build_input_console(),
-                        # 底部状态指示器
-                        self._build_status_indicators(),
-                    ],
-                ),
+            expand=True,
+            padding=ft.padding.symmetric(horizontal=24),
+            alignment=ft.Alignment(0, 0),
+            content=ft.Column(
+                expand=True,
+                spacing=24,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    self._build_prompt_suggestions(),
+                    self._build_input_console(),
+                    self._build_status_indicators(),
+                ],
             ),
         )
 
@@ -258,12 +252,12 @@ class AiTaskPage(ft.Column):
             on_click=self._on_attach,
             content=ft.Icon(ft.Icons.ATTACH_FILE, color="#455c7f", size=20),
         )
-        # 麦克风按钮
+        # 麦克风按钮（功能未实现，视觉禁用）
         mic_btn = ft.Container(
             padding=8,
             border_radius=8,
-            ink=True,
-            content=ft.Icon(ft.Icons.MIC_NONE, color="#455c7f", size=19),
+            tooltip="语音输入即将上线",
+            content=ft.Icon(ft.Icons.MIC_NONE, color=ft.Colors.with_opacity(0.3, "#455c7f"), size=19),
         )
         # 发送按钮
         send_btn = ft.Container(
@@ -359,6 +353,12 @@ class AiTaskPage(ft.Column):
     def _on_submit(self, _) -> None:
         text = (self._input_field.value or "").strip()
         if not text:
+            self._page.snack_bar = ft.SnackBar(
+                content=ft.Text("请先输入任务描述"),
+                bgcolor="#455c7f",
+            )
+            self._page.snack_bar.open = True
+            self._page.update()
             return
         self._page.snack_bar = ft.SnackBar(
             content=ft.Text("AI 任务解析功能即将上线，敬请期待"),
