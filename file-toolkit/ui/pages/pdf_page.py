@@ -129,17 +129,24 @@ class PdfPage(ft.Column):
             )
             self._func_btns.append(btn)
 
+        self._main_content = self._build_main_content()
+        self._build_param_panel()
+
+        # 响应式断点：窄窗口下切换为上下布局
+        self._NARROW_BREAKPOINT = 800
+        self._is_narrow = False
+        self._body_container = ft.Row(
+            controls=[self._main_content, self._param_panel],
+            expand=True,
+            spacing=0,
+        )
+
         self.controls = [
             self._build_topbar(),
-            ft.Row(
-                controls=[
-                    self._build_main_content(),
-                    self._build_param_panel(),
-                ],
-                expand=True,
-                spacing=0,
-            ),
+            self._body_container,
         ]
+
+        self._page.on_resized = self._on_page_resized
 
     def _build_topbar(self) -> ft.Control:
         return ft.Container(
@@ -254,10 +261,45 @@ class PdfPage(ft.Column):
         )
 
     def _build_drop_zone(self) -> ft.Control:
+        self._drop_zone_body = ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.UPLOAD_FILE, color="#2aa7ff", size=30),
+                        width=64, height=64,
+                        bgcolor=ft.Colors.with_opacity(0.2, "#2aa7ff"),
+                        border_radius=9999,
+                        alignment=ft.Alignment(0, 0),
+                    ),
+                    ft.Text("点击选择 PDF 文件", size=20, color="#005f98", font_family="Manrope", text_align=ft.TextAlign.CENTER),
+                    ft.Text("支持多文件合并，最大单文件限制 200MB", size=14, color="#455c7f", font_family="Manrope", text_align=ft.TextAlign.CENTER),
+                    ft.Container(
+                        content=ft.Container(
+                            content=ft.Text("选择本地文件", size=16, color="#ffffff", font_family="Manrope", text_align=ft.TextAlign.CENTER),
+                            bgcolor="#005f98",
+                            border_radius=9999,
+                            padding=ft.padding.symmetric(horizontal=24, vertical=8),
+                            shadow=ft.BoxShadow(blur_radius=15, spread_radius=-3, color=ft.Colors.with_opacity(0.3, "#005f98"), offset=ft.Offset(0, 10)),
+                        ),
+                        padding=ft.padding.only(top=8),
+                    ),
+                ],
+                spacing=16,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+            bgcolor="#ffffff",
+            border=ft.border.all(2, "#2aa7ff"),
+            border_radius=16,
+            padding=ft.padding.symmetric(vertical=40, horizontal=2),
+            expand=True,
+            on_click=self._pick_files,
+            on_hover=self._on_drop_zone_hover,
+            ink=True,
+        )
         return ft.Container(
             content=ft.Stack(
                 controls=[
-                    # 渐变发光边框
                     ft.Container(
                         gradient=ft.LinearGradient(
                             begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
@@ -268,46 +310,21 @@ class PdfPage(ft.Column):
                         blur=ft.Blur(4, 4),
                         expand=True,
                     ),
-                    # 主体
-                    ft.Container(
-                        content=ft.Column(
-                            controls=[
-                                ft.Container(
-                                    content=ft.Icon(ft.Icons.UPLOAD_FILE, color="#2aa7ff", size=30),
-                                    width=64, height=64,
-                                    bgcolor=ft.Colors.with_opacity(0.2, "#2aa7ff"),
-                                    border_radius=9999,
-                                    alignment=ft.Alignment(0, 0),
-                                ),
-                                ft.Text("点击选择 PDF 文件", size=20, color="#005f98", font_family="Manrope", text_align=ft.TextAlign.CENTER),
-                                ft.Text("支持多文件合并，最大单文件限制 200MB", size=14, color="#455c7f", font_family="Manrope", text_align=ft.TextAlign.CENTER),
-                                ft.Container(
-                                    content=ft.Container(
-                                        content=ft.Text("选择本地文件", size=16, color="#ffffff", font_family="Manrope", text_align=ft.TextAlign.CENTER),
-                                        bgcolor="#005f98",
-                                        border_radius=9999,
-                                        padding=ft.padding.symmetric(horizontal=24, vertical=8),
-                                        shadow=ft.BoxShadow(blur_radius=15, spread_radius=-3, color=ft.Colors.with_opacity(0.3, "#005f98"), offset=ft.Offset(0, 10)),
-                                    ),
-                                    padding=ft.padding.only(top=8),
-                                    on_click=self._pick_files,
-                                ),
-                            ],
-                            spacing=16,
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            alignment=ft.MainAxisAlignment.CENTER,
-                        ),
-                        bgcolor="#ffffff",
-                        border=ft.border.all(2, "#2aa7ff"),
-                        border_radius=16,
-                        padding=ft.padding.symmetric(vertical=40, horizontal=2),
-                        expand=True,
-                    ),
+                    self._drop_zone_body,
                 ],
             ),
             padding=ft.padding.symmetric(horizontal=32),
             height=220,
         )
+
+    def _on_drop_zone_hover(self, e: ft.ControlEvent) -> None:
+        if e.data == "true":
+            self._drop_zone_body.border = ft.border.all(2, "#005f98")
+            self._drop_zone_body.bgcolor = ft.Colors.with_opacity(0.03, "#005f98")
+        else:
+            self._drop_zone_body.border = ft.border.all(2, "#2aa7ff")
+            self._drop_zone_body.bgcolor = "#ffffff"
+        self._drop_zone_body.update()
 
     def _build_file_list(self) -> ft.Control:
         return ft.Container(
@@ -328,7 +345,7 @@ class PdfPage(ft.Column):
         )
 
     def _build_param_panel(self) -> ft.Control:
-        return ft.Container(
+        self._param_panel = ft.Container(
             content=ft.Column(
                 controls=[
                     # 标题
@@ -367,13 +384,12 @@ class PdfPage(ft.Column):
                         self._toggle_row("添加密码", ft.Icons.LOCK_OUTLINED, self._pwd_switch),
                         self._toggle_row("添加水印", ft.Icons.WATER_DROP_OUTLINED, self._watermark_switch),
                     ], spacing=12)),
-                    # 弹性空间
-                    ft.Container(expand=True),
                     # 处理按钮
                     self._run_btn,
                     ft.Text("预计耗时: 12秒 • 隐私保护已开启", size=10, color="#455c7f", font_family="Manrope", text_align=ft.TextAlign.CENTER),
                 ],
                 spacing=24,
+                scroll=ft.ScrollMode.AUTO,
                 expand=True,
             ),
             width=320,
@@ -382,6 +398,7 @@ class PdfPage(ft.Column):
             border=ft.border.only(left=ft.BorderSide(1, "#d5e3ff")),
             padding=ft.padding.all(24),
         )
+        return self._param_panel
 
     def _section(self, label: str, content: ft.Control) -> ft.Control:
         return ft.Column(controls=[
@@ -437,13 +454,18 @@ class PdfPage(ft.Column):
         picker = ft.FilePicker()
         self._page.overlay.append(picker)
         self._page.update()
-        files = await picker.pick_files(
-            dialog_title="选择 PDF 文件",
-            file_type=ft.FilePickerFileType.CUSTOM,
-            allowed_extensions=["pdf"],
-            allow_multiple=True,
-        )
-        self._page.overlay.remove(picker)
+        try:
+            files = await picker.pick_files(
+                dialog_title="选择 PDF 文件",
+                file_type=ft.FilePickerFileType.CUSTOM,
+                allowed_extensions=["pdf"],
+                allow_multiple=True,
+            )
+        except RuntimeError:
+            self._page.open(ft.SnackBar(content=ft.Text("无法打开文件选择器，请检查系统环境"), duration=3000))
+            files = None
+        finally:
+            self._page.overlay.remove(picker)
         if not files:
             self._page.update()
             return
@@ -560,3 +582,36 @@ class PdfPage(ft.Column):
     def _reset(self) -> None:
         self._files.clear()
         self._rebuild_file_list()
+
+    def _on_page_resized(self, e) -> None:
+        width = self._page.width or 1000
+        narrow = width < self._NARROW_BREAKPOINT
+        if narrow == self._is_narrow:
+            return
+        self._is_narrow = narrow
+        if narrow:
+            # 切换为上下布局：参数面板移到主内容下方
+            self._param_panel.width = None
+            self._param_panel.border = ft.border.only(top=ft.BorderSide(1, "#d5e3ff"))
+            self._body_container.controls = []
+            new_body = ft.Column(
+                controls=[self._main_content, self._param_panel],
+                expand=True,
+                spacing=0,
+                scroll=ft.ScrollMode.AUTO,
+            )
+            self.controls[1] = new_body
+            self._body_container = new_body
+        else:
+            # 恢复左右布局
+            self._param_panel.width = 320
+            self._param_panel.border = ft.border.only(left=ft.BorderSide(1, "#d5e3ff"))
+            self._body_container.controls = []
+            new_body = ft.Row(
+                controls=[self._main_content, self._param_panel],
+                expand=True,
+                spacing=0,
+            )
+            self.controls[1] = new_body
+            self._body_container = new_body
+        self.update()
