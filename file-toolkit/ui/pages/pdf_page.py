@@ -3,19 +3,19 @@
 布局：左侧主内容区（标题+拖拽区+文件列表） + 右侧参数面板
 """
 import asyncio
+import time
 from pathlib import Path
 
 import flet as ft
 
-from core.pdf.splitter import split_pdf
-from core.pdf.merger import merge_pdf
 from core.pdf.compressor import compress_pdf
 from core.pdf.converter import pdf_to_docx
+from core.pdf.merger import merge_pdf
+from core.pdf.splitter import split_pdf
 from services import history_service, settings_service
 from services.task_service import run_task
 from ui.components.progress_card import ProgressCard
 from ui.components.result_card import ResultCard
-
 
 _FUNCTIONS = [
     {"label": "合并", "icon": ft.Icons.MERGE, "key": "merge"},
@@ -23,6 +23,18 @@ _FUNCTIONS = [
     {"label": "压缩", "icon": ft.Icons.COMPRESS, "key": "compress"},
     {"label": "转word", "icon": ft.Icons.SWAP_HORIZ, "key": "to_word"},
 ]
+
+# slider 0-100 → compress_pdf quality 枚举
+def _quality_level(v: float) -> str:
+    if v >= 70:
+        return "high"
+    if v >= 40:
+        return "medium"
+    return "low"
+
+# "1-5, 6-10" → ["1-5", "6-10"]
+def _parse_ranges(text: str) -> list[str]:
+    return [s.strip() for s in text.split(",") if s.strip()]
 
 
 class PdfPage(ft.Column):
@@ -47,9 +59,9 @@ class PdfPage(ft.Column):
             width=270,
         )
 
-        # 页码范围
+        # 页码范围（range 模式只接受 起始-结束 格式，示例必须合法）
         self._range_field = ft.TextField(
-            value="1-5, 8",
+            value="1-5, 6-10",
             border_radius=12,
             bgcolor="#d5e3ff",
             border_color="transparent",
@@ -57,9 +69,9 @@ class PdfPage(ft.Column):
             expand=True,
         )
 
-        # 增强选项
-        self._pwd_switch = ft.Switch(value=False, active_color="#005f98", inactive_thumb_color="#ffffff", inactive_track_color="#cbdeff")
-        self._watermark_switch = ft.Switch(value=True, active_color="#005f98", inactive_thumb_color="#ffffff", inactive_track_color="#cbdeff")
+        # 增强选项（功能尚未接入，disabled 防止误操作）
+        self._pwd_switch = ft.Switch(value=False, active_color="#005f98", inactive_thumb_color="#ffffff", inactive_track_color="#cbdeff", disabled=True)
+        self._watermark_switch = ft.Switch(value=True, active_color="#005f98", inactive_thumb_color="#ffffff", inactive_track_color="#cbdeff", disabled=True)
 
         # 文件列表
         self._file_list = ft.Column(spacing=12)
@@ -89,6 +101,7 @@ class PdfPage(ft.Column):
             ),
             on_click=self._start_task,
             ink=True,
+            opacity=0.4,  # 初始无文件时视觉禁用
         )
 
         # 功能按钮
@@ -136,6 +149,7 @@ class PdfPage(ft.Column):
                     ft.Container(
                         content=ft.Row(
                             controls=[
+                                # 搜索框：功能未上线，降低视觉权重
                                 ft.Container(
                                     content=ft.Row(
                                         controls=[
@@ -154,8 +168,16 @@ class PdfPage(ft.Column):
                                     border=ft.border.all(1, ft.Colors.with_opacity(0.6, "#e2e8f0")),
                                     border_radius=9999,
                                     padding=ft.padding.symmetric(horizontal=15),
+                                    opacity=0.45,
+                                    tooltip="搜索功能即将上线",
                                 ),
-                                ft.IconButton(icon=ft.Icons.NOTIFICATIONS_OUTLINED, icon_color="#475569", icon_size=20),
+                                ft.IconButton(
+                                    icon=ft.Icons.NOTIFICATIONS_OUTLINED,
+                                    icon_color="#475569", icon_size=20,
+                                    disabled=True,
+                                    opacity=0.45,
+                                    tooltip="通知功能即将上线",
+                                ),
                                 ft.IconButton(icon=ft.Icons.SETTINGS_OUTLINED, icon_color="#475569", icon_size=20,
                                               on_click=lambda _: self._page.go("/settings")),
                             ],
@@ -190,17 +212,22 @@ class PdfPage(ft.Column):
                                     spacing=4,
                                 ),
                                 ft.Container(expand=True),
+                                # 视图切换：功能未上线
                                 ft.Row(
                                     controls=[
                                         ft.Container(
                                             content=ft.Icon(ft.Icons.GRID_VIEW, color="#005f98", size=16),
                                             bgcolor="#d5e3ff", border_radius=12,
                                             padding=ft.padding.all(8),
+                                            opacity=0.45,
+                                            tooltip="网格视图即将上线",
                                         ),
                                         ft.Container(
                                             content=ft.Icon(ft.Icons.VIEW_LIST, color="#005f98", size=16),
                                             bgcolor="#d5e3ff", border_radius=12,
                                             padding=ft.padding.all(8),
+                                            opacity=0.45,
+                                            tooltip="列表视图即将上线",
                                         ),
                                     ],
                                     spacing=8,
@@ -252,7 +279,7 @@ class PdfPage(ft.Column):
                                     border_radius=9999,
                                     alignment=ft.Alignment(0, 0),
                                 ),
-                                ft.Text("点击或将 PDF 文件拖拽至此处", size=20, color="#005f98", font_family="Manrope", text_align=ft.TextAlign.CENTER),
+                                ft.Text("点击选择 PDF 文件", size=20, color="#005f98", font_family="Manrope", text_align=ft.TextAlign.CENTER),
                                 ft.Text("支持多文件合并，最大单文件限制 200MB", size=14, color="#455c7f", font_family="Manrope", text_align=ft.TextAlign.CENTER),
                                 ft.Container(
                                     content=ft.Container(
@@ -318,7 +345,7 @@ class PdfPage(ft.Column):
                         wrap=True, spacing=8, run_spacing=8,
                     )),
                     # 输出质量
-                    self._section("输出质量", ft.Column(controls=[
+                    self._section("输出质量 (压缩)", ft.Column(controls=[
                         ft.Row(controls=[ft.Container(expand=True), self._quality_value]),
                         self._quality_slider,
                         ft.Row(controls=[
@@ -330,12 +357,13 @@ class PdfPage(ft.Column):
                         ]),
                     ], spacing=8)),
                     # 页码范围
-                    self._section("页码范围", ft.Row(controls=[
+                    self._section("页码范围 (拆分)", ft.Row(controls=[
                         self._range_field,
-                        ft.IconButton(icon=ft.Icons.REFRESH, icon_color="#005f98", icon_size=20),
+                        ft.IconButton(icon=ft.Icons.REFRESH, icon_color="#005f98", icon_size=20,
+                                      on_click=lambda _: self._reset_range()),
                     ], spacing=8)),
-                    # 增强选项
-                    self._section("增强选项", ft.Column(controls=[
+                    # 增强选项（即将上线）
+                    self._section("增强选项 (即将上线)", ft.Column(controls=[
                         self._toggle_row("添加密码", ft.Icons.LOCK_OUTLINED, self._pwd_switch),
                         self._toggle_row("添加水印", ft.Icons.WATER_DROP_OUTLINED, self._watermark_switch),
                     ], spacing=12)),
@@ -375,6 +403,8 @@ class PdfPage(ft.Column):
             bgcolor=ft.Colors.with_opacity(0.5, "#ffffff"),
             border_radius=12,
             padding=ft.padding.all(12),
+            opacity=0.5,
+            tooltip="功能即将上线",
         )
 
     def _select_func(self, key: str) -> None:
@@ -385,11 +415,20 @@ class PdfPage(ft.Column):
             col = btn.content
             col.controls[0].color = "#ffffff" if active else "#455c7f"
             col.controls[1].color = "#ffffff" if active else "#455c7f"
+        # 切换功能时同步按钮文案（单文件功能只处理第一个）
+        if self._files:
+            single_func = key in ("split", "compress", "to_word")
+            count_label = "1个文件" if (single_func and len(self._files) > 1) else f"{len(self._files)}个文件"
+            self._run_btn.content.controls[1].value = f"立即处理 ({count_label})"
         self.update()
 
     def _on_quality_change(self, e) -> None:
         self._quality_value.value = f"{int(e.control.value)}%"
         self._quality_value.update()
+
+    def _reset_range(self) -> None:
+        self._range_field.value = "1-5, 6-10"
+        self._range_field.update()
 
     def _pick_files(self, _) -> None:
         self._page.run_task(self._pick_files_async)
@@ -444,9 +483,12 @@ class PdfPage(ft.Column):
                 height=80,
             )
             self._file_list.controls.append(item)
-        # 更新按钮文字
         row = self._run_btn.content
-        row.controls[1].value = f"立即处理 ({len(self._files)}个文件)"
+        single_func = self._selected_func in ("split", "compress", "to_word")
+        count_label = "1个文件" if (single_func and len(self._files) > 1) else f"{len(self._files)}个文件"
+        row.controls[1].value = f"立即处理 ({count_label})"
+        # 有文件时恢复按钮视觉
+        self._run_btn.opacity = 1.0 if self._files else 0.4
         self.update()
 
     def _clear_files(self, _) -> None:
@@ -455,12 +497,45 @@ class PdfPage(ft.Column):
 
     def _start_task(self, _) -> None:
         if not self._files:
+            self._page.open(ft.SnackBar(content=ft.Text("请先选择文件"), duration=2000))
             return
+
         out_dir = settings_service.resolve_output_dir(self._files[0])
-        func_map = {"merge": merge_pdf, "split": split_pdf, "compress": compress_pdf, "to_word": pdf_to_docx}
-        fn = func_map.get(self._selected_func, merge_pdf)
-        kwargs = {"input_files" if self._selected_func == "merge" else "input_file": self._files if self._selected_func == "merge" else self._files[0], "output_dir": out_dir}
-        self._progress.show(f"{len(self._files)} 个文件", f"正在{self._selected_func}...")
+        quality = _quality_level(self._quality_slider.value)
+        ranges = _parse_ranges(self._range_field.value)
+
+        if self._selected_func == "merge":
+            ts = int(time.time())
+            kwargs = {
+                "input_files": self._files,
+                "output_file": out_dir / f"merged_{ts}.pdf",
+            }
+            fn = merge_pdf
+        elif self._selected_func == "split":
+            kwargs = {
+                "input_file": self._files[0],
+                "output_dir": out_dir,
+                "mode": "range" if ranges else "pages",
+                "page_ranges": ranges or None,
+            }
+            fn = split_pdf
+        elif self._selected_func == "compress":
+            kwargs = {
+                "input_file": self._files[0],
+                "output_file": out_dir / f"{self._files[0].stem}_compressed.pdf",
+                "quality": quality,
+            }
+            fn = compress_pdf
+        else:  # to_word
+            kwargs = {
+                "input_file": self._files[0],
+                "output_dir": out_dir,
+            }
+            fn = pdf_to_docx
+
+        single_func = self._selected_func in ("split", "compress", "to_word")
+        file_count_label = "1 个文件" if (single_func and len(self._files) > 1) else f"{len(self._files)} 个文件"
+        self._progress.show(file_count_label, "正在处理...")
         self._result.hide()
 
         async def _run():
@@ -473,7 +548,9 @@ class PdfPage(ft.Column):
     def _on_complete(self, result):
         self._progress.hide()
         self._result.show(result, "处理完成！")
-        history_service.save_task("pdf", self._selected_func, result, input_desc=f"{len(self._files)} 个文件")
+        single_func = self._selected_func in ("split", "compress", "to_word")
+        file_count_label = "1 个文件" if (single_func and len(self._files) > 1) else f"{len(self._files)} 个文件"
+        history_service.save_task("pdf", self._selected_func, result, input_desc=file_count_label)
 
     def _cancel(self) -> None:
         if self._task and not self._task.done():
