@@ -132,20 +132,17 @@ class PdfPage(ft.Column):
         self._main_content = self._build_main_content()
         self._build_param_panel()
 
-        # 响应式断点：窄窗口下切换为上下布局
+        # 响应式断点
         self._NARROW_BREAKPOINT = 800
-        self._is_narrow = False
-        self._body_container = ft.Row(
-            controls=[self._main_content, self._param_panel],
-            expand=True,
-            spacing=0,
-        )
+        self._is_narrow = None  # 强制首次 _apply_responsive_layout 生效
+        self._body_container: ft.Control = ft.Container()  # 占位，立即被替换
+        self._topbar = self._build_topbar()
 
-        self.controls = [
-            self._build_topbar(),
-            self._body_container,
-        ]
+        self.controls = [self._topbar, self._body_container]
+        self._apply_responsive_layout(update=False)
 
+        # 保存旧 handler 以便卸载时恢复
+        self._prev_on_resized = self._page.on_resized
         self._page.on_resized = self._on_page_resized
 
     def _build_topbar(self) -> ft.Control:
@@ -583,35 +580,37 @@ class PdfPage(ft.Column):
         self._files.clear()
         self._rebuild_file_list()
 
-    def _on_page_resized(self, e) -> None:
+    def _apply_responsive_layout(self, update: bool = True) -> None:
         width = self._page.width or 1000
         narrow = width < self._NARROW_BREAKPOINT
         if narrow == self._is_narrow:
             return
         self._is_narrow = narrow
         if narrow:
-            # 切换为上下布局：参数面板移到主内容下方
             self._param_panel.width = None
             self._param_panel.border = ft.border.only(top=ft.BorderSide(1, "#d5e3ff"))
-            self._body_container.controls = []
             new_body = ft.Column(
                 controls=[self._main_content, self._param_panel],
                 expand=True,
                 spacing=0,
                 scroll=ft.ScrollMode.AUTO,
             )
-            self.controls[1] = new_body
-            self._body_container = new_body
         else:
-            # 恢复左右布局
             self._param_panel.width = 320
             self._param_panel.border = ft.border.only(left=ft.BorderSide(1, "#d5e3ff"))
-            self._body_container.controls = []
             new_body = ft.Row(
                 controls=[self._main_content, self._param_panel],
                 expand=True,
                 spacing=0,
             )
-            self.controls[1] = new_body
-            self._body_container = new_body
-        self.update()
+        self._body_container = new_body
+        self.controls[1] = new_body
+        if update:
+            self.update()
+
+    def _on_page_resized(self, e) -> None:
+        # 页面已卸载时不处理
+        if not self.page:
+            self._page.on_resized = self._prev_on_resized
+            return
+        self._apply_responsive_layout()
