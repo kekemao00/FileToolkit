@@ -149,13 +149,14 @@ jobs:
           uv pip install "flet-cli==0.84.0"
 
       - name: Build Windows app
+        shell: pwsh
         run: |
-          flet build windows ^
-            --product-name "File Toolkit" ^
-            --product-version "1.0.0" ^
-            --company-name "FileToolkit" ^
-            --copyright "MIT License" ^
-            --icon assets\icons\app_icon.png
+          uv run flet build windows `
+            --product-name "File Toolkit" `
+            --product-version "1.0.0" `
+            --company-name "FileToolkit" `
+            --copyright "MIT License" `
+            --icon assets/icons/app_icon.png
 
       - name: Zip installer
         shell: pwsh
@@ -233,7 +234,7 @@ jobs:
       - name: Build Linux app
         run: |
           cd file-toolkit
-          flet build linux \
+          uv run flet build linux \
             --product-name "File Toolkit" \
             --product-version "1.0.0" \
             --icon assets/icons/app_icon.png
