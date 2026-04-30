@@ -141,9 +141,15 @@ class PdfPage(ft.Column):
         self.controls = [self._topbar, self._body_container]
         self._apply_responsive_layout(update=False)
 
-        # 保存旧 handler 以便卸载时恢复
+        self._prev_on_resized = None
+
+    def did_mount(self) -> None:
         self._prev_on_resized = self._page.on_resized
         self._page.on_resized = self._on_page_resized
+
+    def will_unmount(self) -> None:
+        if self._page.on_resized == self._on_page_resized:
+            self._page.on_resized = self._prev_on_resized
 
     def _build_topbar(self) -> ft.Control:
         return ft.Container(
@@ -609,8 +615,4 @@ class PdfPage(ft.Column):
             self.update()
 
     def _on_page_resized(self, e) -> None:
-        # 页面已卸载时不处理
-        if not self.page:
-            self._page.on_resized = self._prev_on_resized
-            return
         self._apply_responsive_layout()
