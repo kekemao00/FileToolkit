@@ -137,6 +137,7 @@ jobs:
           Write-Host "Downloading FFmpeg..."
           Invoke-WebRequest -Uri $url -OutFile $tmp
           Expand-Archive -Path $tmp -DestinationPath "$env:RUNNER_TEMP\ffmpeg" -Force
+          New-Item -ItemType Directory -Force -Path "assets\bin"
           Copy-Item "$env:RUNNER_TEMP\ffmpeg\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe" `
             -Destination "assets\bin\ffmpeg.exe" -Force
           Remove-Item $tmp -Force
@@ -218,6 +219,7 @@ jobs:
             -O /tmp/ffmpeg.tar.xz
           mkdir -p /tmp/ffmpeg
           tar -xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg --strip-components=1
+          mkdir -p file-toolkit/assets/bin
           cp /tmp/ffmpeg/ffmpeg file-toolkit/assets/bin/ffmpeg
           chmod +x file-toolkit/assets/bin/ffmpeg
           echo "FFmpeg ready"
