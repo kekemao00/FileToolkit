@@ -15,7 +15,7 @@ on:
       create_release:
         description: "Create a GitHub Release after build"
         required: true
-        default: true
+        default: false
         type: boolean
   push:
     branches:
@@ -34,7 +34,6 @@ jobs:
     defaults:
       run:
         working-directory: file-toolkit
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -84,18 +83,8 @@ jobs:
             find build/macos -maxdepth 3 -print
             exit 1
           fi
-          ditto -c -k --sequesterRsrc --keepParent "$app_path" "../FileToolkit-macos-${MACOS_ARCH}.zip"
-
-      - name: Generate version tag
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "tag=v0.0.0-${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
-            echo "release_name=Preview build $(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
-          else
-            echo "tag=v$(date +'%Y.%m.%d')-${MACOS_ARCH}" >> $GITHUB_OUTPUT
-            echo "release_name=FileToolkit macOS $(date +'%Y.%m.%d') (${MACOS_ARCH})" >> $GITHUB_OUTPUT
-          fi
+          ditto -c -k --sequesterRsrc --keepParent "$app_path" \
+            "../FileToolkit-macos-${MACOS_ARCH}.zip"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -103,6 +92,17 @@ jobs:
           name: FileToolkit-macos-${{ env.MACOS_ARCH }}
           path: FileToolkit-macos-${{ env.MACOS_ARCH }}.zip
           if-no-files-found: error
+
+      - name: Generate version tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "tag=v0.0.0-${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
+            echo "release_name=Preview macOS build $(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+          else
+            echo "tag=v$(date +'%Y.%m.%d')-macos-${MACOS_ARCH}" >> $GITHUB_OUTPUT
+            echo "release_name=FileToolkit macOS $(date +'%Y.%m.%d') (${MACOS_ARCH})" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create GitHub Release
         if: >-

@@ -1,0 +1,308 @@
+name: Build All Platforms
+
+on:
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: "Target platforms"
+        required: true
+        default: "macos,windows,linux"
+        type: choice
+        options:
+          - "macos,windows,linux"
+          - "macos"
+          - "windows"
+          - "linux"
+          - "macos,windows"
+          - "macos,linux"
+          - "windows,linux"
+      create_release:
+        description: "Create a GitHub Release after build"
+        required: true
+        default: true
+        type: boolean
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-macos.yml"
+      - "file-toolkit/**"
+
+jobs:
+  # ── macOS ──────────────────────────────────────────
+  build-macos:
+    if: >-
+      contains(fromJSON('["macos,windows,linux", "macos", "macos,windows", "macos,linux"]'),
+      github.event_name == 'push' && 'macos,windows,linux' || github.event.inputs.platforms)
+    runs-on: macos-14
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        arch: [arm64]
+    env:
+      MACOS_ARCH: ${{ matrix.arch }}
+      FLET_CLI_NO_RICH_OUTPUT: "1"
+    defaults:
+      run:
+        working-directory: file-toolkit
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "file-toolkit/uv.lock"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.4"
+          channel: stable
+          cache: true
+
+      - name: Ensure macOS build tools
+        run: |
+          xcodebuild -version
+          flutter --version
+          flutter config --no-analytics
+          flutter precache --macos
+          if ! command -v pod >/dev/null 2>&1; then
+            sudo gem install cocoapods -v ">=1.16,<2.0"
+          fi
+          pod --version
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras
+          uv pip install "flet-cli==0.84.0"
+
+      - name: Build macOS app
+        run: uv run bash build/build_macos.sh
+
+      - name: Zip app bundle
+        run: |
+          app_path="$(find build/macos -maxdepth 1 -name '*.app' -print -quit)"
+          if [ -z "$app_path" ]; then
+            echo "No .app bundle found in build/macos"
+            find build/macos -maxdepth 3 -print
+            exit 1
+          fi
+          ditto -c -k --sequesterRsrc --keepParent "$app_path" \
+            "../FileToolkit-macos-${{ matrix.arch }}.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FileToolkit-macos-${{ matrix.arch }}
+          path: FileToolkit-macos-${{ matrix.arch }}.zip
+          if-no-files-found: error
+
+  # ── Windows ────────────────────────────────────────
+  build-windows:
+    if: >-
+      contains(fromJSON('["macos,windows,linux", "windows", "macos,windows", "windows,linux"]'),
+      github.event_name == 'push' && 'macos,windows,linux' || github.event.inputs.platforms)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: file-toolkit
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "file-toolkit/uv.lock"
+
+      - name: Download FFmpeg
+        shell: pwsh
+        run: |
+          $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
+          $tmp = "$env:RUNNER_TEMP\ffmpeg.zip"
+          Write-Host "Downloading FFmpeg..."
+          Invoke-WebRequest -Uri $url -OutFile $tmp
+          Expand-Archive -Path $tmp -DestinationPath "$env:RUNNER_TEMP\ffmpeg" -Force
+          Copy-Item "$env:RUNNER_TEMP\ffmpeg\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe" `
+            -Destination "assets\bin\ffmpeg.exe" -Force
+          Remove-Item $tmp -Force
+          Write-Host "FFmpeg ready: $(Get-Item assets\bin\ffmpeg.exe).Length bytes"
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras
+          uv pip install "flet-cli==0.84.0"
+
+      - name: Build Windows app
+        run: |
+          flet build windows ^
+            --product-name "File Toolkit" ^
+            --product-version "1.0.0" ^
+            --company-name "FileToolkit" ^
+            --copyright "MIT License" ^
+            --icon assets\icons\app_icon.png
+
+      - name: Zip installer
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path "build\windows" -Filter "*.msix" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($installer) {
+            Compress-Archive -Path $installer.FullName -DestinationPath "..\FileToolkit-windows.zip"
+            Write-Host "Packaged: $($installer.Name)"
+          } else {
+            $exeDir = Get-ChildItem -Path "build\windows" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($exeDir) {
+              Compress-Archive -Path "$($exeDir.FullName)\*" -DestinationPath "..\FileToolkit-windows.zip"
+              Write-Host "Packaged directory: $($exeDir.Name)"
+            } else {
+              Write-Host "Build output:"
+              Get-ChildItem -Path "build\windows" -Recurse -Name
+              exit 1
+            }
+          }
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FileToolkit-windows
+          path: FileToolkit-windows.zip
+          if-no-files-found: error
+
+  # ── Linux ──────────────────────────────────────────
+  build-linux:
+    if: >-
+      contains(fromJSON('["macos,windows,linux", "linux", "macos,linux", "windows,linux"]'),
+      github.event_name == 'push' && 'macos,windows,linux' || github.event.inputs.platforms)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "file-toolkit/uv.lock"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-3-dev libblkid-dev liblzma-dev \
+            clang cmake ninja-build pkg-config \
+            squashfs-tools
+
+      - name: Download FFmpeg
+        run: |
+          wget -q "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" \
+            -O /tmp/ffmpeg.tar.xz
+          mkdir -p /tmp/ffmpeg
+          tar -xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg --strip-components=1
+          cp /tmp/ffmpeg/ffmpeg file-toolkit/assets/bin/ffmpeg
+          chmod +x file-toolkit/assets/bin/ffmpeg
+          echo "FFmpeg ready"
+
+      - name: Install dependencies
+        run: |
+          cd file-toolkit
+          uv sync --all-extras
+          uv pip install "flet-cli==0.84.0"
+
+      - name: Build Linux app
+        run: |
+          cd file-toolkit
+          flet build linux \
+            --product-name "File Toolkit" \
+            --product-version "1.0.0" \
+            --icon assets/icons/app_icon.png
+
+      - name: Zip app bundle
+        run: |
+          cd file-toolkit
+          app_path="$(find build/linux -maxdepth 1 -name '*.AppImage' -print -quit)"
+          if [ -z "$app_path" ]; then
+            echo "No AppImage found, looking for bundle..."
+            find build/linux -maxdepth 3 -print
+            # fallback: zip the whole build/linux directory
+            cd build/linux
+            zip -r ../../FileToolkit-linux.zip .
+          else
+            cp "$app_path" ../../FileToolkit-linux.zip
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FileToolkit-linux
+          path: FileToolkit-linux.zip
+          if-no-files-found: error
+
+  # ── Create Release ─────────────────────────────────
+  release:
+    needs: [build-macos, build-windows, build-linux]
+    if: >-
+      always() &&
+      ((github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
+      || github.event_name == 'push') &&
+      (needs.build-macos.result == 'success' || needs.build-windows.result == 'success' || needs.build-linux.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate version tag
+        id: version
+        run: |
+          echo "tag=v$(date +'%Y.%m.%d')" >> $GITHUB_OUTPUT
+          echo "release_name=FileToolkit $(date +'%Y.%m.%d')" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: false
+
+      - name: Collect release files
+        run: |
+          mkdir -p release
+          find artifacts -name "*.zip" -exec cp {} release/ \;
+          echo "## Release files:" && ls -lh release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.release_name }}
+          body: |
+            **File Toolkit** multi-platform build
+            - Built from: `${{ github.sha }}`
+            - Flutter: 3.41.4 | Python: 3.11
+            - **Downloads:**
+              - 🍎 macOS (Apple Silicon): `FileToolkit-macos-arm64.zip`
+              - 🪟 Windows: `FileToolkit-windows.zip`
+              - 🐧 Linux: `FileToolkit-linux.zip`
+          files: release/*.zip
+          draft: false
+          prerelease: ${{ github.event_name == 'push' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
