@@ -570,7 +570,24 @@ class OcrPage(ft.Column):
 
     def _on_complete(self, result):
         self._progress_container.visible = False
-        text = result.get("text", "") if isinstance(result, dict) else str(result)
+
+        # 从 TaskResult 读取识别文本（存储在输出的 .txt 文件中）
+        from core.models import TaskResult
+        if isinstance(result, TaskResult):
+            if result.failed:
+                text = result.error_message or "识别失败"
+            elif result.output_files:
+                try:
+                    text = result.output_files[0].read_text(encoding="utf-8")
+                except Exception:
+                    text = ""
+            else:
+                text = ""
+        elif isinstance(result, dict):
+            text = result.get("text", "")
+        else:
+            text = str(result)
+
         self._result_text.value = text
         self._result_text.visible = True
         self._result_section.visible = True
