@@ -7,13 +7,9 @@ from pathlib import Path
 
 import flet as ft
 
-from core.media.video import convert_video
-from core.media.audio import extract_audio
-from services import history_service, settings_service
-from services.task_service import run_task
+from services import history_service
 from ui.components.progress_card import ProgressCard
 from ui.components.result_card import ResultCard
-
 
 _FUNC_TABS = [
     {"label": "格式转换", "icon": ft.Icons.SWAP_HORIZ, "key": "convert", "route": "/media/video-convert"},
@@ -456,9 +452,9 @@ class MediaPage(ft.Column):
         self._page.run_task(self._pick_files_async)
 
     async def _pick_files_async(self) -> None:
-        picker = ft.FilePicker()
-        self._page.overlay.append(picker)
-        self._page.update()
+        if not hasattr(self, "_file_picker"):
+            self._file_picker = ft.FilePicker()
+        picker = self._file_picker
         try:
             files = await picker.pick_files(
                 dialog_title="选择音视频文件",
@@ -471,8 +467,6 @@ class MediaPage(ft.Column):
             )
         except RuntimeError:
             files = None
-        finally:
-            self._page.overlay.remove(picker)
         if not files:
             self._page.update()
             return

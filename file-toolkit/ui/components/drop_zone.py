@@ -15,8 +15,8 @@ flet 0.84 breaking change:
     )
     zone.set_page(page)   # 在加入 page 后调用
 """
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import flet as ft
 
@@ -51,6 +51,7 @@ class DropZone(ft.Container):
         self._icon_name = icon
         self._selected_files: list[Path] = []
         self._page_ref: ft.Page | None = None
+        self._picker: ft.FilePicker | None = None
 
         # 内部控件引用
         self._icon_ctrl = ft.Icon(icon, size=48, color=ft.Colors.ON_SURFACE_VARIANT)
@@ -131,9 +132,9 @@ class DropZone(ft.Container):
         if self._page_ref is None:
             return
 
-        picker = ft.FilePicker()
-        self._page_ref.overlay.append(picker)
-        self._page_ref.update()
+        if self._picker is None:
+            self._picker = ft.FilePicker()
+        picker = self._picker
 
         file_type = (
             ft.FilePickerFileType.CUSTOM
@@ -151,9 +152,6 @@ class DropZone(ft.Container):
         except RuntimeError:
             # WSL/无头环境下 FilePicker 超时，静默忽略
             files = None
-        finally:
-            # 清理 overlay
-            self._page_ref.overlay.remove(picker)
 
         if not files:
             self._page_ref.update()

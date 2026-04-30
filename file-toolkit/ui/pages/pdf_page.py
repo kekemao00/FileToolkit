@@ -141,15 +141,15 @@ class PdfPage(ft.Column):
         self.controls = [self._topbar, self._body_container]
         self._apply_responsive_layout(update=False)
 
-        self._prev_on_resized = None
+        self._prev_on_resize = None
 
     def did_mount(self) -> None:
-        self._prev_on_resized = self._page.on_resized
-        self._page.on_resized = self._on_page_resized
+        self._prev_on_resize = self._page.on_resize
+        self._page.on_resize = self._on_page_resized
 
     def will_unmount(self) -> None:
-        if self._page.on_resized == self._on_page_resized:
-            self._page.on_resized = self._prev_on_resized
+        if self._page.on_resize == self._on_page_resized:
+            self._page.on_resize = self._prev_on_resize
 
     def _build_topbar(self) -> ft.Control:
         return ft.Container(
@@ -454,9 +454,9 @@ class PdfPage(ft.Column):
         self._page.run_task(self._pick_files_async)
 
     async def _pick_files_async(self) -> None:
-        picker = ft.FilePicker()
-        self._page.overlay.append(picker)
-        self._page.update()
+        if not hasattr(self, "_file_picker"):
+            self._file_picker = ft.FilePicker()
+        picker = self._file_picker
         try:
             files = await picker.pick_files(
                 dialog_title="选择 PDF 文件",
@@ -467,8 +467,6 @@ class PdfPage(ft.Column):
         except RuntimeError:
             self._page.open(ft.SnackBar(content=ft.Text("无法打开文件选择器，请检查系统环境"), duration=3000))
             files = None
-        finally:
-            self._page.overlay.remove(picker)
         if not files:
             self._page.update()
             return

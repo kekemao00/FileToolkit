@@ -519,9 +519,9 @@ class OcrPage(ft.Column):
         self._page.run_task(self._pick_file_async)
 
     async def _pick_file_async(self) -> None:
-        picker = ft.FilePicker()
-        self._page.overlay.append(picker)
-        self._page.update()
+        if not hasattr(self, "_file_picker"):
+            self._file_picker = ft.FilePicker()
+        picker = self._file_picker
         try:
             files = await picker.pick_files(
                 dialog_title="选择图片或扫描件",
@@ -531,8 +531,6 @@ class OcrPage(ft.Column):
             )
         except RuntimeError:
             files = None
-        finally:
-            self._page.overlay.remove(picker)
         if not files:
             self._page.update()
             return
@@ -565,7 +563,7 @@ class OcrPage(ft.Column):
     def _on_progress(self, current, total, desc):
         if total > 0:
             self._progress_bar.value = current / total
-        self._progress_text.value = desc or f"正在处理..."
+        self._progress_text.value = desc or "正在处理..."
         self._progress_container.update()
 
     def _on_complete(self, result):

@@ -116,15 +116,13 @@ class SettingsPage(ft.Column):
         self._page.run_task(self._pick_output_dir_async)
 
     async def _pick_output_dir_async(self) -> None:
-        picker = ft.FilePicker()
-        self._page.overlay.append(picker)
-        self._page.update()
+        if not hasattr(self, "_file_picker"):
+            self._file_picker = ft.FilePicker()
+        picker = self._file_picker
         try:
             path = await picker.get_directory_path(dialog_title="选择默认输出目录")
         except RuntimeError:
             path = None
-        finally:
-            self._page.overlay.remove(picker)
         if path:
             settings_service.set("default_output_dir", path)
             self._output_dir_text.value = path

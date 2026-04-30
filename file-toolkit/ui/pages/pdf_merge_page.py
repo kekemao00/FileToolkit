@@ -9,9 +9,9 @@ from services import history_service, settings_service
 from services.task_service import run_task
 from ui.components.drop_zone import DropZone
 from ui.components.file_list import FileList
-from ui.components.sub_page_header import SubPageHeader
 from ui.components.progress_card import ProgressCard
 from ui.components.result_card import ResultCard
+from ui.components.sub_page_header import SubPageHeader
 
 
 class PdfMergePage(ft.Column):
@@ -222,15 +222,13 @@ class PdfMergePage(ft.Column):
         self._page.run_task(self._pick_output_dir_async)
 
     async def _pick_output_dir_async(self) -> None:
-        picker = ft.FilePicker()
-        self._page.overlay.append(picker)
-        self._page.update()
+        if not hasattr(self, "_file_picker"):
+            self._file_picker = ft.FilePicker()
+        picker = self._file_picker
         try:
             path = await picker.get_directory_path(dialog_title="选择输出目录")
         except RuntimeError:
             path = None
-        finally:
-            self._page.overlay.remove(picker)
         if path:
             self._output_dir = Path(path)
             self._output_dir_text.value = path

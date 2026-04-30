@@ -7,13 +7,12 @@ from pathlib import Path
 
 import flet as ft
 
-from core.image.converter import convert_image
 from core.image.compressor import compress_images
+from core.image.converter import convert_image
 from services import history_service, settings_service
 from services.task_service import run_task
 from ui.components.progress_card import ProgressCard
 from ui.components.result_card import ResultCard
-
 
 _FUNCTIONS = [
     {"label": "格式转换", "icon": ft.Icons.TRANSFORM, "key": "convert"},
@@ -483,9 +482,9 @@ class ImagePage(ft.Column):
         self._page.run_task(self._pick_files_async)
 
     async def _pick_files_async(self) -> None:
-        picker = ft.FilePicker()
-        self._page.overlay.append(picker)
-        self._page.update()
+        if not hasattr(self, "_file_picker"):
+            self._file_picker = ft.FilePicker()
+        picker = self._file_picker
         try:
             files = await picker.pick_files(
                 dialog_title="选择图片文件",
@@ -497,8 +496,6 @@ class ImagePage(ft.Column):
             )
         except RuntimeError:
             files = None
-        finally:
-            self._page.overlay.remove(picker)
         if not files:
             self._page.update()
             return
@@ -616,9 +613,9 @@ class ImagePage(ft.Column):
         elif func == "compress":
             level_map = {range(0, 34): "high", range(34, 67): "medium", range(67, 101): "low"}
             level = "medium"
-            for r, l in level_map.items():
-                if quality in r:
-                    level = l
+            for range_, level_ in level_map.items():
+                if quality in range_:
+                    level = level_
                     break
             kwargs = {
                 "input_files": self._files,
