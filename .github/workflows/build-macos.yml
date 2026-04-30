@@ -1,4 +1,4 @@
-name: Build macOS Preview
+name: Build macOS Release
 
 on:
   workflow_dispatch:
@@ -12,6 +12,11 @@ on:
           - arm64
           - x86_64
           - universal
+      create_release:
+        description: "Create a GitHub Release after build"
+        required: true
+        default: true
+        type: boolean
   push:
     branches:
       - main
@@ -81,9 +86,40 @@ jobs:
           fi
           ditto -c -k --sequesterRsrc --keepParent "$app_path" "../FileToolkit-macos-${MACOS_ARCH}.zip"
 
+      - name: Generate version tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "tag=v0.0.0-${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
+            echo "release_name=Preview build $(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+          else
+            echo "tag=v$(date +'%Y.%m.%d')-${MACOS_ARCH}" >> $GITHUB_OUTPUT
+            echo "release_name=FileToolkit macOS $(date +'%Y.%m.%d') (${MACOS_ARCH})" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: FileToolkit-macos-${{ env.MACOS_ARCH }}
           path: FileToolkit-macos-${{ env.MACOS_ARCH }}.zip
           if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: >-
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
+          || github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.release_name }}
+          body: |
+            **FileToolkit** macOS build
+            - Architecture: `${{ env.MACOS_ARCH }}`
+            - Built from: `${{ github.sha }}`
+            - Flutter: 3.41.4
+          files: |
+            FileToolkit-macos-${{ env.MACOS_ARCH }}.zip
+          draft: false
+          prerelease: ${{ github.event_name == 'push' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
