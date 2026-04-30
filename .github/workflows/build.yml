@@ -242,22 +242,21 @@ jobs:
             --yes
 
       - name: Zip app bundle
+        working-directory: file-toolkit
         run: |
-          cd file-toolkit
           app_path="$(find build/linux -maxdepth 1 -name '*.AppImage' -print -quit)"
           if [ -z "$app_path" ]; then
             echo "No AppImage found, looking for bundle..."
-            find build/linux -maxdepth 3 -print
             cd build/linux
-            zip -r ../../FileToolkit-linux.zip .
+            zip -r ../../../FileToolkit-linux.zip .
           else
-            cp "$app_path" ../../FileToolkit-linux.zip
+            cp "$app_path" ../FileToolkit-linux.zip
           fi
 
       - uses: actions/upload-artifact@v4
         with:
           name: FileToolkit-linux
-          path: FileToolkit-linux.zip
+          path: file-toolkit/FileToolkit-linux.zip
           if-no-files-found: error
 
   # ── Create Release ─────────────────────────────────
