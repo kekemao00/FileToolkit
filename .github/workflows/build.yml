@@ -150,11 +150,10 @@ jobs:
         shell: pwsh
         run: |
           uv run -- flet build windows `
-            --product-name "File Toolkit" `
-            --product-version "1.0.0" `
-            --company-name "FileToolkit" `
-            --copyright "MIT License" `
-            --icon assets/icons/app_icon.png
+            --product "File Toolkit" `
+            --build-version "1.0.0" `
+            --company "FileToolkit" `
+            --copyright "MIT License"
 
       - name: Zip installer
         shell: pwsh
@@ -225,9 +224,8 @@ jobs:
         run: |
           cd file-toolkit
           uv run -- flet build linux \
-            --product-name "File Toolkit" \
-            --product-version "1.0.0" \
-            --icon assets/icons/app_icon.png
+            --product "File Toolkit" \
+            --build-version "1.0.0"
 
       - name: Zip app bundle
         run: |
