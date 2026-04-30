@@ -82,20 +82,20 @@ class HomePage(ft.Column):
                     ft.Container(
                         content=ft.Row(
                             controls=[
-                                # 搜索框
+                                # 搜索框（功能未实现，视觉禁用）
                                 ft.Container(
                                     content=ft.Row(
                                         controls=[
                                             ft.Icon(
                                                 ft.Icons.SEARCH,
-                                                color="#94a3b8",
+                                                color=ft.Colors.with_opacity(0.4, "#94a3b8"),
                                                 size=15,
                                             ),
                                             ft.Container(
                                                 content=ft.Text(
-                                                    "搜索功能或指令...",
+                                                    "搜索功能即将上线...",
                                                     size=13,
-                                                    color="#94a3b8",
+                                                    color=ft.Colors.with_opacity(0.4, "#94a3b8"),
                                                     font_family="Manrope",
                                                 ),
                                                 padding=ft.padding.only(left=8),
@@ -107,10 +107,11 @@ class HomePage(ft.Column):
                                     ),
                                     width=288,
                                     height=36,
-                                    bgcolor=ft.Colors.with_opacity(0.5, "#f8fafc"),
-                                    border=ft.border.all(1, ft.Colors.with_opacity(0.6, "#e2e8f0")),
+                                    bgcolor=ft.Colors.with_opacity(0.3, "#f8fafc"),
+                                    border=ft.border.all(1, ft.Colors.with_opacity(0.3, "#e2e8f0")),
                                     border_radius=18,
                                     padding=ft.padding.symmetric(horizontal=15),
+                                    tooltip="搜索功能即将上线",
                                 ),
                                 # 通知按钮（功能未实现）
                                 ft.IconButton(
@@ -342,7 +343,7 @@ class HomePage(ft.Column):
                             content=ft.Row(
                                 controls=[
                                     ft.Text(
-                                        "查看全部",
+                                        "查看 PDF 工具",
                                         size=14,
                                         color="#005f98",
                                         font_family="Manrope",
@@ -540,15 +541,17 @@ class HomePage(ft.Column):
                             ),
                             ft.IconButton(
                                 icon=ft.Icons.FILTER_LIST,
-                                icon_color="#455c7f",
+                                icon_color=ft.Colors.with_opacity(0.35, "#455c7f"),
                                 icon_size=18,
-                                tooltip="筛选",
+                                tooltip="筛选功能即将上线",
+                                disabled=True,
                             ),
                             ft.IconButton(
                                 icon=ft.Icons.MORE_VERT,
-                                icon_color="#455c7f",
+                                icon_color=ft.Colors.with_opacity(0.35, "#455c7f"),
                                 icon_size=16,
-                                tooltip="更多",
+                                tooltip="更多操作即将上线",
+                                disabled=True,
                             ),
                         ],
                     ),
@@ -624,12 +627,20 @@ class HomePage(ft.Column):
         def _open_dir(_, d=output_dir):
             if not d:
                 return
-            if sys.platform == "win32":
-                subprocess.Popen(["explorer", d])
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", d])
-            else:
-                subprocess.Popen(["xdg-open", d])
+            try:
+                if sys.platform == "win32":
+                    subprocess.Popen(["explorer", d])
+                elif sys.platform == "darwin":
+                    subprocess.Popen(["open", d])
+                else:
+                    subprocess.Popen(["xdg-open", d])
+            except Exception:
+                self._page.snack_bar = ft.SnackBar(
+                    content=ft.Text("无法打开目录"),
+                    bgcolor="#455c7f",
+                )
+                self._page.snack_bar.open = True
+                self._page.update()
 
         # 进度条（running 状态）
         progress_widget: ft.Control
@@ -751,9 +762,10 @@ class HomePage(ft.Column):
                                 ),
                                 ft.IconButton(
                                     icon=ft.Icons.MORE_VERT,
-                                    icon_color="#455c7f",
+                                    icon_color=ft.Colors.with_opacity(0.35, "#455c7f"),
                                     icon_size=16,
-                                    tooltip="更多",
+                                    tooltip="更多操作即将上线",
+                                    disabled=True,
                                 ),
                             ],
                             spacing=0,
