@@ -28,7 +28,7 @@ class SubPageHeader(ft.Container):
         on_back: callable,
     ) -> None:
         super().__init__(
-            padding=ft.padding.only(left=28, top=24, right=40, bottom=16),
+            padding=ft.padding.only(left=32, top=24, right=32, bottom=16),
             content=ft.Row(
                 controls=[
                     ft.IconButton(
@@ -41,7 +41,7 @@ class SubPageHeader(ft.Container):
                         width=40,
                         height=40,
                         bgcolor=icon_bg,
-                        border_radius=10,
+                        border_radius=12,
                         alignment=ft.Alignment(0, 0),
                     ),
                     ft.Text(

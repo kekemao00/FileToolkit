@@ -90,7 +90,7 @@ class PdfPage(ft.Column):
             bgcolor="#005f98",
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
-                colors=["#005f98", "#2aa7ff"],
+                colors=["#005f98", "#00a3ff"],
             ),
             border_radius=16,
             padding=ft.padding.symmetric(vertical=16),
@@ -117,7 +117,7 @@ class PdfPage(ft.Column):
                     spacing=4,
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                bgcolor="#005f98" if active else "#d5e3ff",
+                bgcolor="#00a3ff" if active else "#d5e3ff",
                 border_radius=12,
                 padding=ft.padding.symmetric(vertical=12, horizontal=20),
                 on_click=lambda _, k=f["key"]: self._select_func(k),
@@ -199,11 +199,11 @@ class PdfPage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             height=80,
-            bgcolor=ft.Colors.with_opacity(0.8, "#ffffff"),
-            blur=ft.Blur(12, 12),
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.5, "#e2e8f0"))),
-            shadow=ft.BoxShadow(blur_radius=1, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1)),
-            padding=ft.padding.only(left=40, right=24),
+            bgcolor="#ffffff",
+            shadow=ft.BoxShadow(
+                blur_radius=2, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1),
+            ),
+            padding=ft.padding.symmetric(horizontal=32),
         )
 
     def _build_main_content(self) -> ft.Control:
@@ -294,7 +294,7 @@ class PdfPage(ft.Column):
             bgcolor="#ffffff",
             border=ft.border.all(2, "#2aa7ff"),
             border_radius=16,
-            padding=ft.padding.symmetric(vertical=40, horizontal=2),
+            padding=ft.padding.symmetric(vertical=37),
             expand=True,
             on_click=self._pick_files,
             on_hover=self._on_drop_zone_hover,
@@ -352,12 +352,9 @@ class PdfPage(ft.Column):
             content=ft.Column(
                 controls=[
                     # 标题
-                    ft.Row(
-                        controls=[
-                            ft.Icon(ft.Icons.SETTINGS, color="#005f98", size=18),
-                            ft.Text("参数设置", size=20, color="#005f98", font_family="Manrope"),
-                        ],
-                        spacing=8,
+                    ft.Text(
+                        "参数设置", size=20, weight=ft.FontWeight.W_500,
+                        color="#005f98", font_family="Manrope",
                     ),
                     # 功能选择
                     self._section("选择功能", ft.Row(
@@ -396,8 +393,8 @@ class PdfPage(ft.Column):
                 expand=True,
             ),
             width=320,
-            bgcolor=ft.Colors.with_opacity(0.7, "#f4f6ff"),
-            blur=ft.Blur(6, 6),
+            bgcolor="#f4f6ff",
+            border_radius=16,
             border=ft.border.only(left=ft.BorderSide(1, "#d5e3ff")),
             padding=ft.padding.all(24),
         )
@@ -420,7 +417,7 @@ class PdfPage(ft.Column):
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor=ft.Colors.with_opacity(0.5, "#ffffff"),
+            bgcolor="#ffffff",
             border_radius=12,
             padding=ft.padding.all(12),
             opacity=0.5,
@@ -431,7 +428,7 @@ class PdfPage(ft.Column):
         self._selected_func = key
         for btn in self._func_btns:
             active = btn.data == key
-            btn.bgcolor = "#005f98" if active else "#d5e3ff"
+            btn.bgcolor = "#00a3ff" if active else "#d5e3ff"
             col = btn.content
             col.controls[0].color = "#ffffff" if active else "#455c7f"
             col.controls[1].color = "#ffffff" if active else "#455c7f"
@@ -500,10 +497,12 @@ class PdfPage(ft.Column):
                     spacing=16,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                bgcolor="#ebf1ff",
+                bgcolor="#ffffff",
                 border_radius=12,
-                padding=ft.padding.all(16),
-                height=80,
+                padding=ft.padding.all(20),
+                shadow=ft.BoxShadow(
+                    blur_radius=2, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1),
+                ),
             )
             self._file_list.controls.append(item)
         row = self._run_btn.content
@@ -592,6 +591,7 @@ class PdfPage(ft.Column):
         self._is_narrow = narrow
         if narrow:
             self._param_panel.width = None
+            self._param_panel.border_radius = 0
             self._param_panel.border = ft.border.only(top=ft.BorderSide(1, "#d5e3ff"))
             new_body = ft.Column(
                 controls=[self._main_content, self._param_panel],
@@ -601,6 +601,7 @@ class PdfPage(ft.Column):
             )
         else:
             self._param_panel.width = 320
+            self._param_panel.border_radius = 16
             self._param_panel.border = ft.border.only(left=ft.BorderSide(1, "#d5e3ff"))
             new_body = ft.Row(
                 controls=[self._main_content, self._param_panel],

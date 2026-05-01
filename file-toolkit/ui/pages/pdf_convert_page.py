@@ -107,7 +107,7 @@ class PdfConvertPage(ft.Column):
 
         return ft.Container(
             content=ft.Column(controls=sections, spacing=16),
-            padding=ft.padding.symmetric(horizontal=40, vertical=8),
+            padding=ft.padding.all(32),
         )
 
     def _section(self, title: str, content: ft.Control) -> ft.Control:
@@ -119,8 +119,8 @@ class PdfConvertPage(ft.Column):
                 ],
                 spacing=10,
             ),
-            bgcolor="#ffffff", border_radius=16, padding=ft.padding.all(20),
-            shadow=ft.BoxShadow(blur_radius=1, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1)),
+            bgcolor="#ffffff", border_radius=12, padding=ft.padding.all(20),
+            shadow=ft.BoxShadow(blur_radius=2, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1)),
         )
 
     def _build_run_button(self) -> ft.Control:
@@ -133,7 +133,7 @@ class PdfConvertPage(ft.Column):
                 spacing=8, alignment=ft.MainAxisAlignment.CENTER,
             ),
             bgcolor="#005f98",
-            gradient=ft.LinearGradient(begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0), colors=["#005f98", "#2aa7ff"]),
+            gradient=ft.LinearGradient(begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0), colors=["#005f98", "#00a3ff"]),
             border_radius=16, padding=ft.padding.symmetric(vertical=14),
             shadow=ft.BoxShadow(blur_radius=20, spread_radius=-5, color=ft.Colors.with_opacity(0.2, "#005f98"), offset=ft.Offset(0, 10)),
             on_click=self._start_task, ink=True,

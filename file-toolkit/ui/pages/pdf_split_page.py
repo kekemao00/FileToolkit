@@ -140,7 +140,7 @@ class PdfSplitPage(ft.Column):
                 ],
                 spacing=16,
             ),
-            padding=ft.padding.symmetric(horizontal=40, vertical=8),
+            padding=ft.padding.all(32),
         )
 
     def _section(self, title: str, content: ft.Control) -> ft.Control:
@@ -156,10 +156,10 @@ class PdfSplitPage(ft.Column):
                 spacing=10,
             ),
             bgcolor="#ffffff",
-            border_radius=16,
+            border_radius=12,
             padding=ft.padding.all(20),
             shadow=ft.BoxShadow(
-                blur_radius=1,
+                blur_radius=2,
                 color=ft.Colors.with_opacity(0.05, "#000000"),
                 offset=ft.Offset(0, 1),
             ),
@@ -181,7 +181,7 @@ class PdfSplitPage(ft.Column):
             bgcolor="#005f98",
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
-                colors=["#005f98", "#2aa7ff"],
+                colors=["#005f98", "#00a3ff"],
             ),
             border_radius=16,
             padding=ft.padding.symmetric(vertical=14),
