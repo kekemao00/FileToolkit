@@ -224,6 +224,7 @@ class PdfMergePage(ft.Column):
     async def _pick_output_dir_async(self) -> None:
         if not hasattr(self, "_file_picker"):
             self._file_picker = ft.FilePicker()
+            self._page.overlay.append(self._file_picker)
         picker = self._file_picker
         try:
             path = await picker.get_directory_path(dialog_title="选择输出目录")

@@ -134,6 +134,7 @@ class DropZone(ft.Container):
 
         if self._picker is None:
             self._picker = ft.FilePicker()
+            self._page_ref.overlay.append(self._picker)
         picker = self._picker
 
         file_type = (
