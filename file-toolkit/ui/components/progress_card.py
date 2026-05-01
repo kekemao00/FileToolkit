@@ -70,9 +70,12 @@ class ProgressCard(ft.Container):
                 ],
                 spacing=10,
             ),
-            bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
-            border_radius=ft.border_radius.all(16),
+            bgcolor="#ffffff",
+            border_radius=ft.border_radius.all(12),
             padding=ft.padding.all(20),
+            shadow=ft.BoxShadow(
+                blur_radius=2, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1),
+            ),
         )
 
     # ── 公开 API ─────────────────────────────────────────────────────

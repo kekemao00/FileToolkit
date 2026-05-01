@@ -120,9 +120,12 @@ class FileList(ft.Column):
                 spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
-            border_radius=ft.border_radius.all(10),
+            bgcolor="#ffffff",
+            border_radius=ft.border_radius.all(12),
             padding=ft.padding.symmetric(horizontal=12, vertical=8),
+            shadow=ft.BoxShadow(
+                blur_radius=2, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1),
+            ),
         )
 
     def _move(self, idx: int, direction: int) -> None:
