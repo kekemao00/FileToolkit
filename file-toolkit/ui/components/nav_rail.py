@@ -1,16 +1,18 @@
 """
-侧边导航栏 — 基于 Figma 设计稿
+侧边导航栏 — 1:1 还原 Figma 设计稿
 
 设计规格：
   宽度：256px（固定）
-  背景：渐变 #f8fafc → #f1f5f9，右侧 1px border #e2e8f0
+  背景：#FFFFFF，阴影 offset=(0,20) blur=25 spread=-5 rgba(30,58,138,0.05)
+  内边距：16px
   Logo 区：48px 图标 + 标题 + 副标题
-  导航项：44px 高，激活态背景 rgba(0,163,255,0.08)，激活色 #00a3ff
-  底部：用户信息区
+  导航项：44px 高，激活态 bg=#00A3FF 实色，r=12，文字白色，图标白色
+  未激活态：无背景，r=12，文字 #475569，图标 #475569
+  底部用户区：分隔线 + 用户信息
 """
 import flet as ft
 
-# 导航项配置：(label, route, icon_name)
+# 导航项配置：(label, route, icon_outline, icon_filled)
 _NAV_ITEMS = [
     ("首页",      "/",        ft.Icons.HOME_OUTLINED,          ft.Icons.HOME),
     ("AI 智能任务", "/ai",    ft.Icons.AUTO_AWESOME_OUTLINED,  ft.Icons.AUTO_AWESOME),
@@ -21,15 +23,6 @@ _NAV_ITEMS = [
     ("OCR识别",   "/ocr",     ft.Icons.DOCUMENT_SCANNER_OUTLINED, ft.Icons.DOCUMENT_SCANNER),
     ("最近操作",  "/history", ft.Icons.HISTORY,                 ft.Icons.HISTORY),
 ]
-
-# 不在主导航中但需要 sync 的路由前缀映射
-_ROUTE_PREFIX_MAP = {
-    "/pdf":     2,
-    "/image":   3,
-    "/media":   4,
-    "/archive": 5,
-    "/ocr":     6,
-}
 
 
 class NavRail(ft.Container):
@@ -46,17 +39,13 @@ class NavRail(ft.Container):
         super().__init__(
             width=256,
             expand_loose=True,
-            gradient=ft.LinearGradient(
-                begin=ft.Alignment(0, -1),
-                end=ft.Alignment(0, 1),
-                colors=["#f8fafc", "#f1f5f9"],
-            ),
-            border=ft.border.only(right=ft.BorderSide(1, "#e2e8f0")),
+            bgcolor="#FFFFFF",
+            border=ft.border.only(right=ft.BorderSide(1, "#E2E8F0")),
             shadow=ft.BoxShadow(
-                spread_radius=0,
+                spread_radius=-5,
                 blur_radius=25,
-                color=ft.Colors.with_opacity(0.05, "#1e3a8a"),
-                offset=ft.Offset(20, 0),
+                color=ft.Colors.with_opacity(0.05, "#1E3A8A"),
+                offset=ft.Offset(0, 20),
             ),
             content=ft.Column(
                 controls=[
@@ -67,7 +56,7 @@ class NavRail(ft.Container):
                 spacing=0,
                 expand=True,
             ),
-            padding=ft.padding.symmetric(horizontal=16, vertical=16),
+            padding=16,
         )
 
     # ── Logo 区 ──────────────────────────────────────────────────────────
@@ -78,13 +67,13 @@ class NavRail(ft.Container):
                     ft.Container(
                         content=ft.Icon(
                             ft.Icons.FOLDER_SPECIAL,
-                            color="#005f98",
+                            color="#005F98",
                             size=28,
                         ),
                         width=48,
                         height=48,
                         border_radius=8,
-                        bgcolor="#ffffff",
+                        bgcolor="#FFFFFF",
                         shadow=ft.BoxShadow(
                             blur_radius=2,
                             color=ft.Colors.with_opacity(0.05, "#000000"),
@@ -97,14 +86,15 @@ class NavRail(ft.Container):
                                 "文件全能王",
                                 size=18,
                                 weight=ft.FontWeight.W_600,
-                                color="#001d33",
-                                font_family="Manrope",
+                                color="#001D33",
+                                font_family="42dot Sans",
                             ),
                             ft.Text(
                                 "一个软件，搞定所有文件",
                                 size=11,
-                                color=ft.Colors.with_opacity(0.7, "#001d33"),
-                                font_family="Manrope",
+                                color="#001D33",
+                                font_family="42dot Sans",
+                                opacity=0.7,
                             ),
                         ],
                         spacing=2,
@@ -145,21 +135,21 @@ class NavRail(ft.Container):
                 controls=[
                     ft.Icon(
                         selected_icon if is_selected else icon,
-                        color="#00a3ff" if is_selected else "#475569",
+                        color="#FFFFFF" if is_selected else "#475569",
                         size=18,
                     ),
                     ft.Text(
                         label,
                         size=14,
-                        color="#00a3ff" if is_selected else "#475569",
-                        font_family="Manrope",
+                        color="#FFFFFF" if is_selected else "#475569",
+                        font_family="42dot Sans",
                         weight=ft.FontWeight.W_500,
                     ),
                 ],
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor=ft.Colors.with_opacity(0.08, "#00a3ff") if is_selected else None,
+            bgcolor="#00A3FF" if is_selected else None,
             border_radius=12,
             padding=ft.padding.symmetric(horizontal=16, vertical=12),
             on_click=lambda e, r=route: self._on_navigate(r),
@@ -173,22 +163,22 @@ class NavRail(ft.Container):
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Divider(height=1, color=ft.Colors.with_opacity(0.5, "#e2e8f0")),
+                    ft.Divider(height=1, color="#E2E8F0"),
                     ft.Container(
                         content=ft.Row(
                             controls=[
                                 ft.Container(
                                     content=ft.Icon(
                                         ft.Icons.PERSON,
-                                        color="#ffffff",
+                                        color="#FFFFFF",
                                         size=20,
                                     ),
                                     width=40,
                                     height=40,
                                     border_radius=20,
-                                    bgcolor="#005f98",
+                                    bgcolor="#005F98",
                                     alignment=ft.Alignment(0, 0),
-                                    border=ft.border.all(2, "#ffffff"),
+                                    border=ft.border.all(2, "#FFFFFF"),
                                     shadow=ft.BoxShadow(
                                         blur_radius=2,
                                         color=ft.Colors.with_opacity(0.05, "#000000"),
@@ -200,14 +190,14 @@ class NavRail(ft.Container):
                                             "本地用户",
                                             size=14,
                                             weight=ft.FontWeight.BOLD,
-                                            color="#0f172a",
-                                            font_family="Manrope",
+                                            color="#0F172A",
+                                            font_family="42dot Sans",
                                         ),
                                         ft.Text(
                                             "免费版",
                                             size=11,
-                                            color="#64748b",
-                                            font_family="Manrope",
+                                            color="#64748B",
+                                            font_family="42dot Sans",
                                         ),
                                     ],
                                     spacing=2,
@@ -216,7 +206,7 @@ class NavRail(ft.Container):
                                 ),
                                 ft.Icon(
                                     ft.Icons.CHEVRON_RIGHT,
-                                    color="#64748b",
+                                    color="#64748B",
                                     size=16,
                                 ),
                             ],
@@ -265,6 +255,6 @@ class NavRail(ft.Container):
             _, _, icon, sel_icon = _NAV_ITEMS[new_index]
             row: ft.Row = new_item.content
             row.controls[0].name = sel_icon
-            row.controls[0].color = "#00a3ff"
-            row.controls[1].color = "#00a3ff"
-            new_item.bgcolor = ft.Colors.with_opacity(0.08, "#00a3ff")
+            row.controls[0].color = "#FFFFFF"
+            row.controls[1].color = "#FFFFFF"
+            new_item.bgcolor = "#00A3FF"
