@@ -2,7 +2,7 @@
 
 
 
-> 你的主要职责是负责review，将建议输出，不直接修改代码
+> 你的主要职责是负责开发，直接修改代码并提交
 
 ## Project Structure & Module Organization
 

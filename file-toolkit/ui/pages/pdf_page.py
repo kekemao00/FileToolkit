@@ -550,7 +550,9 @@ class PdfPage(ft.Column):
                 allow_multiple=True,
             )
         except RuntimeError:
-            self._page.open(ft.SnackBar(content=ft.Text("无法打开文件选择器，请检查系统环境"), duration=3000))
+            self._page.snack_bar = ft.SnackBar(content=ft.Text("无法打开文件选择器，请检查系统环境"), duration=3000)
+            self._page.snack_bar.open = True
+            self._page.update()
             files = None
         if not files:
             self._page.update()
@@ -617,7 +619,9 @@ class PdfPage(ft.Column):
 
     def _start_task(self, _) -> None:
         if not self._files:
-            self._page.open(ft.SnackBar(content=ft.Text("请先选择文件"), duration=2000))
+            self._page.snack_bar = ft.SnackBar(content=ft.Text("请先选择文件"), duration=2000)
+            self._page.snack_bar.open = True
+            self._page.update()
             return
 
         out_dir = settings_service.resolve_output_dir(self._files[0])
