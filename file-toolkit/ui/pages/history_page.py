@@ -100,8 +100,8 @@ class HistoryPage(ft.Column):
             visible=False,
         )
 
-        # ── 文件选择器（CSV 导出目录）──
-        self._file_picker = ft.FilePicker()
+        # ── 文件选择器（CSV 导出目录）：挂载后再创建并加入 page.overlay ──
+        self._file_picker: ft.FilePicker | None = None
 
         # ── 组装 ──
         self._topbar = self._build_topbar()
@@ -109,10 +109,16 @@ class HistoryPage(ft.Column):
 
     # ── 生命周期 ──────────────────────────────────────────────
     def did_mount(self) -> None:
-        if self._file_picker not in self._page.overlay:
-            self._page.overlay.append(self._file_picker)
-            self._page.update()
+        self._file_picker = ft.FilePicker()
+        self._page.overlay.append(self._file_picker)
+        self._page.update()
         self._reload_from_service()
+
+    def will_unmount(self) -> None:
+        picker = self._file_picker
+        if picker is not None and picker in self._page.overlay:
+            self._page.overlay.remove(picker)
+        self._file_picker = None
 
     # ── 统计值文本工厂 ────────────────────────────────────────
     def _make_stat_value(self, text: str, color: str) -> ft.Text:
@@ -872,8 +878,11 @@ class HistoryPage(ft.Column):
         self._page.run_task(self._export_history_async)
 
     async def _export_history_async(self) -> None:
+        picker = self._file_picker
+        if picker is None or picker not in self._page.overlay:
+            return
         try:
-            dir_path = await self._file_picker.get_directory_path(
+            dir_path = await picker.get_directory_path(
                 dialog_title="选择 CSV 导出目录",
             )
         except RuntimeError:
