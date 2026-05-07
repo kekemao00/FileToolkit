@@ -11,45 +11,45 @@ import flet as ft
 
 from services import history_service
 
-# 工具卡片配置：(title, subtitle, icon, icon_bg, badge1, badge2, badge1_bg, badge2_bg, route)
+# 工具卡片配置：(title, subtitle, icon, icon_color, bar_color, badge1, badge2, route)
 _TOOL_CARDS = [
     (
-        "PDF工具", "合并、拆分或压缩\nPDF 文档",
-        ft.Icons.PICTURE_AS_PDF, "#fef2f2",
-        "PDF", "DOC", "#fee2e2", "#dbeafe",
+        "PDF工具", "合并、拆分或压缩 PDF 文档",
+        ft.Icons.PICTURE_AS_PDF, "#005F98", "#005F98",
+        "PDF", "DOC",
         "/pdf",
     ),
     (
-        "图片工具", "无损压缩、格式转换与\n裁剪",
-        ft.Icons.IMAGE, "#f0fdf4",
-        "PNG", "JPG", "#dcfce7", "#ffedd5",
+        "图片工具", "无损压缩、格式转换与裁剪",
+        ft.Icons.IMAGE, "#059669", "#059669",
+        "PNG", "JPG",
         "/image",
     ),
     (
         "音视频工具", "转码、提取音频或剪辑",
-        ft.Icons.MOVIE, "#faf5ff",
-        "MP4", "GIF", "#f3e8ff", "#fef9c3",
+        ft.Icons.MOVIE, "#7C3AED", "#7C3AED",
+        "MP4", "GIF",
         "/media",
     ),
     (
-        "压缩解压", "极速打包与安全解压文\n件",
-        ft.Icons.FOLDER_ZIP, "#eff6ff",
-        "ZIP", "7Z", "#dbeafe", "#f1f5f9",
+        "压缩解压", "极速打包与安全解压文件",
+        ft.Icons.FOLDER_ZIP, "#D97706", "#D97706",
+        "ZIP", "7Z",
         "/archive",
     ),
     (
-        "OCR识别", "从图像提取可编辑的文\n本",
-        ft.Icons.DOCUMENT_SCANNER, "#ecfeff",
-        "TXT", "OCR", "#cffafe", "#d1fae5",
+        "OCR识别", "从图像提取可编辑的文本",
+        ft.Icons.DOCUMENT_SCANNER, "#DC2626", "#DC2626",
+        "TXT", "OCR",
         "/ocr",
     ),
 ]
 
 _STATUS_COLORS = {
-    "success":   ("#d1fae5", "#047857"),
-    "failed":    ("#fee2e2", "#b91c1c"),
-    "cancelled": ("#fef9c3", "#92400e"),
-    "running":   ("#dee9ff", "#005f98"),
+    "success":   ("#047857", "#ffffff"),
+    "failed":    ("#b91c1c", "#ffffff"),
+    "cancelled": ("#E2E8F0", "#455C7F"),
+    "running":   ("#005F98", "#ffffff"),
 }
 
 _STATUS_LABELS = {
@@ -216,55 +216,54 @@ class HomePage(ft.Column):
                                 ft.Column(
                                     controls=[
                                         ft.Text(
-                                            "一个软件，",
+                                            "文件全能王",
                                             size=48,
-                                            weight=ft.FontWeight.W_500,
-                                            color="#162f50",
+                                            weight=ft.FontWeight.BOLD,
+                                            color="#162F50",
                                             font_family="42dot Sans",
-                                            height=1.0,
+                                            height=1.1,
                                         ),
                                         ft.Text(
-                                            "搞定所有文件",
+                                            "一个软件，搞定所有文件",
                                             size=48,
                                             weight=ft.FontWeight.W_500,
-                                            color="#005f98",
+                                            color="#005F98",
                                             font_family="42dot Sans",
                                             italic=True,
-                                            height=1.0,
+                                            height=1.1,
                                         ),
                                     ],
-                                    spacing=0,
+                                    spacing=4,
                                     tight=True,
                                 ),
                                 ft.Text(
                                     "简单高效的工具集，一站式解决您的 PDF 转换、图像优化及媒体处理需求。",
                                     size=18,
-                                    color="#455c7f",
+                                    color="#455C7F",
                                     font_family="42dot Sans",
                                     max_lines=2,
                                 ),
                                 ft.Row(
                                     controls=[
                                         ft.ElevatedButton(
-                                            "快速开始",
+                                            "开始处理",
                                             style=ft.ButtonStyle(
-                                                bgcolor="#005f98",
-                                                color="#ecf3ff",
+                                                bgcolor="#005F98",
+                                                color="#ffffff",
                                                 shape=ft.RoundedRectangleBorder(radius=12),
-                                                padding=ft.padding.symmetric(horizontal=32, vertical=12),
-                                                shadow_color=ft.Colors.with_opacity(0.2, "#005f98"),
+                                                padding=ft.padding.symmetric(horizontal=32, vertical=14),
+                                                shadow_color=ft.Colors.with_opacity(0.2, "#005F98"),
                                                 elevation={"": 4, "hovered": 8},
                                             ),
                                             on_click=lambda e: self._page.go("/pdf"),
                                         ),
-                                        ft.ElevatedButton(
+                                        ft.OutlinedButton(
                                             "了解更多",
                                             style=ft.ButtonStyle(
-                                                bgcolor="#cbdeff",
-                                                color="#005f98",
+                                                color="#005F98",
+                                                side=ft.BorderSide(1.5, "#005F98"),
                                                 shape=ft.RoundedRectangleBorder(radius=12),
-                                                padding=ft.padding.symmetric(horizontal=32, vertical=12),
-                                                elevation={"": 0},
+                                                padding=ft.padding.symmetric(horizontal=32, vertical=14),
                                             ),
                                             on_click=lambda e: self._page.go("/pdf"),
                                         ),
@@ -272,7 +271,7 @@ class HomePage(ft.Column):
                                     spacing=16,
                                 ),
                             ],
-                            spacing=16,
+                            spacing=20,
                         ),
                         expand=True,
                     ),
@@ -321,7 +320,7 @@ class HomePage(ft.Column):
                 self._build_tool_card(*card)
                 for card in _TOOL_CARDS
             ],
-            spacing=24,
+            spacing=20,
         )
         return ft.Column(
             controls=[
@@ -367,96 +366,108 @@ class HomePage(ft.Column):
         title: str,
         subtitle: str,
         icon: str,
-        icon_bg: str,
+        icon_color: str,
+        bar_color: str,
         badge1: str,
         badge2: str,
-        badge1_bg: str,
-        badge2_bg: str,
         route: str,
     ) -> ft.Control:
         return ft.Container(
-            content=ft.Column(
+            content=ft.Row(
                 controls=[
-                    # 图标
+                    # 左侧彩色竖条
                     ft.Container(
-                        content=ft.Icon(icon, color="#162f50", size=25),
-                        width=56,
-                        height=56,
-                        bgcolor=icon_bg,
-                        border_radius=12,
-                        alignment=ft.Alignment(0, 0),
-                    ),
-                    # 标题
-                    ft.Container(
-                        content=ft.Text(
-                            title,
-                            size=16,
-                            color="#162f50",
-                            font_family="42dot Sans",
-                            weight=ft.FontWeight.W_500,
+                        width=4,
+                        bgcolor=bar_color,
+                        border_radius=ft.border_radius.only(
+                            top_left=2, bottom_left=2,
                         ),
-                        padding=ft.padding.only(top=20),
+                        expand=False,
                     ),
-                    # 副标题
-                    ft.Text(
-                        subtitle,
-                        size=12,
-                        color="#455c7f",
-                        font_family="42dot Sans",
-                        max_lines=2,
-                    ),
-                    # 格式徽章
+                    # 内容区
                     ft.Container(
-                        content=ft.Row(
+                        content=ft.Column(
                             controls=[
+                                # 图标行
                                 ft.Container(
-                                    content=ft.Text(
-                                        badge1,
-                                        size=8,
-                                        color="#162f50",
-                                        text_align=ft.TextAlign.CENTER,
-                                        font_family="42dot Sans",
-                                    ),
-                                    width=24,
-                                    height=24,
-                                    bgcolor=badge1_bg,
-                                    border_radius=12,
-                                    border=ft.border.all(2, "#ffffff"),
+                                    content=ft.Icon(icon, color=icon_color, size=28),
+                                    width=44,
+                                    height=44,
+                                    bgcolor=ft.Colors.with_opacity(0.1, icon_color),
+                                    border_radius=10,
                                     alignment=ft.Alignment(0, 0),
                                 ),
-                                ft.Container(
-                                    content=ft.Text(
-                                        badge2,
-                                        size=8,
-                                        color="#162f50",
-                                        text_align=ft.TextAlign.CENTER,
-                                        font_family="42dot Sans",
-                                    ),
-                                    width=24,
-                                    height=24,
-                                    bgcolor=badge2_bg,
-                                    border_radius=12,
-                                    border=ft.border.all(2, "#ffffff"),
-                                    alignment=ft.Alignment(0, 0),
-                                    margin=ft.margin.only(left=-8),
+                                # 标题
+                                ft.Text(
+                                    title,
+                                    size=15,
+                                    color="#162F50",
+                                    font_family="42dot Sans",
+                                    weight=ft.FontWeight.W_500,
+                                ),
+                                # 副标题
+                                ft.Text(
+                                    subtitle,
+                                    size=12,
+                                    color="#455C7F",
+                                    font_family="42dot Sans",
+                                    max_lines=2,
+                                    expand=True,
+                                ),
+                                # 格式徽章（右下角）
+                                ft.Row(
+                                    controls=[
+                                        ft.Container(expand=True),
+                                        ft.Container(
+                                            content=ft.Text(
+                                                badge1,
+                                                size=9,
+                                                color=icon_color,
+                                                text_align=ft.TextAlign.CENTER,
+                                                font_family="42dot Sans",
+                                                weight=ft.FontWeight.W_500,
+                                            ),
+                                            bgcolor=ft.Colors.with_opacity(0.12, icon_color),
+                                            border_radius=6,
+                                            padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                                        ),
+                                        ft.Container(
+                                            content=ft.Text(
+                                                badge2,
+                                                size=9,
+                                                color="#455C7F",
+                                                text_align=ft.TextAlign.CENTER,
+                                                font_family="42dot Sans",
+                                                weight=ft.FontWeight.W_500,
+                                            ),
+                                            bgcolor="#F1F5F9",
+                                            border_radius=6,
+                                            padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                                        ),
+                                    ],
+                                    spacing=4,
                                 ),
                             ],
-                            spacing=0,
+                            spacing=8,
+                            expand=True,
                         ),
-                        padding=ft.padding.only(top=12),
+                        padding=ft.padding.all(16),
+                        expand=True,
                     ),
                 ],
-                spacing=4,
+                spacing=0,
+                vertical_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
-            bgcolor="#ffffff",
+            bgcolor="#FFFFFF",
             border_radius=16,
-            padding=ft.padding.all(24),
             shadow=ft.BoxShadow(
-                blur_radius=1,
-                color=ft.Colors.with_opacity(0.05, "#000000"),
-                offset=ft.Offset(0, 1),
+                blur_radius=8,
+                color=ft.Colors.with_opacity(0.06, "#000000"),
+                offset=ft.Offset(0, 2),
             ),
             expand=True,
+            height=160,
+            clip_behavior=ft.ClipBehavior.HARD_EDGE,
             ink=True,
             on_click=lambda e, r=route: self._page.go(r),
         )
@@ -498,8 +509,9 @@ class HomePage(ft.Column):
                 ],
                 spacing=0,
             ),
-            border=ft.border.only(bottom=ft.BorderSide(1, "#dee9ff")),
-            padding=ft.padding.only(bottom=16),
+            bgcolor="#F8FAFC",
+            border_radius=ft.border_radius.only(top_left=8, top_right=8),
+            padding=ft.padding.symmetric(horizontal=16, vertical=12),
         )
 
         view_all_btn = ft.Container(
@@ -601,7 +613,7 @@ class HomePage(ft.Column):
 
     def _build_history_row(self, task: dict) -> ft.Control:
         status = task.get("status", "success")
-        status_bg, status_color = _STATUS_COLORS.get(status, ("#dee9ff", "#005f98"))
+        status_pill_bg, status_pill_color = _STATUS_COLORS.get(status, ("#E2E8F0", "#455C7F"))
         status_label = _STATUS_LABELS.get(status, status)
 
         module = task.get("module", "").upper()
@@ -645,8 +657,8 @@ class HomePage(ft.Column):
                 controls=[
                     ft.Container(
                         content=ft.Container(
-                            bgcolor="#005f98",
-                            width=42,  # 约 66%
+                            bgcolor="#005F98",
+                            width=42,
                         ),
                         width=64,
                         height=4,
@@ -654,24 +666,24 @@ class HomePage(ft.Column):
                         border_radius=2,
                         clip_behavior=ft.ClipBehavior.HARD_EDGE,
                     ),
-                    ft.Text("68%", size=10, color="#005f98", font_family="42dot Sans"),
+                    ft.Text("68%", size=10, color="#005F98", font_family="42dot Sans"),
                 ],
                 spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             )
         else:
+            status_pill_bg, status_pill_color = _STATUS_COLORS.get(status, ("#E2E8F0", "#455C7F"))
             progress_widget = ft.Container(
-                content=ft.Container(
-                    content=ft.Text(
-                        status_label,
-                        size=10,
-                        color=status_color,
-                        font_family="42dot Sans",
-                    ),
-                    bgcolor=status_bg,
-                    border_radius=9999,
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                content=ft.Text(
+                    status_label,
+                    size=10,
+                    color=status_pill_color,
+                    font_family="42dot Sans",
+                    weight=ft.FontWeight.W_500,
                 ),
+                bgcolor=status_pill_bg,
+                border_radius=9999,
+                padding=ft.padding.symmetric(horizontal=10, vertical=4),
             )
 
         return ft.Container(
