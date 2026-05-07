@@ -30,12 +30,12 @@ def main(page: ft.Page) -> None:
     page.window.height = 800
     page.window.min_width = 1024
     page.window.min_height = 640
-    page.bgcolor = "#f4f6ff"
+    page.bgcolor = "#F4F6FF"
 
-    # 字体注册（Manrope + Inter，从 assets/fonts/ 加载）
+    # 字体注册（42dot Sans + Plus Jakarta Sans，从 assets/fonts/ 加载）
     page.fonts = {
-        "Manrope": "fonts/Manrope-VariableFont_wght.ttf",
-        "Inter": "fonts/Inter-VariableFont_opsz,wght.ttf",
+        "42dot Sans": "fonts/42dotSans-VariableFont_wght.ttf",
+        "Plus Jakarta Sans": "fonts/PlusJakartaSans-VariableFont_wght.ttf",
     }
 
     # 主题配置（从设置读取持久化的模式）
