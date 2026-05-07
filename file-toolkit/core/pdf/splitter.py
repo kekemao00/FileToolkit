@@ -54,12 +54,29 @@ def split_pdf(
                 )
             for n, rng in enumerate(page_ranges, start=1):
                 parts = rng.strip().split("-")
-                if len(parts) != 2:
+                if len(parts) == 1:
+                    # 单页码，如 "8" 表示只取第 8 页
+                    try:
+                        page_num = int(parts[0])
+                    except ValueError:
+                        return TaskResult(
+                            status=TaskStatus.FAILED,
+                            error_message=f"范围格式错误：{rng}，应为 '起始-结束'（如 1-5）或单页码（如 8）",
+                        )
+                    s, e = page_num - 1, page_num
+                elif len(parts) == 2:
+                    try:
+                        s, e = int(parts[0]) - 1, int(parts[1])
+                    except ValueError:
+                        return TaskResult(
+                            status=TaskStatus.FAILED,
+                            error_message=f"范围格式错误：{rng}，应为 '起始-结束'（如 1-5）或单页码（如 8）",
+                        )
+                else:
                     return TaskResult(
                         status=TaskStatus.FAILED,
-                        error_message=f"范围格式错误：{rng}，应为 '起始-结束'（如 1-5）",
+                        error_message=f"范围格式错误：{rng}，应为 '起始-结束'（如 1-5）或单页码（如 8）",
                     )
-                s, e = int(parts[0]) - 1, int(parts[1])
                 if s < 0 or e > total_pages or s >= e:
                     return TaskResult(
                         status=TaskStatus.FAILED,
