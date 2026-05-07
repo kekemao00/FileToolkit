@@ -1,6 +1,6 @@
 # File Toolkit — 开发 TODO & 进度追踪
 
-> 最后更新：2026-05-07 12:35
+> 最后更新：2026-05-07 14:10
 > Figma 设计稿：https://www.figma.com/design/KexCp8dbqlHhT2O2Po1u9A/
 > 工作流：屎蛋儿(调度) → CC(开发) → Codex(Review)
 
@@ -62,16 +62,14 @@
 - [x] 顶部栏 (topbar) — 搜索框 pill 形 r=9999, 高 54px
 - Commits: `915888b` `0f523fd` `fd7af61` `9346aab` `14a635f`
 
-### Phase 2 — 首页 🔄 (Codex Review 后修复中)
+### Phase 2 — 首页 ✅
 - [x] 初版完成 — Commit `6fa39e1`
-- [ ] 🔴 Hero 内容：应为单行 "一个软件，搞定所有文件" (48px Medium #162F50)
-- [ ] 🔴 CTA 按钮："快速开始" (#ECF3FF) + "了解更多" (#CBDEFF 填充)
-- [ ] 🔴 工具卡片：改为垂直 235px 卡片 + 56px 柔和色图标块 + 24px 圆形徽章
-- [ ] 🟡 状态标签：改为浅色药丸 (#D1FAE5/#047857)
-- [ ] 🟡 历史行字体：文件名/操作改用 Plus Jakarta Sans
-- Codex Review: 176,691 tokens, 5 issues found
+- [x] Codex Review Round 1 — 5 issues found
+- [x] CC 修复 — Commit `b3612bb`
+- [x] Codex Review Round 2 — PASS
+- Changes: 208 lines in home_page.py
 
-### Phase 3 — PDF 模块（核心页面，最复杂）
+### Phase 3 — PDF 模块 🔄
 - [ ] PDF 工具列表页（功能卡片布局）
 - [ ] PDF 合并页面（拖拽区+文件列表+参数面板）
 - [ ] 正在处理状态
