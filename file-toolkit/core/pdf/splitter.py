@@ -25,7 +25,7 @@ def split_pdf(
         output_dir: 输出目录（不存在则自动创建）
         mode: pages（按固定页数）/ range（按页码范围）/ each（每页单独）
         pages_per_file: mode=pages 时每份页数
-        page_ranges: mode=range 时页面范围列表，如 ["1-5", "6-10"]（1-based）
+        page_ranges: mode=range 时页面范围列表，如 ["1-5", "8"]（1-based）
         filename_template: 支持 {stem} {n} {start} {end} 占位符
         progress_callback: 可选进度回调 (current, total, desc)
     """
@@ -53,30 +53,40 @@ def split_pdf(
                     error_message="mode=range 时须提供 page_ranges",
                 )
             for n, rng in enumerate(page_ranges, start=1):
-                parts = rng.strip().split("-")
-                if len(parts) == 1:
+                range_text = rng.strip()
+                if "-" not in range_text:
                     # 单页码，如 "8" 表示只取第 8 页
                     try:
-                        page_num = int(parts[0])
+                        page_num = int(range_text)
                     except ValueError:
                         return TaskResult(
                             status=TaskStatus.FAILED,
-                            error_message=f"范围格式错误：{rng}，应为 '起始-结束'（如 1-5）或单页码（如 8）",
+                            error_message=(
+                                f"范围格式错误：{rng}，应为 '起始-结束'（如 1-5）"
+                                "或单页码（如 8）"
+                            ),
                         )
                     s, e = page_num - 1, page_num
-                elif len(parts) == 2:
+                else:
+                    parts = range_text.split("-")
+                    if len(parts) != 2:
+                        return TaskResult(
+                            status=TaskStatus.FAILED,
+                            error_message=(
+                                f"范围格式错误：{rng}，应为 '起始-结束'（如 1-5）"
+                                "或单页码（如 8）"
+                            ),
+                        )
                     try:
                         s, e = int(parts[0]) - 1, int(parts[1])
                     except ValueError:
                         return TaskResult(
                             status=TaskStatus.FAILED,
-                            error_message=f"范围格式错误：{rng}，应为 '起始-结束'（如 1-5）或单页码（如 8）",
+                            error_message=(
+                                f"范围格式错误：{rng}，应为 '起始-结束'（如 1-5）"
+                                "或单页码（如 8）"
+                            ),
                         )
-                else:
-                    return TaskResult(
-                        status=TaskStatus.FAILED,
-                        error_message=f"范围格式错误：{rng}，应为 '起始-结束'（如 1-5）或单页码（如 8）",
-                    )
                 if s < 0 or e > total_pages or s >= e:
                     return TaskResult(
                         status=TaskStatus.FAILED,
