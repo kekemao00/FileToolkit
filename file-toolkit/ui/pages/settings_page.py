@@ -31,8 +31,8 @@ class SettingsPage(ft.Column):
                     ),
                     ft.Column(
                         controls=[
-                            ft.Text("设置", size=24, weight=ft.FontWeight.W_600, color="#162f50", font_family="Manrope"),
-                            ft.Text("个性化配置与系统偏好", size=14, color="#455c7f", font_family="Manrope"),
+                            ft.Text("设置", size=24, weight=ft.FontWeight.W_600, color="#162f50", font_family="42dot Sans"),
+                            ft.Text("个性化配置与系统偏好", size=14, color="#455c7f", font_family="42dot Sans"),
                         ],
                         spacing=2,
                     ),
@@ -168,7 +168,7 @@ class SettingsPage(ft.Column):
                     ft.Icon(ft.Icons.SAVE, color="#ffffff", size=16),
                     ft.Text(
                         "保存 API 配置", size=14, color="#ffffff",
-                        font_family="Manrope", weight=ft.FontWeight.W_500,
+                        font_family="42dot Sans", weight=ft.FontWeight.W_500,
                     ),
                 ],
                 spacing=8,
@@ -216,7 +216,7 @@ class SettingsPage(ft.Column):
                                 width=36, height=36, bgcolor=icon_bg, border_radius=10,
                                 alignment=ft.Alignment(0, 0),
                             ),
-                            ft.Text(title, size=16, weight=ft.FontWeight.W_600, color="#162f50", font_family="Manrope"),
+                            ft.Text(title, size=16, weight=ft.FontWeight.W_600, color="#162f50", font_family="42dot Sans"),
                         ],
                         spacing=12,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -236,7 +236,7 @@ class SettingsPage(ft.Column):
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Text(label, size=14, color="#162f50", width=140, font_family="Manrope"),
+                    ft.Text(label, size=14, color="#162f50", width=140, font_family="42dot Sans"),
                     ft.Container(content=control, expand=True),
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,

@@ -71,7 +71,7 @@ class VideoCutPage(ft.Column):
                         ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                         ft.Text(
                             "格式：HH:MM:SS（如 00:01:30 表示 1 分 30 秒）",
-                            size=11, color="#94a3b8", font_family="Manrope",
+                            size=11, color="#94a3b8", font_family="42dot Sans",
                         ),
                     ], spacing=8)),
                     self._progress,
@@ -92,7 +92,7 @@ class VideoCutPage(ft.Column):
                 controls=[
                     ft.Text(
                         title, size=14, weight=ft.FontWeight.W_600,
-                        color="#162f50", font_family="Manrope",
+                        color="#162f50", font_family="42dot Sans",
                     ),
                     content,
                 ],
@@ -115,7 +115,7 @@ class VideoCutPage(ft.Column):
                     ft.Icon(icon, color="#ffffff", size=18),
                     ft.Text(
                         label, size=16, color="#ffffff",
-                        font_family="Manrope", weight=ft.FontWeight.W_500,
+                        font_family="42dot Sans", weight=ft.FontWeight.W_500,
                     ),
                 ],
                 spacing=8,

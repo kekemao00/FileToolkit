@@ -141,7 +141,7 @@ class PdfMergePage(ft.Column):
                 controls=[
                     ft.Text(
                         title, size=14, weight=ft.FontWeight.W_600,
-                        color="#162f50", font_family="Manrope",
+                        color="#162f50", font_family="42dot Sans",
                     ),
                     content,
                 ],
@@ -164,7 +164,7 @@ class PdfMergePage(ft.Column):
                     ft.Icon(ft.Icons.MERGE, color="#ffffff", size=18),
                     ft.Text(
                         "开始合并", size=16, color="#ffffff",
-                        font_family="Manrope", weight=ft.FontWeight.W_500,
+                        font_family="42dot Sans", weight=ft.FontWeight.W_500,
                     ),
                 ],
                 spacing=8,

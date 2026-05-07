@@ -54,7 +54,7 @@ class ActionCard(ft.Container):
                             ft.Text(
                                 title,
                                 weight=ft.FontWeight.W_600,
-                                font_family="Manrope",
+                                font_family="42dot Sans",
                                 size=15,
                                 color=ft.Colors.ON_SURFACE,
                             ),
@@ -62,7 +62,7 @@ class ActionCard(ft.Container):
                                 subtitle,
                                 size=12,
                                 color=ft.Colors.ON_SURFACE_VARIANT,
-                                font_family="Inter",
+                                font_family="Plus Jakarta Sans",
                             ),
                         ],
                         spacing=2,

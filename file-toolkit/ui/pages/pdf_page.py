@@ -75,14 +75,14 @@ class PdfPage(ft.Column):
 
         # 文件列表
         self._file_list = ft.Column(spacing=12)
-        self._file_count = ft.Text("待处理文件 (0)", size=18, color="#162f50", font_family="Manrope")
+        self._file_count = ft.Text("待处理文件 (0)", size=18, color="#162f50", font_family="42dot Sans")
 
         # 运行按钮
         self._run_btn = ft.Container(
             content=ft.Row(
                 controls=[
                     ft.Icon(ft.Icons.PLAY_ARROW, color="#ffffff", size=20),
-                    ft.Text("立即处理 (0个文件)", size=18, color="#ffffff", font_family="Manrope"),
+                    ft.Text("立即处理 (0个文件)", size=18, color="#ffffff", font_family="42dot Sans"),
                 ],
                 spacing=8,
                 alignment=ft.MainAxisAlignment.CENTER,
@@ -112,7 +112,7 @@ class PdfPage(ft.Column):
                 content=ft.Column(
                     controls=[
                         ft.Icon(f["icon"], color="#ffffff" if active else "#455c7f", size=16),
-                        ft.Text(f["label"], size=12, color="#ffffff" if active else "#455c7f", font_family="Manrope", text_align=ft.TextAlign.CENTER),
+                        ft.Text(f["label"], size=12, color="#ffffff" if active else "#455c7f", font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
                     ],
                     spacing=4,
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -216,8 +216,8 @@ class PdfPage(ft.Column):
                             controls=[
                                 ft.Column(
                                     controls=[
-                                        ft.Text("PDF 万能编辑器", size=30, weight=ft.FontWeight.W_500, color="#005f98", font_family="Manrope"),
-                                        ft.Text("处理、转换与加密您的数字化文档", size=16, color="#455c7f", font_family="Manrope"),
+                                        ft.Text("PDF 万能编辑器", size=30, weight=ft.FontWeight.W_500, color="#005f98", font_family="42dot Sans"),
+                                        ft.Text("处理、转换与加密您的数字化文档", size=16, color="#455c7f", font_family="42dot Sans"),
                                     ],
                                     spacing=4,
                                 ),
@@ -274,11 +274,11 @@ class PdfPage(ft.Column):
                         border_radius=9999,
                         alignment=ft.Alignment(0, 0),
                     ),
-                    ft.Text("点击选择 PDF 文件", size=20, color="#005f98", font_family="Manrope", text_align=ft.TextAlign.CENTER),
-                    ft.Text("支持多文件合并，最大单文件限制 200MB", size=14, color="#455c7f", font_family="Manrope", text_align=ft.TextAlign.CENTER),
+                    ft.Text("点击选择 PDF 文件", size=20, color="#005f98", font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
+                    ft.Text("支持多文件合并，最大单文件限制 200MB", size=14, color="#455c7f", font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
                     ft.Container(
                         content=ft.Container(
-                            content=ft.Text("选择本地文件", size=16, color="#ffffff", font_family="Manrope", text_align=ft.TextAlign.CENTER),
+                            content=ft.Text("选择本地文件", size=16, color="#ffffff", font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
                             bgcolor="#005f98",
                             border_radius=9999,
                             padding=ft.padding.symmetric(horizontal=24, vertical=8),
@@ -354,7 +354,7 @@ class PdfPage(ft.Column):
                     # 标题
                     ft.Text(
                         "参数设置", size=20, weight=ft.FontWeight.W_500,
-                        color="#005f98", font_family="Manrope",
+                        color="#005f98", font_family="42dot Sans",
                     ),
                     # 功能选择
                     self._section("选择功能", ft.Row(
@@ -386,7 +386,7 @@ class PdfPage(ft.Column):
                     ], spacing=12)),
                     # 处理按钮
                     self._run_btn,
-                    ft.Text("预计耗时: 12秒 • 隐私保护已开启", size=10, color="#455c7f", font_family="Manrope", text_align=ft.TextAlign.CENTER),
+                    ft.Text("预计耗时: 12秒 • 隐私保护已开启", size=10, color="#455c7f", font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
                 ],
                 spacing=24,
                 scroll=ft.ScrollMode.AUTO,
@@ -402,7 +402,7 @@ class PdfPage(ft.Column):
 
     def _section(self, label: str, content: ft.Control) -> ft.Control:
         return ft.Column(controls=[
-            ft.Text(label.upper(), size=12, color="#455c7f", font_family="Manrope"),
+            ft.Text(label.upper(), size=12, color="#455c7f", font_family="42dot Sans"),
             content,
         ], spacing=12)
 
@@ -411,7 +411,7 @@ class PdfPage(ft.Column):
             content=ft.Row(
                 controls=[
                     ft.Icon(icon, color="#162f50", size=16),
-                    ft.Text(label, size=14, color="#162f50", font_family="Manrope"),
+                    ft.Text(label, size=14, color="#162f50", font_family="42dot Sans"),
                     ft.Container(expand=True),
                     switch,
                 ],
@@ -490,7 +490,7 @@ class PdfPage(ft.Column):
                             width=48, height=48, bgcolor="#fee2e2", border_radius=8, alignment=ft.Alignment(0, 0),
                         ),
                         ft.Column(controls=[
-                            ft.Text(f.name, size=16, weight=ft.FontWeight.BOLD, color="#162f50", font_family="Manrope", max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                            ft.Text(f.name, size=16, weight=ft.FontWeight.BOLD, color="#162f50", font_family="42dot Sans", max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                             ft.Text(size_str, size=12, color="#455c7f"),
                         ], spacing=2, expand=True),
                     ],

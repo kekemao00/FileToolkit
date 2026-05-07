@@ -65,7 +65,7 @@ class ImagePage(ft.Column):
         # 文件列表
         self._file_grid = ft.Column(spacing=12)
         self._file_count = ft.Text(
-            "已添加图片 (0)", size=18, color="#162f50", font_family="Manrope",
+            "已添加图片 (0)", size=18, color="#162f50", font_family="42dot Sans",
         )
 
         # 功能按钮
@@ -83,7 +83,7 @@ class ImagePage(ft.Column):
                         ft.Text(
                             f["label"], size=12,
                             color="#ffffff" if active else "#455c7f",
-                            font_family="Manrope",
+                            font_family="42dot Sans",
                             text_align=ft.TextAlign.CENTER,
                         ),
                     ],
@@ -109,7 +109,7 @@ class ImagePage(ft.Column):
                     ft.Icon(ft.Icons.PLAY_ARROW, color="#ffffff", size=20),
                     ft.Text(
                         "开始处理 (0张图片)", size=18,
-                        color="#ffffff", font_family="Manrope",
+                        color="#ffffff", font_family="42dot Sans",
                     ),
                 ],
                 spacing=8,
@@ -170,7 +170,7 @@ class ImagePage(ft.Column):
                     ft.Text(
                         "图片处理工具", size=20,
                         weight=ft.FontWeight.W_600,
-                        color="#162f50", font_family="Manrope",
+                        color="#162f50", font_family="42dot Sans",
                     ),
                     ft.VerticalDivider(width=1, color="#e2e8f0"),
                     tag_batch,
@@ -246,11 +246,11 @@ class ImagePage(ft.Column):
                                 ft.Text(
                                     "图片处理中心", size=30,
                                     weight=ft.FontWeight.W_500,
-                                    color="#005f98", font_family="Manrope",
+                                    color="#005f98", font_family="42dot Sans",
                                 ),
                                 ft.Text(
                                     "支持批量转换、压缩及水印处理，享受极致效率",
-                                    size=16, color="#455c7f", font_family="Manrope",
+                                    size=16, color="#455c7f", font_family="42dot Sans",
                                 ),
                             ],
                             spacing=4,
@@ -308,20 +308,20 @@ class ImagePage(ft.Column):
                                 ft.Text(
                                     "拖拽图片至此，或点击上传",
                                     size=20, color="#005f98",
-                                    font_family="Manrope",
+                                    font_family="42dot Sans",
                                     text_align=ft.TextAlign.CENTER,
                                 ),
                                 ft.Text(
                                     "支持 JPG, PNG, WEBP, HEIC 等多种主流格式",
                                     size=14, color="#455c7f",
-                                    font_family="Manrope",
+                                    font_family="42dot Sans",
                                     text_align=ft.TextAlign.CENTER,
                                 ),
                                 ft.Container(
                                     content=ft.Container(
                                         content=ft.Text(
                                             "选择本地文件", size=16,
-                                            color="#ffffff", font_family="Manrope",
+                                            color="#ffffff", font_family="42dot Sans",
                                             text_align=ft.TextAlign.CENTER,
                                         ),
                                         bgcolor="#005f98",
@@ -388,7 +388,7 @@ class ImagePage(ft.Column):
                             ft.Icon(ft.Icons.SETTINGS, color="#005f98", size=18),
                             ft.Text(
                                 "参数设置", size=20,
-                                color="#005f98", font_family="Manrope",
+                                color="#005f98", font_family="42dot Sans",
                             ),
                         ],
                         spacing=8,
@@ -438,7 +438,7 @@ class ImagePage(ft.Column):
                     self._run_btn,
                     ft.Text(
                         "预计耗时: 8秒 • 隐私保护已开启",
-                        size=10, color="#455c7f", font_family="Manrope",
+                        size=10, color="#455c7f", font_family="42dot Sans",
                         text_align=ft.TextAlign.CENTER,
                     ),
                 ],
@@ -456,7 +456,7 @@ class ImagePage(ft.Column):
         return ft.Column(
             controls=[
                 ft.Text(
-                    label.upper(), size=12, color="#455c7f", font_family="Manrope",
+                    label.upper(), size=12, color="#455c7f", font_family="42dot Sans",
                 ),
                 content,
             ],
@@ -550,7 +550,7 @@ class ImagePage(ft.Column):
                                     ft.Text(
                                         f.name, size=12,
                                         weight=ft.FontWeight.W_500,
-                                        color="#162f50", font_family="Manrope",
+                                        color="#162f50", font_family="42dot Sans",
                                         max_lines=1,
                                         overflow=ft.TextOverflow.ELLIPSIS,
                                     ),

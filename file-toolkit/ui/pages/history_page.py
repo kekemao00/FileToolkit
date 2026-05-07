@@ -40,11 +40,11 @@ class HistoryPage(ft.Column):
                     ft.Icon(ft.Icons.HISTORY, size=48, color="#94a3b8"),
                     ft.Text(
                         "暂无历史记录", color="#455c7f", size=14,
-                        font_family="Manrope",
+                        font_family="42dot Sans",
                     ),
                     ft.Text(
                         "完成第一次文件处理后，这里会显示记录",
-                        color="#94a3b8", size=12, font_family="Manrope",
+                        color="#94a3b8", size=12, font_family="42dot Sans",
                     ),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -92,11 +92,11 @@ class HistoryPage(ft.Column):
                             ft.Text(
                                 "最近操作", size=28,
                                 weight=ft.FontWeight.W_500,
-                                color="#162f50", font_family="Manrope",
+                                color="#162f50", font_family="42dot Sans",
                             ),
                             ft.Text(
                                 f"共 {total} 条记录 · {success} 次成功处理",
-                                size=14, color="#455c7f", font_family="Manrope",
+                                size=14, color="#455c7f", font_family="42dot Sans",
                             ),
                         ],
                         spacing=4,
@@ -108,7 +108,7 @@ class HistoryPage(ft.Column):
                                 ft.Icon(ft.Icons.DOWNLOAD, color="#ffffff", size=14),
                                 ft.Text(
                                     "导出报告", size=13,
-                                    color="#ffffff", font_family="Manrope",
+                                    color="#ffffff", font_family="42dot Sans",
                                 ),
                             ],
                             spacing=8,
@@ -158,12 +158,12 @@ class HistoryPage(ft.Column):
                             controls=[
                                 ft.Text(
                                     label, size=11, color="#455c7f",
-                                    font_family="Manrope",
+                                    font_family="42dot Sans",
                                 ),
                                 ft.Text(
                                     value, size=22,
                                     weight=ft.FontWeight.BOLD,
-                                    color="#162f50", font_family="Manrope",
+                                    color="#162f50", font_family="42dot Sans",
                                 ),
                             ],
                             spacing=2, tight=True,
@@ -218,7 +218,7 @@ class HistoryPage(ft.Column):
                 content=ft.Text(
                     label, size=13,
                     color="#005f98" if active else "#455c7f",
-                    font_family="Manrope",
+                    font_family="42dot Sans",
                     weight=ft.FontWeight.W_500 if active else ft.FontWeight.NORMAL,
                 ),
                 bgcolor="#dee9ff" if active else "transparent",
@@ -246,35 +246,35 @@ class HistoryPage(ft.Column):
                     ft.Container(
                         content=ft.Text(
                             "文件名", size=12, color="#455c7f",
-                            font_family="Manrope",
+                            font_family="42dot Sans",
                         ),
                         expand=True,
                     ),
                     ft.Container(
                         content=ft.Text(
                             "类型", size=12, color="#455c7f",
-                            font_family="Manrope",
+                            font_family="42dot Sans",
                         ),
                         width=96,
                     ),
                     ft.Container(
                         content=ft.Text(
                             "状态", size=12, color="#455c7f",
-                            font_family="Manrope",
+                            font_family="42dot Sans",
                         ),
                         width=120,
                     ),
                     ft.Container(
                         content=ft.Text(
                             "时间", size=12, color="#455c7f",
-                            font_family="Manrope",
+                            font_family="42dot Sans",
                         ),
                         width=140,
                     ),
                     ft.Container(
                         content=ft.Text(
                             "操作", size=12, color="#455c7f",
-                            font_family="Manrope",
+                            font_family="42dot Sans",
                             text_align=ft.TextAlign.RIGHT,
                         ),
                         width=80,
@@ -359,13 +359,13 @@ class HistoryPage(ft.Column):
                                             input_desc or f"{module} · {action}",
                                             size=14,
                                             weight=ft.FontWeight.W_500,
-                                            color="#162f50", font_family="Manrope",
+                                            color="#162f50", font_family="42dot Sans",
                                             max_lines=1,
                                             overflow=ft.TextOverflow.ELLIPSIS,
                                         ),
                                         ft.Text(
                                             action, size=11, color="#455c7f",
-                                            font_family="Manrope",
+                                            font_family="42dot Sans",
                                         ),
                                     ],
                                     spacing=2, tight=True, expand=True,
@@ -379,7 +379,7 @@ class HistoryPage(ft.Column):
                     # 类型列
                     ft.Container(
                         content=ft.Text(
-                            action, size=12, color="#455c7f", font_family="Manrope",
+                            action, size=12, color="#455c7f", font_family="42dot Sans",
                         ),
                         width=96,
                     ),
@@ -388,7 +388,7 @@ class HistoryPage(ft.Column):
                         content=ft.Container(
                             content=ft.Text(
                                 status_label, size=11, color=status_color,
-                                font_family="Manrope",
+                                font_family="42dot Sans",
                             ),
                             bgcolor=status_bg,
                             border_radius=9999,
@@ -400,7 +400,7 @@ class HistoryPage(ft.Column):
                     ft.Container(
                         content=ft.Text(
                             created_at, size=12, color="#455c7f",
-                            font_family="Manrope",
+                            font_family="42dot Sans",
                         ),
                         width=140,
                     ),

@@ -69,7 +69,7 @@ class TopBar(ft.Container):
                             "搜索功能或指令...",
                             size=13,
                             color="#94a3b8",
-                            font_family="Manrope",
+                            font_family="42dot Sans",
                         ),
                         padding=ft.padding.only(left=8),
                         expand=True,

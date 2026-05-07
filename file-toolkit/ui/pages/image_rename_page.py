@@ -79,7 +79,7 @@ class ImageRenamePage(ft.Column):
                         ft.Row(controls=[self._template, self._start_num], spacing=12),
                         ft.Text(
                             "可用变量：{name} 原文件名  {n} 序号  {n:03d} 补零序号  {date} 日期  {ext} 扩展名",
-                            size=11, color="#94a3b8", font_family="Manrope",
+                            size=11, color="#94a3b8", font_family="42dot Sans",
                         ),
                         self._preview_btn,
                     ], spacing=10)),
@@ -102,7 +102,7 @@ class ImageRenamePage(ft.Column):
                 controls=[
                     ft.Text(
                         title, size=14, weight=ft.FontWeight.W_600,
-                        color="#162f50", font_family="Manrope",
+                        color="#162f50", font_family="42dot Sans",
                     ),
                     content,
                 ],
@@ -125,7 +125,7 @@ class ImageRenamePage(ft.Column):
                     ft.Icon(icon, color="#ffffff", size=18),
                     ft.Text(
                         label, size=16, color="#ffffff",
-                        font_family="Manrope", weight=ft.FontWeight.W_500,
+                        font_family="42dot Sans", weight=ft.FontWeight.W_500,
                     ),
                 ],
                 spacing=8,

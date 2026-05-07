@@ -49,7 +49,7 @@ class SubPageHeader(ft.Container):
                         size=20,
                         weight=ft.FontWeight.W_600,
                         color="#162f50",
-                        font_family="Manrope",
+                        font_family="42dot Sans",
                     ),
                 ],
                 spacing=12,

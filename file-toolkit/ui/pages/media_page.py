@@ -92,11 +92,11 @@ class MediaPage(ft.Column):
                             ft.Text(
                                 "音视频处理中心", size=30,
                                 weight=ft.FontWeight.W_500,
-                                color="#162f50", font_family="Manrope",
+                                color="#162f50", font_family="42dot Sans",
                             ),
                             ft.Text(
                                 "专业级文件转码与剪辑工具，支持超过50种媒体格式",
-                                size=16, color="#455c7f", font_family="Manrope",
+                                size=16, color="#455c7f", font_family="42dot Sans",
                             ),
                         ],
                     ),
@@ -131,7 +131,7 @@ class MediaPage(ft.Column):
                         ft.Text(
                             t["label"], size=14,
                             color="#ffffff" if active else "#455c7f",
-                            font_family="Manrope",
+                            font_family="42dot Sans",
                             weight=ft.FontWeight.W_500,
                         ),
                     ],
@@ -211,14 +211,14 @@ class MediaPage(ft.Column):
                                 ),
                                 ft.Text(
                                     "拖拽文件到此处开始", size=22,
-                                    color="#162f50", font_family="Manrope",
+                                    color="#162f50", font_family="42dot Sans",
                                     weight=ft.FontWeight.W_500,
                                     text_align=ft.TextAlign.CENTER,
                                 ),
                                 ft.Text(
                                     "支持 MP4, MOV, MKV, AVI, MP3, WAV 等主流格式",
                                     size=14, color="#455c7f",
-                                    font_family="Manrope",
+                                    font_family="42dot Sans",
                                     text_align=ft.TextAlign.CENTER,
                                 ),
                                 ft.Row(
@@ -230,7 +230,7 @@ class MediaPage(ft.Column):
                                     content=ft.Container(
                                         content=ft.Text(
                                             "选择文件", size=16,
-                                            color="#ffffff", font_family="Manrope",
+                                            color="#ffffff", font_family="42dot Sans",
                                         ),
                                         bgcolor="#005f98",
                                         border_radius=12,
@@ -273,28 +273,28 @@ class MediaPage(ft.Column):
                     ft.Container(
                         content=ft.Text(
                             "文件名", size=12, color="#455c7f",
-                            font_family="Manrope",
+                            font_family="42dot Sans",
                         ),
                         expand=True,
                     ),
                     ft.Container(
                         content=ft.Text(
                             "时长", size=12, color="#455c7f",
-                            font_family="Manrope",
+                            font_family="42dot Sans",
                         ),
                         width=80,
                     ),
                     ft.Container(
                         content=ft.Text(
                             "目标格式", size=12, color="#455c7f",
-                            font_family="Manrope",
+                            font_family="42dot Sans",
                         ),
                         width=100,
                     ),
                     ft.Container(
                         content=ft.Text(
                             "状态", size=12, color="#455c7f",
-                            font_family="Manrope",
+                            font_family="42dot Sans",
                         ),
                         width=100,
                     ),
@@ -314,7 +314,7 @@ class MediaPage(ft.Column):
                 ft.Container(
                     content=ft.Text(
                         "暂无处理记录", size=13, color="#94a3b8",
-                        font_family="Manrope",
+                        font_family="42dot Sans",
                     ),
                     padding=ft.padding.symmetric(vertical=20),
                     alignment=ft.Alignment(0, 0),
@@ -329,7 +329,7 @@ class MediaPage(ft.Column):
                             ft.Text(
                                 "最近处理", size=16,
                                 weight=ft.FontWeight.W_600,
-                                color="#162f50", font_family="Manrope",
+                                color="#162f50", font_family="42dot Sans",
                             ),
                             ft.Container(expand=True),
                             ft.TextButton(
@@ -337,7 +337,7 @@ class MediaPage(ft.Column):
                                     controls=[
                                         ft.Text(
                                             "查看全部", size=13,
-                                            color="#005f98", font_family="Manrope",
+                                            color="#005f98", font_family="42dot Sans",
                                         ),
                                         ft.Icon(
                                             ft.Icons.CHEVRON_RIGHT,
@@ -395,7 +395,7 @@ class MediaPage(ft.Column):
                                 ),
                                 ft.Text(
                                     input_desc or action, size=13,
-                                    color="#162f50", font_family="Manrope",
+                                    color="#162f50", font_family="42dot Sans",
                                     max_lines=1,
                                     overflow=ft.TextOverflow.ELLIPSIS,
                                 ),
@@ -407,21 +407,21 @@ class MediaPage(ft.Column):
                     ),
                     ft.Container(
                         content=ft.Text(
-                            "--", size=12, color="#455c7f", font_family="Manrope",
+                            "--", size=12, color="#455c7f", font_family="42dot Sans",
                         ),
                         width=80,
                     ),
                     ft.Container(
                         content=ft.Text(
                             action.upper(), size=12, color="#455c7f",
-                            font_family="Manrope",
+                            font_family="42dot Sans",
                         ),
                         width=100,
                     ),
                     ft.Container(
                         content=ft.Container(
                             content=ft.Text(
-                                label, size=10, color=color, font_family="Manrope",
+                                label, size=10, color=color, font_family="42dot Sans",
                             ),
                             bgcolor=bg,
                             border_radius=9999,

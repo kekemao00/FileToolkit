@@ -62,7 +62,7 @@ class OcrPage(ft.Column):
         self._result_section = ft.Container(visible=False)
 
         # 文件名显示
-        self._file_name = ft.Text("", size=14, color="#162f50", font_family="Manrope")
+        self._file_name = ft.Text("", size=14, color="#162f50", font_family="42dot Sans")
         self._file_info = ft.Container(visible=False)
 
         self.controls = [
@@ -138,11 +138,11 @@ class OcrPage(ft.Column):
                             ft.Text(
                                 "OCR 文字识别", size=28,
                                 weight=ft.FontWeight.W_500,
-                                color="#162f50", font_family="Manrope",
+                                color="#162f50", font_family="42dot Sans",
                             ),
                             ft.Text(
                                 "高精度光学字符识别引擎",
-                                size=16, color="#455c7f", font_family="Manrope",
+                                size=16, color="#455c7f", font_family="42dot Sans",
                             ),
                         ],
                         spacing=4,
@@ -184,20 +184,20 @@ class OcrPage(ft.Column):
                         ),
                         ft.Text(
                             "拖放文件或点击扫描", size=20,
-                            color="#162f50", font_family="Manrope",
+                            color="#162f50", font_family="42dot Sans",
                             weight=ft.FontWeight.W_500,
                             text_align=ft.TextAlign.CENTER,
                         ),
                         ft.Text(
                             "支持 JPG, PNG, PDF 格式 (最大 20MB)",
-                            size=13, color="#455c7f", font_family="Manrope",
+                            size=13, color="#455c7f", font_family="42dot Sans",
                             text_align=ft.TextAlign.CENTER,
                         ),
                         ft.Container(
                             content=ft.Container(
                                 content=ft.Text(
                                     "选择文件", size=15,
-                                    color="#ffffff", font_family="Manrope",
+                                    color="#ffffff", font_family="42dot Sans",
                                 ),
                                 bgcolor="#005f98",
                                 border_radius=12,
@@ -264,7 +264,7 @@ class OcrPage(ft.Column):
                                         ),
                                         ft.Text(
                                             "开始识别", size=14,
-                                            color="#ffffff", font_family="Manrope",
+                                            color="#ffffff", font_family="42dot Sans",
                                         ),
                                     ],
                                     spacing=8,
@@ -322,7 +322,7 @@ class OcrPage(ft.Column):
                                         ft.Text(
                                             "正在识别...", size=16,
                                             weight=ft.FontWeight.W_500,
-                                            color="#162f50", font_family="Manrope",
+                                            color="#162f50", font_family="42dot Sans",
                                         ),
                                         self._progress_text,
                                     ],
@@ -370,7 +370,7 @@ class OcrPage(ft.Column):
                                         ft.Text(
                                             "识别结果", size=16,
                                             weight=ft.FontWeight.W_600,
-                                            color="#162f50", font_family="Manrope",
+                                            color="#162f50", font_family="42dot Sans",
                                         ),
                                         ft.Container(expand=True),
                                         ft.Container(
@@ -440,7 +440,7 @@ class OcrPage(ft.Column):
                                 ft.Text(
                                     "文档摘要", size=16,
                                     weight=ft.FontWeight.W_600,
-                                    color="#162f50", font_family="Manrope",
+                                    color="#162f50", font_family="42dot Sans",
                                 ),
                                 ft.Divider(height=1, color="#e2e8f0"),
                                 self._build_summary_row(
@@ -460,7 +460,7 @@ class OcrPage(ft.Column):
                                             ft.Text(
                                                 "导出为 Word", size=14,
                                                 color="#ffffff",
-                                                font_family="Manrope",
+                                                font_family="42dot Sans",
                                             ),
                                         ],
                                         spacing=8,
@@ -500,11 +500,11 @@ class OcrPage(ft.Column):
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Text(label, size=13, color="#455c7f", font_family="Manrope"),
+                    ft.Text(label, size=13, color="#455c7f", font_family="42dot Sans"),
                     ft.Container(expand=True),
                     ft.Text(
                         value, size=13, color="#162f50",
-                        weight=ft.FontWeight.W_500, font_family="Manrope",
+                        weight=ft.FontWeight.W_500, font_family="42dot Sans",
                     ),
                 ],
             ),
