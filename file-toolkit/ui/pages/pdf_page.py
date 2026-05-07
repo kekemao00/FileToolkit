@@ -239,7 +239,7 @@ class PdfPage(ft.Column):
                                         spacing=0,
                                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                                     ),
-                                    width=288, height=36,
+                                    width=288, height=54,
                                     bgcolor=ft.Colors.with_opacity(0.5, "#f8fafc"),
                                     border=ft.border.all(1, ft.Colors.with_opacity(0.6, "#e2e8f0")),
                                     border_radius=9999,
@@ -513,9 +513,13 @@ class PdfPage(ft.Column):
                 offset=ft.Offset(0, 2),
             )
             col = btn.content
-            icon_container = col.controls[0]
-            icon_container.bgcolor = f["color"] if active else f["bg"]
-            icon_container.content.color = "#ffffff" if active else f["color"]
+            # controls[0] 是 Stack(icon_block, badge)
+            icon_stack = col.controls[0]
+            icon_block = icon_stack.controls[0]
+            badge = icon_stack.controls[1]
+            icon_block.bgcolor = f["color"] if active else f["bg"]
+            icon_block.content.color = "#ffffff" if active else f["color"]
+            badge.bgcolor = "#ffffff" if active else "#005f98"
             col.controls[1].color = "#005f98" if active else "#162f50"
         if self._files:
             single_func = key in ("split", "compress", "to_word")
