@@ -3,8 +3,8 @@
 
 用于 PDF 合并等需要对文件排序的场景。
 """
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import flet as ft
 

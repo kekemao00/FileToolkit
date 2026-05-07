@@ -5,12 +5,12 @@ from pathlib import Path
 import flet as ft
 
 from core.image.renamer import batch_rename
-from services import history_service, settings_service
+from services import history_service
 from services.task_service import run_task
 from ui.components.drop_zone import DropZone
-from ui.components.sub_page_header import SubPageHeader
 from ui.components.progress_card import ProgressCard
 from ui.components.result_card import ResultCard
+from ui.components.sub_page_header import SubPageHeader
 
 
 class ImageRenamePage(ft.Column):

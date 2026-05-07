@@ -111,12 +111,12 @@ class HomePage(ft.Column):
                                     padding=ft.padding.symmetric(horizontal=14, vertical=6),
                                     tooltip="搜索功能或指令",
                                 ),
-                                # 通知按钮（功能未实现）
+                                # 通知按钮
                                 ft.IconButton(
                                     icon=ft.Icons.NOTIFICATIONS_OUTLINED,
                                     icon_color=ft.Colors.with_opacity(0.35, "#475569"),
                                     icon_size=20,
-                                    tooltip="通知功能即将上线",
+                                    tooltip="暂无新通知",
                                     disabled=True,
                                 ),
                                 # 设置按钮
@@ -519,19 +519,25 @@ class HomePage(ft.Column):
                                 font_family="42dot Sans",
                                 expand=True,
                             ),
-                            ft.IconButton(
-                                icon=ft.Icons.FILTER_LIST,
-                                icon_color=ft.Colors.with_opacity(0.35, "#455c7f"),
-                                icon_size=18,
-                                tooltip="筛选功能即将上线",
-                                disabled=True,
-                            ),
-                            ft.IconButton(
-                                icon=ft.Icons.MORE_VERT,
-                                icon_color=ft.Colors.with_opacity(0.35, "#455c7f"),
-                                icon_size=16,
-                                tooltip="更多操作即将上线",
-                                disabled=True,
+                            ft.TextButton(
+                                content=ft.Row(
+                                    controls=[
+                                        ft.Text(
+                                            "查看全部",
+                                            size=12,
+                                            color="#005f98",
+                                            font_family="42dot Sans",
+                                        ),
+                                        ft.Icon(
+                                            ft.Icons.CHEVRON_RIGHT,
+                                            color="#005f98",
+                                            size=14,
+                                        ),
+                                    ],
+                                    spacing=2,
+                                    tight=True,
+                                ),
+                                on_click=lambda e: self._page.go("/history"),
                             ),
                         ],
                     ),
@@ -739,13 +745,6 @@ class HomePage(ft.Column):
                                     tooltip="打开目录",
                                     on_click=_open_dir,
                                     visible=bool(output_dir),
-                                ),
-                                ft.IconButton(
-                                    icon=ft.Icons.MORE_VERT,
-                                    icon_color=ft.Colors.with_opacity(0.35, "#455c7f"),
-                                    icon_size=16,
-                                    tooltip="更多操作即将上线",
-                                    disabled=True,
                                 ),
                             ],
                             spacing=0,

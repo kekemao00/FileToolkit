@@ -96,7 +96,7 @@ class ArchivePage(ft.Column):
         self._solid_enabled = ft.Switch(
             value=False, active_color="#005f98",
             inactive_thumb_color="#ffffff", inactive_track_color="#cbdeff",
-            tooltip="固实压缩功能即将上线",
+            tooltip="固实压缩暂未开启",
         )
 
         # 文件列表（缩略图卡片网格）
@@ -459,7 +459,7 @@ class ArchivePage(ft.Column):
         self._solid_section = self._section("固实压缩", ft.Row(
             controls=[
                 ft.Icon(ft.Icons.LAYERS, color="#162f50", size=16),
-                ft.Text("启用固实（即将上线）", size=14, color="#162f50",
+                ft.Text("启用固实", size=14, color="#162f50",
                         font_family="42dot Sans"),
                 ft.Container(expand=True),
                 self._solid_enabled,

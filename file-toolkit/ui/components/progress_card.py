@@ -5,7 +5,7 @@ show(filename, desc)        → 切换到进行中状态（不确定进度）
 update_progress(n, total, desc) → 更新确定进度
 done()                      → 隐藏（任务完成后由父页面接管 UI）
 """
-from typing import Callable
+from collections.abc import Callable
 
 import flet as ft
 

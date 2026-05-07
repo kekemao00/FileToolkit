@@ -267,13 +267,13 @@ class ImagePage(ft.Column):
                                     border_radius=9999,
                                     padding=ft.padding.symmetric(horizontal=15),
                                     opacity=0.45,
-                                    tooltip="搜索功能即将上线",
+                                    tooltip="搜索",
                                 ),
                                 ft.IconButton(
                                     icon=ft.Icons.NOTIFICATIONS_OUTLINED,
                                     icon_color="#475569", icon_size=20,
                                     disabled=True, opacity=0.45,
-                                    tooltip="通知功能即将上线",
+                                    tooltip="通知",
                                 ),
                                 ft.IconButton(
                                     icon=ft.Icons.SETTINGS_OUTLINED,
@@ -941,7 +941,7 @@ class ImagePage(ft.Column):
             fn = add_text_watermark
         else:
             self._page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"「{func}」功能即将上线"), duration=2000
+                content=ft.Text(f"未知功能：{func}"), duration=2000,
             )
             self._page.snack_bar.open = True
             self._page.update()

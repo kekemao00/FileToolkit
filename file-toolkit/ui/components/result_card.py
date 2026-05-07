@@ -6,8 +6,8 @@ on_reset: 「再次处理」按钮回调，由父页面实现重置逻辑
 """
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import flet as ft
 
