@@ -3,25 +3,51 @@
 布局：左侧主内容区（标题+拖拽区+文件列表） + 右侧参数面板
 """
 import asyncio
+import subprocess
+import sys
 import time
 from pathlib import Path
 
 import flet as ft
+import flet.canvas as cv
 
+from core.models import TaskResult, TaskStatus
 from core.pdf.compressor import compress_pdf
 from core.pdf.converter import pdf_to_docx
 from core.pdf.merger import merge_pdf
 from core.pdf.splitter import split_pdf
 from services import history_service, settings_service
 from services.task_service import run_task
-from ui.components.progress_card import ProgressCard
-from ui.components.result_card import ResultCard
+from ui.theme import build_color_scheme
+
+_THEME = build_color_scheme()
+PRIMARY = _THEME.primary
+ON_PRIMARY = _THEME.on_primary
+PRIMARY_CONTAINER = _THEME.primary_container
+SECONDARY = _THEME.secondary
+SURFACE = _THEME.surface
+SURFACE_LOW = _THEME.surface_container_low
+SURFACE_HIGH = _THEME.surface_container_high
+SURFACE_HIGHEST = _THEME.surface_container_highest
+SURFACE_LOWEST = _THEME.surface_container_lowest
+OUTLINE = _THEME.outline
+OUTLINE_VARIANT = _THEME.outline_variant
+ERROR = _THEME.error
+ERROR_CONTAINER = _THEME.error_container
+TERTIARY = _THEME.tertiary
+TERTIARY_CONTAINER = _THEME.tertiary_container
+TITLE_FONT = "42dot Sans"
+BODY_FONT = "Plus Jakarta Sans"
 
 _FUNCTIONS = [
-    {"label": "合并", "icon": ft.Icons.MERGE, "key": "merge"},
-    {"label": "拆分", "icon": ft.Icons.CONTENT_CUT, "key": "split"},
-    {"label": "压缩", "icon": ft.Icons.COMPRESS, "key": "compress"},
-    {"label": "转word", "icon": ft.Icons.SWAP_HORIZ, "key": "to_word"},
+    {"label": "合并", "desc": "PDF 合并与优化", "icon": ft.Icons.MERGE, "key": "merge",
+     "color": "#005f98", "bg": "#d5e3ff"},
+    {"label": "拆分", "desc": "按页码范围拆分", "icon": ft.Icons.CONTENT_CUT, "key": "split",
+     "color": "#d97706", "bg": "#fef3c7"},
+    {"label": "压缩", "desc": "输出质量 85%", "icon": ft.Icons.COMPRESS, "key": "compress",
+     "color": "#059669", "bg": "#d1fae5"},
+    {"label": "转Office", "desc": "PDF 转 Office", "icon": ft.Icons.SWAP_HORIZ, "key": "to_word",
+     "color": "#7c3aed", "bg": "#ede9fe"},
 ]
 
 # slider 0-100 → compress_pdf quality 枚举
@@ -49,6 +75,28 @@ class PdfPage(ft.Column):
 
         self._progress = ProgressCard(on_cancel=self._cancel)
         self._result = ResultCard(on_reset=self._reset)
+
+        # 删除确认对话框
+        self._delete_target: Path | None = None
+        self._delete_dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("移除文件", size=18, weight=ft.FontWeight.W_600, color="#162f50", font_family="42dot Sans"),
+            content=ft.Text("确定要从列表中移除该文件吗？", size=14, color="#455c7f"),
+            actions=[
+                ft.TextButton(
+                    "取消",
+                    style=ft.ButtonStyle(color="#455c7f"),
+                    on_click=lambda _: self._close_delete_dialog(),
+                ),
+                ft.FilledButton(
+                    "移除",
+                    style=ft.ButtonStyle(bgcolor="#dc2626", color="#ffffff"),
+                    on_click=lambda _: self._confirm_delete(),
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+            shape=ft.RoundedRectangleBorder(radius=16),
+        )
 
         # 质量滑块
         self._quality_value = ft.Text("85%", size=12, weight=ft.FontWeight.BOLD, color="#005f98")
@@ -104,28 +152,47 @@ class PdfPage(ft.Column):
             opacity=0.4,  # 初始无文件时视觉禁用
         )
 
-        # 功能按钮
+        # 功能卡片（2×2 网格）
         self._func_btns = []
         for f in _FUNCTIONS:
             active = f["key"] == self._selected_func
             btn = ft.Container(
                 content=ft.Column(
                     controls=[
-                        ft.Icon(f["icon"], color="#ffffff" if active else "#455c7f", size=16),
-                        ft.Text(f["label"], size=12, color="#ffffff" if active else "#455c7f", font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
+                        ft.Container(
+                            content=ft.Icon(f["icon"], color=f["color"] if not active else "#ffffff", size=20),
+                            width=40, height=40,
+                            bgcolor=f["bg"] if not active else f["color"],
+                            border_radius=10,
+                            alignment=ft.Alignment(0, 0),
+                        ),
+                        ft.Text(
+                            f["label"], size=13, weight=ft.FontWeight.W_600,
+                            color="#162f50" if not active else "#005f98",
+                            font_family="42dot Sans",
+                        ),
+                        ft.Text(
+                            f["desc"], size=11, color="#455c7f",
+                            font_family="Plus Jakarta Sans",
+                            max_lines=2, overflow=ft.TextOverflow.ELLIPSIS,
+                        ),
                     ],
-                    spacing=4,
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=6,
+                    horizontal_alignment=ft.CrossAxisAlignment.START,
                 ),
-                bgcolor="#00a3ff" if active else "#d5e3ff",
-                border_radius=12,
-                padding=ft.padding.symmetric(vertical=12, horizontal=20),
+                bgcolor="#ffffff" if not active else "#e8f4ff",
+                border=ft.border.all(2, "#005f98" if active else "#e2e8f0"),
+                border_radius=14,
+                padding=ft.padding.all(14),
                 on_click=lambda _, k=f["key"]: self._select_func(k),
                 ink=True,
                 data=f["key"],
-                width=130,
-                height=68,
-                alignment=ft.Alignment(0, 0),
+                expand=True,
+                shadow=ft.BoxShadow(
+                    blur_radius=4 if active else 2,
+                    color=ft.Colors.with_opacity(0.08 if active else 0.04, "#000000"),
+                    offset=ft.Offset(0, 2),
+                ),
             )
             self._func_btns.append(btn)
 
@@ -146,10 +213,18 @@ class PdfPage(ft.Column):
     def did_mount(self) -> None:
         self._prev_on_resize = self._page.on_resize
         self._page.on_resize = self._on_page_resized
+        # 注册删除确认对话框
+        if self._delete_dialog not in self._page.overlay:
+            self._page.overlay.append(self._delete_dialog)
+            self._page.update()
 
     def will_unmount(self) -> None:
         if self._page.on_resize == self._on_page_resized:
             self._page.on_resize = self._prev_on_resize
+        # 清理对话框
+        if self._delete_dialog in self._page.overlay:
+            self._page.overlay.remove(self._delete_dialog)
+            self._page.update()
 
     def _build_topbar(self) -> ft.Control:
         return ft.Container(
@@ -268,9 +343,9 @@ class PdfPage(ft.Column):
             content=ft.Column(
                 controls=[
                     ft.Container(
-                        content=ft.Icon(ft.Icons.UPLOAD_FILE, color="#2aa7ff", size=30),
+                        content=ft.Icon(ft.Icons.UPLOAD_FILE, color="#2aa7ff", size=32),
                         width=64, height=64,
-                        bgcolor=ft.Colors.with_opacity(0.2, "#2aa7ff"),
+                        bgcolor=ft.Colors.with_opacity(0.12, "#2aa7ff"),
                         border_radius=9999,
                         alignment=ft.Alignment(0, 0),
                     ),
@@ -278,23 +353,23 @@ class PdfPage(ft.Column):
                     ft.Text("支持多文件合并，最大单文件限制 200MB", size=14, color="#455c7f", font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
                     ft.Container(
                         content=ft.Container(
-                            content=ft.Text("选择本地文件", size=16, color="#ffffff", font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
+                            content=ft.Text("选择本地文件", size=15, color="#ffffff", font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
                             bgcolor="#005f98",
                             border_radius=9999,
-                            padding=ft.padding.symmetric(horizontal=24, vertical=8),
-                            shadow=ft.BoxShadow(blur_radius=15, spread_radius=-3, color=ft.Colors.with_opacity(0.3, "#005f98"), offset=ft.Offset(0, 10)),
+                            padding=ft.padding.symmetric(horizontal=28, vertical=10),
+                            shadow=ft.BoxShadow(blur_radius=15, spread_radius=-3, color=ft.Colors.with_opacity(0.3, "#005f98"), offset=ft.Offset(0, 8)),
                         ),
                         padding=ft.padding.only(top=8),
                     ),
                 ],
-                spacing=16,
+                spacing=12,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
-            bgcolor="#ffffff",
-            border=ft.border.all(2, "#2aa7ff"),
+            bgcolor=ft.Colors.with_opacity(0.7, "#ffffff"),
+            border=ft.border.all(1.5, "#2aa7ff"),
             border_radius=16,
-            padding=ft.padding.symmetric(vertical=37),
+            padding=ft.padding.symmetric(vertical=32),
             expand=True,
             on_click=self._pick_files,
             on_hover=self._on_drop_zone_hover,
@@ -305,19 +380,17 @@ class PdfPage(ft.Column):
                 controls=[
                     ft.Container(
                         gradient=ft.LinearGradient(
-                            begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
-                            colors=["#005f98", "#6b1ef3"],
+                            begin=ft.Alignment(-1, -1), end=ft.Alignment(1, 1),
+                            colors=["#deeeff", "#ede8ff"],
                         ),
                         border_radius=16,
-                        opacity=0.1,
-                        blur=ft.Blur(4, 4),
                         expand=True,
                     ),
                     self._drop_zone_body,
                 ],
             ),
             padding=ft.padding.symmetric(horizontal=32),
-            height=220,
+            height=210,
         )
 
     def _on_drop_zone_hover(self, e: ft.ControlEvent) -> None:
@@ -325,8 +398,8 @@ class PdfPage(ft.Column):
             self._drop_zone_body.border = ft.border.all(2, "#005f98")
             self._drop_zone_body.bgcolor = ft.Colors.with_opacity(0.03, "#005f98")
         else:
-            self._drop_zone_body.border = ft.border.all(2, "#2aa7ff")
-            self._drop_zone_body.bgcolor = "#ffffff"
+            self._drop_zone_body.border = ft.border.all(1.5, "#2aa7ff")
+            self._drop_zone_body.bgcolor = ft.Colors.with_opacity(0.7, "#ffffff")
         self._drop_zone_body.update()
 
     def _build_file_list(self) -> ft.Control:
@@ -339,6 +412,15 @@ class PdfPage(ft.Column):
                             ft.Container(expand=True),
                             ft.TextButton("清空全部", style=ft.ButtonStyle(color="#005f98"), on_click=self._clear_files),
                         ],
+                    ),
+                    ft.Container(
+                        content=ft.Row(
+                            controls=[
+                                ft.Text("文件名", size=12, color="#94a3b8", font_family="Plus Jakarta Sans", expand=True),
+                                ft.Text("大小", size=12, color="#94a3b8", font_family="Plus Jakarta Sans", width=80),
+                            ],
+                        ),
+                        padding=ft.padding.symmetric(horizontal=4),
                     ),
                     self._file_list,
                 ],
@@ -356,10 +438,13 @@ class PdfPage(ft.Column):
                         "参数设置", size=20, weight=ft.FontWeight.W_500,
                         color="#005f98", font_family="42dot Sans",
                     ),
-                    # 功能选择
-                    self._section("选择功能", ft.Row(
-                        controls=self._func_btns,
-                        wrap=True, spacing=8, run_spacing=8,
+                    # 功能选择（2×2 网格）
+                    self._section("选择功能", ft.Column(
+                        controls=[
+                            ft.Row(controls=[self._func_btns[0], self._func_btns[1]], spacing=8),
+                            ft.Row(controls=[self._func_btns[2], self._func_btns[3]], spacing=8),
+                        ],
+                        spacing=8,
                     )),
                     # 输出质量
                     self._section("输出质量 (压缩)", ft.Column(controls=[
@@ -426,13 +511,21 @@ class PdfPage(ft.Column):
 
     def _select_func(self, key: str) -> None:
         self._selected_func = key
-        for btn in self._func_btns:
+        for i, btn in enumerate(self._func_btns):
+            f = _FUNCTIONS[i]
             active = btn.data == key
-            btn.bgcolor = "#00a3ff" if active else "#d5e3ff"
+            btn.bgcolor = "#e8f4ff" if active else "#ffffff"
+            btn.border = ft.border.all(2, "#005f98" if active else "#e2e8f0")
+            btn.shadow = ft.BoxShadow(
+                blur_radius=4 if active else 2,
+                color=ft.Colors.with_opacity(0.08 if active else 0.04, "#000000"),
+                offset=ft.Offset(0, 2),
+            )
             col = btn.content
-            col.controls[0].color = "#ffffff" if active else "#455c7f"
-            col.controls[1].color = "#ffffff" if active else "#455c7f"
-        # 切换功能时同步按钮文案（单文件功能只处理第一个）
+            icon_container = col.controls[0]
+            icon_container.bgcolor = f["color"] if active else f["bg"]
+            icon_container.content.color = "#ffffff" if active else f["color"]
+            col.controls[1].color = "#005f98" if active else "#162f50"
         if self._files:
             single_func = key in ("split", "compress", "to_word")
             count_label = "1个文件" if (single_func and len(self._files) > 1) else f"{len(self._files)}个文件"
@@ -493,6 +586,16 @@ class PdfPage(ft.Column):
                             ft.Text(f.name, size=16, weight=ft.FontWeight.BOLD, color="#162f50", font_family="42dot Sans", max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                             ft.Text(size_str, size=12, color="#455c7f"),
                         ], spacing=2, expand=True),
+                        ft.IconButton(
+                            icon=ft.Icons.DELETE_OUTLINE,
+                            icon_color="#94a3b8",
+                            icon_size=18,
+                            tooltip="移除文件",
+                            on_click=lambda _, path=f: self._ask_delete(path),
+                            style=ft.ButtonStyle(
+                                overlay_color=ft.Colors.with_opacity(0.08, "#dc2626"),
+                            ),
+                        ),
                     ],
                     spacing=16,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -615,3 +718,21 @@ class PdfPage(ft.Column):
 
     def _on_page_resized(self, e) -> None:
         self._apply_responsive_layout()
+
+    def _ask_delete(self, path: Path) -> None:
+        self._delete_target = path
+        self._delete_dialog.open = True
+        self._page.update()
+
+    def _close_delete_dialog(self) -> None:
+        self._delete_dialog.open = False
+        self._delete_target = None
+        self._page.update()
+
+    def _confirm_delete(self) -> None:
+        if self._delete_target and self._delete_target in self._files:
+            self._files.remove(self._delete_target)
+        self._delete_dialog.open = False
+        self._delete_target = None
+        self._rebuild_file_list()
+        self._page.update()
