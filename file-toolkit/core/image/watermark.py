@@ -28,19 +28,25 @@ def _calc_position(
 ) -> tuple[int, int]:
     """根据位置标识计算文字左上角坐标。"""
     margin = 20
+    cx = (img_w - text_w) // 2
+    cy = (img_h - text_h) // 2
     positions = {
         "top_left": (margin, margin),
+        "top_center": (cx, margin),
         "top_right": (img_w - text_w - margin, margin),
+        "center_left": (margin, cy),
+        "center": (cx, cy),
+        "center_right": (img_w - text_w - margin, cy),
         "bottom_left": (margin, img_h - text_h - margin),
+        "bottom_center": (cx, img_h - text_h - margin),
         "bottom_right": (img_w - text_w - margin, img_h - text_h - margin),
-        "center": ((img_w - text_w) // 2, (img_h - text_h) // 2),
         # 兼容旧格式（带连字符）
         "top-left": (margin, margin),
         "top-right": (img_w - text_w - margin, margin),
         "bottom-left": (margin, img_h - text_h - margin),
         "bottom-right": (img_w - text_w - margin, img_h - text_h - margin),
     }
-    return positions.get(position, ((img_w - text_w) // 2, (img_h - text_h) // 2))
+    return positions.get(position, (cx, cy))
 
 
 def add_text_watermark(

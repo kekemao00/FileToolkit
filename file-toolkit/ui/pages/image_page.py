@@ -3,12 +3,16 @@
 布局：左侧主内容区（标题+拖拽区+文件列表） + 右侧参数面板
 """
 import asyncio
+import subprocess
+import sys
 from pathlib import Path
 
 import flet as ft
 
 from core.image.compressor import compress_images
 from core.image.converter import convert_image
+from core.image.resizer import resize_images
+from core.image.watermark import add_text_watermark
 from services import history_service, settings_service
 from services.task_service import run_task
 
@@ -22,6 +26,13 @@ _FUNCTIONS = [
     {"label": "水印", "desc": "添加文字/图片水印", "icon": ft.Icons.WATER_DROP_OUTLINED, "key": "watermark",
      "color": "#7c3aed", "bg": "#ede9fe"},
 ]
+
+# 水印位置 3×3 网格 → watermark 模块位置标识
+_WATERMARK_POS_MAP = {
+    "tl": "top_left", "tc": "top_center", "tr": "top_right",
+    "cl": "center_left", "cc": "center", "cr": "center_right",
+    "bl": "bottom_left", "bc": "bottom_center", "br": "bottom_right",
+}
 
 
 class ImagePage(ft.Column):
@@ -338,12 +349,16 @@ class ImagePage(ft.Column):
 
     def _build_drop_zone(self) -> ft.Control:
         dash_color = ft.Colors.with_opacity(0.3, "#005f98")
-        dash_segment = lambda: ft.Container(
-            width=16, height=2, bgcolor=dash_color, border_radius=9999,
-        )
-        dash_column = lambda: ft.Container(
-            width=2, height=16, bgcolor=dash_color, border_radius=9999,
-        )
+
+        def dash_segment() -> ft.Container:
+            return ft.Container(
+                width=16, height=2, bgcolor=dash_color, border_radius=9999,
+            )
+
+        def dash_column() -> ft.Container:
+            return ft.Container(
+                width=2, height=16, bgcolor=dash_color, border_radius=9999,
+            )
         top_dash = ft.Row(
             controls=[dash_segment() for _ in range(30)],
             spacing=8,
@@ -878,6 +893,52 @@ class ImagePage(ft.Column):
                 "quality": quality,
             }
             fn = convert_image
+        elif func == "resize":
+            try:
+                w_raw = (self._width_field.value or "").strip()
+                h_raw = (self._height_field.value or "").strip()
+                width = int(w_raw) if w_raw else None
+                height = int(h_raw) if h_raw else None
+            except ValueError:
+                self._page.snack_bar = ft.SnackBar(
+                    content=ft.Text("宽度/高度必须为整数"), duration=2000,
+                )
+                self._page.snack_bar.open = True
+                self._page.update()
+                return
+            if not width and not height:
+                self._page.snack_bar = ft.SnackBar(
+                    content=ft.Text("请至少填写宽度或高度"), duration=2000,
+                )
+                self._page.snack_bar.open = True
+                self._page.update()
+                return
+            kwargs = {
+                "input_files": self._files,
+                "output_dir": out_dir,
+                "width": width,
+                "height": height,
+                "keep_ratio": bool(self._keep_ratio.value),
+            }
+            fn = resize_images
+        elif func == "watermark":
+            text = (self._watermark_field.value or "").strip()
+            if not text:
+                self._page.snack_bar = ft.SnackBar(
+                    content=ft.Text("水印文字不能为空"), duration=2000,
+                )
+                self._page.snack_bar.open = True
+                self._page.update()
+                return
+            kwargs = {
+                "input_files": self._files,
+                "output_dir": out_dir,
+                "text": text,
+                "position": _WATERMARK_POS_MAP.get(self._watermark_pos, "bottom_right"),
+                # 复用质量 Slider 作为水印透明度（10-100）
+                "opacity": max(10, min(100, quality)),
+            }
+            fn = add_text_watermark
         else:
             self._page.snack_bar = ft.SnackBar(
                 content=ft.Text(f"「{func}」功能即将上线"), duration=2000
@@ -1013,7 +1074,6 @@ class ImagePage(ft.Column):
         self.update()
 
     def _open_output_folder(self, _) -> None:
-        import subprocess, sys
         if self._output_dir and self._output_dir.exists():
             if sys.platform == "win32":
                 subprocess.Popen(["explorer", str(self._output_dir)])
@@ -1023,7 +1083,6 @@ class ImagePage(ft.Column):
                 subprocess.Popen(["xdg-open", str(self._output_dir)])
 
     def _open_file_location(self, path: Path) -> None:
-        import subprocess, sys
         folder = path.parent
         if not folder.exists():
             return
