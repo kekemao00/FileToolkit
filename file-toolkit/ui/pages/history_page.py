@@ -92,6 +92,9 @@ class HistoryPage(ft.Column):
 
         self._topbar = self._build_topbar()
         self.controls = [self._topbar, self._build_body()]
+
+    def did_mount(self) -> None:
+        """页面加入控件树后再读取并刷新历史数据。"""
         self._reload_from_service()
 
     # ── 顶部栏 ────────────────────────────────────────────
