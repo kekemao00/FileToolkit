@@ -62,11 +62,14 @@
 - [x] 顶部栏 (topbar) — 搜索框 pill 形 r=9999, 高 54px
 - Commits: `915888b` `0f523fd` `fd7af61` `9346aab` `14a635f`
 
-### Phase 2 — 首页 ✅
-- [x] Hero 区域：标题 48px Bold + 副标题 italic + CTA 按钮
-- [x] 工具卡片网格：左侧彩色竖条 + 图标颜色对齐 Figma
-- [x] 最近操作表格：表头 #F8FAFC + 状态标签颜色
-- Commit: `6fa39e1` (256 行改动)
+### Phase 2 — 首页 🔄 (Codex Review 后修复中)
+- [x] 初版完成 — Commit `6fa39e1`
+- [ ] 🔴 Hero 内容：应为单行 "一个软件，搞定所有文件" (48px Medium #162F50)
+- [ ] 🔴 CTA 按钮："快速开始" (#ECF3FF) + "了解更多" (#CBDEFF 填充)
+- [ ] 🔴 工具卡片：改为垂直 235px 卡片 + 56px 柔和色图标块 + 24px 圆形徽章
+- [ ] 🟡 状态标签：改为浅色药丸 (#D1FAE5/#047857)
+- [ ] 🟡 历史行字体：文件名/操作改用 Plus Jakarta Sans
+- Codex Review: 176,691 tokens, 5 issues found
 
 ### Phase 3 — PDF 模块（核心页面，最复杂）
 - [ ] PDF 工具列表页（功能卡片布局）

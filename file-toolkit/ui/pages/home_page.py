@@ -11,45 +11,45 @@ import flet as ft
 
 from services import history_service
 
-# 工具卡片配置：(title, subtitle, icon, icon_color, bar_color, badge1, badge2, route)
+# 工具卡片配置：(title, subtitle, icon, icon_color, icon_bg, badge1, badge2, badge1_bg, badge2_bg, route)
 _TOOL_CARDS = [
     (
         "PDF工具", "合并、拆分或压缩 PDF 文档",
-        ft.Icons.PICTURE_AS_PDF, "#005F98", "#005F98",
-        "PDF", "DOC",
+        ft.Icons.PICTURE_AS_PDF, "#DC2626", "#FEF2F2",
+        "PDF", "DOC", "#FEE2E2", "#DBEAFE",
         "/pdf",
     ),
     (
         "图片工具", "无损压缩、格式转换与裁剪",
-        ft.Icons.IMAGE, "#059669", "#059669",
-        "PNG", "JPG",
+        ft.Icons.IMAGE, "#059669", "#F0FDF4",
+        "PNG", "JPG", "#DCFCE7", "#DBEAFE",
         "/image",
     ),
     (
         "音视频工具", "转码、提取音频或剪辑",
-        ft.Icons.MOVIE, "#7C3AED", "#7C3AED",
-        "MP4", "GIF",
+        ft.Icons.MOVIE, "#7C3AED", "#FAF5FF",
+        "MP4", "GIF", "#EDE9FE", "#DBEAFE",
         "/media",
     ),
     (
         "压缩解压", "极速打包与安全解压文件",
-        ft.Icons.FOLDER_ZIP, "#D97706", "#D97706",
-        "ZIP", "7Z",
+        ft.Icons.FOLDER_ZIP, "#2563EB", "#EFF6FF",
+        "ZIP", "7Z", "#DBEAFE", "#E0F2FE",
         "/archive",
     ),
     (
         "OCR识别", "从图像提取可编辑的文本",
-        ft.Icons.DOCUMENT_SCANNER, "#DC2626", "#DC2626",
-        "TXT", "OCR",
+        ft.Icons.DOCUMENT_SCANNER, "#0891B2", "#ECFEFF",
+        "TXT", "OCR", "#CFFAFE", "#DBEAFE",
         "/ocr",
     ),
 ]
 
 _STATUS_COLORS = {
-    "success":   ("#047857", "#ffffff"),
-    "failed":    ("#b91c1c", "#ffffff"),
+    "success":   ("#D1FAE5", "#047857"),
+    "failed":    ("#FEE2E2", "#B91C1C"),
     "cancelled": ("#E2E8F0", "#455C7F"),
-    "running":   ("#005F98", "#ffffff"),
+    "running":   ("#DEE9FF", "#005F98"),
 }
 
 _STATUS_LABELS = {
@@ -213,28 +213,13 @@ class HomePage(ft.Column):
                     ft.Container(
                         content=ft.Column(
                             controls=[
-                                ft.Column(
-                                    controls=[
-                                        ft.Text(
-                                            "文件全能王",
-                                            size=48,
-                                            weight=ft.FontWeight.BOLD,
-                                            color="#162F50",
-                                            font_family="42dot Sans",
-                                            height=1.1,
-                                        ),
-                                        ft.Text(
-                                            "一个软件，搞定所有文件",
-                                            size=48,
-                                            weight=ft.FontWeight.W_500,
-                                            color="#005F98",
-                                            font_family="42dot Sans",
-                                            italic=True,
-                                            height=1.1,
-                                        ),
-                                    ],
-                                    spacing=4,
-                                    tight=True,
+                                ft.Text(
+                                    "一个软件，搞定所有文件",
+                                    size=48,
+                                    weight=ft.FontWeight.W_500,
+                                    color="#162F50",
+                                    font_family="42dot Sans",
+                                    height=1.1,
                                 ),
                                 ft.Text(
                                     "简单高效的工具集，一站式解决您的 PDF 转换、图像优化及媒体处理需求。",
@@ -246,10 +231,10 @@ class HomePage(ft.Column):
                                 ft.Row(
                                     controls=[
                                         ft.ElevatedButton(
-                                            "开始处理",
+                                            "快速开始",
                                             style=ft.ButtonStyle(
                                                 bgcolor="#005F98",
-                                                color="#ffffff",
+                                                color="#ECF3FF",
                                                 shape=ft.RoundedRectangleBorder(radius=12),
                                                 padding=ft.padding.symmetric(horizontal=32, vertical=14),
                                                 shadow_color=ft.Colors.with_opacity(0.2, "#005F98"),
@@ -257,13 +242,14 @@ class HomePage(ft.Column):
                                             ),
                                             on_click=lambda e: self._page.go("/pdf"),
                                         ),
-                                        ft.OutlinedButton(
+                                        ft.ElevatedButton(
                                             "了解更多",
                                             style=ft.ButtonStyle(
+                                                bgcolor="#CBDEFF",
                                                 color="#005F98",
-                                                side=ft.BorderSide(1.5, "#005F98"),
                                                 shape=ft.RoundedRectangleBorder(radius=12),
                                                 padding=ft.padding.symmetric(horizontal=32, vertical=14),
+                                                elevation={"": 0, "hovered": 2},
                                             ),
                                             on_click=lambda e: self._page.go("/pdf"),
                                         ),
@@ -367,96 +353,81 @@ class HomePage(ft.Column):
         subtitle: str,
         icon: str,
         icon_color: str,
-        bar_color: str,
+        icon_bg: str,
         badge1: str,
         badge2: str,
+        badge1_bg: str,
+        badge2_bg: str,
         route: str,
     ) -> ft.Control:
         return ft.Container(
-            content=ft.Row(
+            content=ft.Column(
                 controls=[
-                    # 左侧彩色竖条
+                    # 图标块
                     ft.Container(
-                        width=4,
-                        bgcolor=bar_color,
-                        border_radius=ft.border_radius.only(
-                            top_left=2, bottom_left=2,
-                        ),
-                        expand=False,
+                        content=ft.Icon(icon, color=icon_color, size=25),
+                        width=56,
+                        height=56,
+                        bgcolor=icon_bg,
+                        border_radius=12,
+                        alignment=ft.Alignment(0, 0),
                     ),
-                    # 内容区
-                    ft.Container(
-                        content=ft.Column(
-                            controls=[
-                                # 图标行
-                                ft.Container(
-                                    content=ft.Icon(icon, color=icon_color, size=28),
-                                    width=44,
-                                    height=44,
-                                    bgcolor=ft.Colors.with_opacity(0.1, icon_color),
-                                    border_radius=10,
-                                    alignment=ft.Alignment(0, 0),
-                                ),
-                                # 标题
-                                ft.Text(
-                                    title,
-                                    size=15,
-                                    color="#162F50",
+                    # 标题
+                    ft.Text(
+                        title,
+                        size=14,
+                        weight=ft.FontWeight.W_600,
+                        color="#162F50",
+                        font_family="42dot Sans",
+                    ),
+                    # 描述
+                    ft.Text(
+                        subtitle,
+                        size=12,
+                        color="#455C7F",
+                        font_family="42dot Sans",
+                        max_lines=2,
+                        expand=True,
+                    ),
+                    # 格式徽章
+                    ft.Row(
+                        controls=[
+                            ft.Container(
+                                content=ft.Text(
+                                    badge1,
+                                    size=9,
+                                    color=icon_color,
+                                    text_align=ft.TextAlign.CENTER,
                                     font_family="42dot Sans",
                                     weight=ft.FontWeight.W_500,
                                 ),
-                                # 副标题
-                                ft.Text(
-                                    subtitle,
-                                    size=12,
+                                bgcolor=badge1_bg,
+                                border_radius=9999,
+                                width=24,
+                                height=24,
+                                alignment=ft.Alignment(0, 0),
+                            ),
+                            ft.Container(
+                                content=ft.Text(
+                                    badge2,
+                                    size=9,
                                     color="#455C7F",
+                                    text_align=ft.TextAlign.CENTER,
                                     font_family="42dot Sans",
-                                    max_lines=2,
-                                    expand=True,
+                                    weight=ft.FontWeight.W_500,
                                 ),
-                                # 格式徽章（右下角）
-                                ft.Row(
-                                    controls=[
-                                        ft.Container(expand=True),
-                                        ft.Container(
-                                            content=ft.Text(
-                                                badge1,
-                                                size=9,
-                                                color=icon_color,
-                                                text_align=ft.TextAlign.CENTER,
-                                                font_family="42dot Sans",
-                                                weight=ft.FontWeight.W_500,
-                                            ),
-                                            bgcolor=ft.Colors.with_opacity(0.12, icon_color),
-                                            border_radius=6,
-                                            padding=ft.padding.symmetric(horizontal=6, vertical=2),
-                                        ),
-                                        ft.Container(
-                                            content=ft.Text(
-                                                badge2,
-                                                size=9,
-                                                color="#455C7F",
-                                                text_align=ft.TextAlign.CENTER,
-                                                font_family="42dot Sans",
-                                                weight=ft.FontWeight.W_500,
-                                            ),
-                                            bgcolor="#F1F5F9",
-                                            border_radius=6,
-                                            padding=ft.padding.symmetric(horizontal=6, vertical=2),
-                                        ),
-                                    ],
-                                    spacing=4,
-                                ),
-                            ],
-                            spacing=8,
-                            expand=True,
-                        ),
-                        padding=ft.padding.all(16),
-                        expand=True,
+                                bgcolor=badge2_bg,
+                                border_radius=9999,
+                                width=24,
+                                height=24,
+                                alignment=ft.Alignment(0, 0),
+                            ),
+                        ],
+                        spacing=6,
                     ),
                 ],
-                spacing=0,
-                vertical_alignment=ft.CrossAxisAlignment.STRETCH,
+                spacing=8,
+                expand=True,
             ),
             bgcolor="#FFFFFF",
             border_radius=16,
@@ -466,8 +437,9 @@ class HomePage(ft.Column):
                 offset=ft.Offset(0, 2),
             ),
             expand=True,
-            height=160,
-            clip_behavior=ft.ClipBehavior.HARD_EDGE,
+            width=170,
+            height=235,
+            padding=ft.padding.all(16),
             ink=True,
             on_click=lambda e, r=route: self._page.go(r),
         )
@@ -708,7 +680,7 @@ class HomePage(ft.Column):
                                             size=14,
                                             weight=ft.FontWeight.BOLD,
                                             color="#162f50",
-                                            font_family="42dot Sans",
+                                            font_family="Plus Jakarta Sans",
                                             max_lines=1,
                                             overflow=ft.TextOverflow.ELLIPSIS,
                                         ),
@@ -716,7 +688,7 @@ class HomePage(ft.Column):
                                             f"{module} · {action}",
                                             size=10,
                                             color="#455c7f",
-                                            font_family="42dot Sans",
+                                            font_family="Plus Jakarta Sans",
                                             max_lines=1,
                                             overflow=ft.TextOverflow.ELLIPSIS,
                                         ),
