@@ -46,12 +46,12 @@ class MediaPage(ft.Column):
             font_family="42dot Sans",
         )
         self._progress_pct = ft.Text(
-            "0%", size=16, weight=ft.FontWeight.BOLD, color="#005f98",
+            "0%", size=30, weight=ft.FontWeight.BOLD, color="#005f98",
             font_family="42dot Sans",
         )
         self._progress_bar = ft.ProgressBar(
-            value=0, color="#005f98", bgcolor="#d5e3ff", bar_height=8,
-            border_radius=4,
+            value=0, color="#005f98", bgcolor="#d5e3ff", bar_height=10,
+            border_radius=5,
         )
         self._progress_file_rows = ft.Column(spacing=8)
         self._progress_cancel_btn = ft.FilledButton(
@@ -265,13 +265,13 @@ class MediaPage(ft.Column):
                                     border_radius=9999,
                                     padding=ft.padding.symmetric(horizontal=15),
                                     opacity=0.45,
-                                    tooltip="搜索功能即将上线",
+                                    tooltip="搜索",
                                 ),
                                 ft.IconButton(
                                     icon=ft.Icons.NOTIFICATIONS_OUTLINED,
                                     icon_color="#475569", icon_size=20,
                                     disabled=True, opacity=0.45,
-                                    tooltip="通知功能即将上线",
+                                    tooltip="通知",
                                 ),
                                 ft.IconButton(
                                     icon=ft.Icons.SETTINGS_OUTLINED,
@@ -737,7 +737,7 @@ class MediaPage(ft.Column):
             is_audio = ext in _AUDIO_EXTS
             tag_color = "#7c3aed" if is_audio else "#005f98"
             tag_bg = "#ede9fe" if is_audio else "#d5e3ff"
-            thumb_icon = ft.Icons.AUDIOTRACK if is_audio else ft.Icons.MOVIE
+            thumb_icon = ft.Icons.AUDIO_FILE if is_audio else ft.Icons.VIDEO_FILE
             thumb = ft.Container(
                 content=ft.Icon(thumb_icon, color=tag_color, size=24),
                 width=48, height=48, bgcolor=tag_bg, border_radius=8,
@@ -845,23 +845,43 @@ class MediaPage(ft.Column):
         func = self._selected_func
         quality = int(self._quality_slider.value)
 
+        # 按功能过滤文件类型
+        if func in ("video_convert", "video_compress", "audio_extract"):
+            files = [p for p in self._files if p.suffix.lower().lstrip(".") in _VIDEO_EXTS]
+            need = "视频"
+        elif func == "audio_convert":
+            files = [p for p in self._files if p.suffix.lower().lstrip(".") in _AUDIO_EXTS]
+            need = "音频"
+        else:
+            files = self._files
+            need = "音视频"
+
+        if not files:
+            self._page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"所选功能需要{need}文件，当前无符合条件的文件"),
+                duration=2500,
+            )
+            self._page.snack_bar.open = True
+            self._page.update()
+            return
+
         if func == "video_convert":
             kwargs = {
-                "input_files": self._files,
+                "input_files": files,
                 "output_dir": out_dir,
                 "target_format": self._video_format_value,
             }
             fn = convert_video
         elif func == "video_compress":
-            # quality 0-33 => high(画质优先), 34-66 => medium, 67-100 => low(体积优先)
+            # quality slider：左(低值)=体积优先=low(CRF28)，右(高值)=画质优先=high(CRF18)
             if quality < 34:
-                q_level = "high"
+                q_level = "low"
             elif quality < 67:
                 q_level = "medium"
             else:
-                q_level = "low"
+                q_level = "high"
             kwargs = {
-                "input_files": self._files,
+                "input_files": files,
                 "output_dir": out_dir,
                 "quality": q_level,
                 "resolution": self._resolution_value,
@@ -869,7 +889,6 @@ class MediaPage(ft.Column):
             fn = compress_video
         elif func == "audio_extract":
             # 后端 extract_audio 单文件；包装成批处理
-            files = self._files
             fmt = self._extract_format_value
             fn = _batch_extract_audio
             kwargs = {
@@ -879,7 +898,7 @@ class MediaPage(ft.Column):
             }
         elif func == "audio_convert":
             kwargs = {
-                "input_files": self._files,
+                "input_files": files,
                 "output_dir": out_dir,
                 "target_format": self._audio_format_value,
                 "bitrate": "192",
@@ -893,7 +912,7 @@ class MediaPage(ft.Column):
             self._page.update()
             return
 
-        self._show_processing(f"{len(self._files)} 个文件")
+        self._show_processing(f"{len(files)} 个文件")
 
         async def _run():
             await run_task(fn, kwargs, self._on_progress, self._on_complete)
@@ -915,18 +934,25 @@ class MediaPage(ft.Column):
     def _cancel(self) -> None:
         if self._task and not self._task.done():
             self._task.cancel()
-        self._hide_processing()
+        self._reset_to_workspace()
 
     def _reset(self) -> None:
         self._files.clear()
         self._rebuild_file_list()
-        self._hide_complete()
+        self._reset_to_workspace()
+
+    def _reset_to_workspace(self) -> None:
+        self._workspace_view.visible = True
+        self._processing_view.visible = False
+        self._complete_view.visible = False
+        self.update()
 
     def _show_processing(self, file_count_label: str) -> None:
         self._progress_title.value = "正在处理…"
         self._progress_pct.value = "0%"
         self._progress_bar.value = 0
         self._progress_file_rows.controls.clear()
+        self._workspace_view.visible = False
         self._processing_view.visible = True
         self._complete_view.visible = False
         self.update()
@@ -956,8 +982,8 @@ class MediaPage(ft.Column):
         self._processing_view.update()
 
     def _hide_processing(self) -> None:
-        self._processing_view.visible = False
-        self.update()
+        # 隐藏处理中视图并回到工作台
+        self._reset_to_workspace()
 
     def _show_complete(self, result) -> None:
         from core.models import TaskStatus
@@ -971,11 +997,15 @@ class MediaPage(ft.Column):
         self._result_file_rows.controls.clear()
         if result.output_files:
             for fp in result.output_files[:8]:
+                fp_ext = fp.suffix.lower().lstrip(".")
+                fp_is_audio = fp_ext in _AUDIO_EXTS
+                fp_icon = ft.Icons.AUDIO_FILE if fp_is_audio else ft.Icons.VIDEO_FILE
+                fp_color = "#7c3aed" if fp_is_audio else "#005f98"
                 self._result_file_rows.controls.append(
                     ft.Container(
                         content=ft.Row(
                             controls=[
-                                ft.Icon(ft.Icons.MOVIE, color="#005f98", size=16),
+                                ft.Icon(fp_icon, color=fp_color, size=16),
                                 ft.Text(
                                     fp.name, size=13, color="#162f50",
                                     expand=True, max_lines=1,
@@ -1011,13 +1041,14 @@ class MediaPage(ft.Column):
                     ft.Text(f"…共 {len(result.output_files)} 个文件", size=12, color="#455c7f")
                 )
 
+        self._workspace_view.visible = False
         self._processing_view.visible = False
         self._complete_view.visible = True
         self.update()
 
     def _hide_complete(self) -> None:
-        self._complete_view.visible = False
-        self.update()
+        # 从完成视图回到工作台
+        self._reset_to_workspace()
 
     def _open_output_folder(self, _) -> None:
         if self._output_dir and self._output_dir.exists():
