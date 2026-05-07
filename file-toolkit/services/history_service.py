@@ -4,10 +4,9 @@ File Toolkit — 任务历史服务
 基于 SQLite task_history 表记录操作历史，支持查询最近 N 条和清空。
 """
 import sqlite3
-import time
 from pathlib import Path
 
-from core.models import TaskResult, TaskStatus
+from core.models import TaskResult
 
 _db_path: Path | None = None
 

@@ -74,6 +74,8 @@ def _resolve_page(route: str, page: ft.Page) -> ft.Control:
         return PdfConvertPage(page, mode="from_office")
     if route == "/pdf/ocr":
         return OcrPage(page)
+    if route == "/ocr":
+        return OcrPage(page)
     if route == "/image":
         return ImagePage(page)
     if route == "/image/convert":
@@ -104,7 +106,37 @@ def _resolve_page(route: str, page: ft.Page) -> ft.Control:
         return HistoryPage(page)
     if route == "/settings":
         return SettingsPage(page)
-    return HomePage(page)
+    return _unknown_route_page(page, route)
+
+
+def _unknown_route_page(page: ft.Page, route: str) -> ft.Column:
+    """未知路由提示页面：显示路由信息 + 返回首页按钮。"""
+    return ft.Column(
+        controls=[
+            ft.Icon(ft.Icons.SEARCH_OFF, color="#94a3b8", size=48),
+            ft.Text(
+                f"页面不存在: {route}", size=20, color="#162f50",
+                font_family="42dot Sans", weight=ft.FontWeight.W_500,
+            ),
+            ft.Text(
+                "请检查入口链接或返回首页重新选择功能。",
+                size=13, color="#455c7f", font_family="42dot Sans",
+            ),
+            ft.ElevatedButton(
+                "返回首页",
+                on_click=lambda _: page.go("/"),
+                style=ft.ButtonStyle(
+                    bgcolor="#005f98", color="#ffffff",
+                    shape=ft.RoundedRectangleBorder(radius=12),
+                    padding=ft.padding.symmetric(horizontal=24, vertical=12),
+                ),
+            ),
+        ],
+        alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        spacing=12,
+        expand=True,
+    )
 
 
 def setup_router(page: ft.Page) -> None:

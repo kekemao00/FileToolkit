@@ -1,9 +1,24 @@
 """图片批量重命名模块"""
+import re
 import time
 from datetime import date
 from pathlib import Path
 
 from core.models import ProgressCallback, TaskResult, TaskStatus
+
+
+def _sanitize_filename(name: str) -> str:
+    """清理文件名中的非法字符，防止路径穿越与跨平台不兼容。"""
+    # 移除路径分隔符和 Windows 非法字符
+    name = re.sub(r'[/\\:*?"<>|]', "_", name)
+    # 拒绝 .. 序列
+    name = name.replace("..", "_")
+    # 去除前后空白和点（避免 Windows 隐藏文件和尾点）
+    name = name.strip(". ")
+    # 空名兜底
+    if not name:
+        name = "unnamed"
+    return name
 
 
 def preview_rename(
@@ -33,6 +48,7 @@ def preview_rename(
             )
         except (KeyError, ValueError, IndexError):
             new_stem = f"{f.stem}_{n:03d}"
+        new_stem = _sanitize_filename(new_stem)
         new_name = new_stem + f.suffix
         results.append((f, new_name))
 
@@ -72,6 +88,7 @@ def batch_rename(
             except (KeyError, ValueError, IndexError):
                 new_stem = f"{path.stem}_{n:03d}"
 
+            new_stem = _sanitize_filename(new_stem)
             new_name = new_stem + path.suffix
             new_path = path.parent / new_name
 

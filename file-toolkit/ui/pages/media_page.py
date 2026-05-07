@@ -13,6 +13,7 @@ from core.media.audio import convert_audio, extract_audio
 from core.media.video import compress_video, convert_video
 from services import history_service, settings_service
 from services.task_service import run_task
+from ui.utils import show_toast
 
 _FUNCTIONS = [
     {"label": "视频转换", "desc": "MP4/AVI/MOV/MKV 互转", "icon": ft.Icons.SWAP_HORIZ,
@@ -708,9 +709,7 @@ class MediaPage(ft.Column):
                 allow_multiple=True,
             )
         except RuntimeError:
-            self._page.snack_bar = ft.SnackBar(content=ft.Text("无法打开文件选择器，请检查系统环境"), duration=3000)
-            self._page.snack_bar.open = True
-            self._page.update()
+            show_toast(self._page, "无法打开文件选择器，请检查系统环境", duration=3000)
             files = None
         if not files:
             self._page.update()
@@ -836,9 +835,7 @@ class MediaPage(ft.Column):
 
     def _start_task(self, _) -> None:
         if not self._files:
-            self._page.snack_bar = ft.SnackBar(content=ft.Text("请先选择音视频文件"), duration=2000)
-            self._page.snack_bar.open = True
-            self._page.update()
+            show_toast(self._page, "请先选择音视频文件")
             return
 
         out_dir = settings_service.resolve_output_dir(self._files[0])
@@ -857,12 +854,7 @@ class MediaPage(ft.Column):
             need = "音视频"
 
         if not files:
-            self._page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"所选功能需要{need}文件，当前无符合条件的文件"),
-                duration=2500,
-            )
-            self._page.snack_bar.open = True
-            self._page.update()
+            show_toast(self._page, f"所选功能需要{need}文件，当前无符合条件的文件", duration=2500)
             return
 
         if func == "video_convert":
@@ -905,11 +897,7 @@ class MediaPage(ft.Column):
             }
             fn = convert_audio
         else:
-            self._page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"未知功能：{func}"), duration=2000,
-            )
-            self._page.snack_bar.open = True
-            self._page.update()
+            show_toast(self._page, f"未知功能：{func}")
             return
 
         self._show_processing(f"{len(files)} 个文件")

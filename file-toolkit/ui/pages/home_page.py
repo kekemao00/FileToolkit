@@ -10,6 +10,7 @@ import sys
 import flet as ft
 
 from services import history_service
+from ui.utils import show_toast
 
 # 工具卡片配置：(title, subtitle, icon, icon_color, icon_bg, badge1, badge2, badge1_bg, badge2_bg, route)
 _TOOL_CARDS = [
@@ -621,12 +622,7 @@ class HomePage(ft.Column):
                 else:
                     subprocess.Popen(["xdg-open", d])
             except Exception:
-                self._page.snack_bar = ft.SnackBar(
-                    content=ft.Text("无法打开目录"),
-                    bgcolor="#455c7f",
-                )
-                self._page.snack_bar.open = True
-                self._page.update()
+                show_toast(self._page, "无法打开目录", color="#455c7f")
 
         # 进度条（running 状态）
         progress_widget: ft.Control

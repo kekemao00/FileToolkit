@@ -15,6 +15,7 @@ from core.image.resizer import resize_images
 from core.image.watermark import add_text_watermark
 from services import history_service, settings_service
 from services.task_service import run_task
+from ui.utils import show_toast
 
 _FUNCTIONS = [
     {"label": "压缩", "desc": "图片压缩与优化", "icon": ft.Icons.COMPRESS, "key": "compress",
@@ -724,9 +725,7 @@ class ImagePage(ft.Column):
                 allow_multiple=True,
             )
         except RuntimeError:
-            self._page.snack_bar = ft.SnackBar(content=ft.Text("无法打开文件选择器，请检查系统环境"), duration=3000)
-            self._page.snack_bar.open = True
-            self._page.update()
+            show_toast(self._page, "无法打开文件选择器，请检查系统环境", duration=3000)
             files = None
         if not files:
             self._page.update()
@@ -867,9 +866,7 @@ class ImagePage(ft.Column):
 
     def _start_task(self, _) -> None:
         if not self._files:
-            self._page.snack_bar = ft.SnackBar(content=ft.Text("请先选择图片文件"), duration=2000)
-            self._page.snack_bar.open = True
-            self._page.update()
+            show_toast(self._page, "请先选择图片文件")
             return
 
         out_dir = settings_service.resolve_output_dir(self._files[0])
@@ -900,18 +897,10 @@ class ImagePage(ft.Column):
                 width = int(w_raw) if w_raw else None
                 height = int(h_raw) if h_raw else None
             except ValueError:
-                self._page.snack_bar = ft.SnackBar(
-                    content=ft.Text("宽度/高度必须为整数"), duration=2000,
-                )
-                self._page.snack_bar.open = True
-                self._page.update()
+                show_toast(self._page, "宽度/高度必须为整数")
                 return
             if not width and not height:
-                self._page.snack_bar = ft.SnackBar(
-                    content=ft.Text("请至少填写宽度或高度"), duration=2000,
-                )
-                self._page.snack_bar.open = True
-                self._page.update()
+                show_toast(self._page, "请至少填写宽度或高度")
                 return
             kwargs = {
                 "input_files": self._files,
@@ -924,11 +913,7 @@ class ImagePage(ft.Column):
         elif func == "watermark":
             text = (self._watermark_field.value or "").strip()
             if not text:
-                self._page.snack_bar = ft.SnackBar(
-                    content=ft.Text("水印文字不能为空"), duration=2000,
-                )
-                self._page.snack_bar.open = True
-                self._page.update()
+                show_toast(self._page, "水印文字不能为空")
                 return
             kwargs = {
                 "input_files": self._files,
@@ -940,11 +925,7 @@ class ImagePage(ft.Column):
             }
             fn = add_text_watermark
         else:
-            self._page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"未知功能：{func}"), duration=2000,
-            )
-            self._page.snack_bar.open = True
-            self._page.update()
+            show_toast(self._page, f"未知功能：{func}")
             return
 
         self._show_processing(f"{len(self._files)} 张图片")

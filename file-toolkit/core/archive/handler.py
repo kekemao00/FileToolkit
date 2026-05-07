@@ -1,4 +1,5 @@
 """压缩解压统一处理模块"""
+import logging
 import os
 import tarfile
 import time
@@ -8,6 +9,36 @@ from pathlib import Path
 import py7zr
 
 from core.models import ProgressCallback, TaskResult, TaskStatus
+
+logger = logging.getLogger(__name__)
+
+
+def _safe_extract_check(member_name: str, dst: Path) -> Path | None:
+    """校验解压成员路径，防止 Zip Slip 路径穿越。
+
+    Returns:
+        合法时返回 resolve 后的目标 Path；非法时返回 None。
+    """
+    if not member_name:
+        return None
+    # 拒绝绝对路径
+    if os.path.isabs(member_name):
+        logger.warning("拒绝绝对路径成员: %s", member_name)
+        return None
+    # 拒绝显式 .. 穿越（即便未 resolve 也先过滤一次）
+    if ".." in Path(member_name).parts:
+        logger.warning("拒绝路径穿越成员: %s", member_name)
+        return None
+    try:
+        target = (dst / member_name).resolve()
+        dst_resolved = dst.resolve()
+    except OSError as exc:
+        logger.warning("路径 resolve 失败 %s: %s", member_name, exc)
+        return None
+    if not target.is_relative_to(dst_resolved):
+        logger.warning("路径穿越被拒: %s", member_name)
+        return None
+    return target
 
 
 def compress(
@@ -167,16 +198,32 @@ def _extract_zip(src: Path, dst: Path, cb: ProgressCallback | None) -> None:
         members = zf.namelist()
         total = len(members)
         for i, name in enumerate(members, start=1):
+            safe_target = _safe_extract_check(name, dst)
+            if safe_target is None:
+                if cb:
+                    cb(i, total, f"跳过可疑路径：{name} ({i}/{total})")
+                continue
             zf.extract(name, dst)
             if cb:
                 cb(i, total, f"解压中：{name} ({i}/{total})")
 
 
 def _extract_7z(src: Path, dst: Path, cb: ProgressCallback | None) -> None:
+    # py7zr 的 extractall 一次性处理，先过滤非法成员再解压
     with py7zr.SevenZipFile(str(src), "r") as sz:
+        names = sz.getnames()
+        safe_names: list[str] = []
+        for n in names:
+            if _safe_extract_check(n, dst) is not None:
+                safe_names.append(n)
         if cb:
             cb(1, 1, "正在解压 7z 文件...")
-        sz.extractall(path=str(dst))
+        if len(safe_names) == len(names):
+            sz.extractall(path=str(dst))
+        elif safe_names:
+            # 有成员被拒绝时逐个取出过滤后的部分
+            sz.reset()
+            sz.extract(path=str(dst), targets=safe_names)
         if cb:
             cb(1, 1, "解压完成")
 
@@ -187,6 +234,11 @@ def _extract_rar(src: Path, dst: Path, cb: ProgressCallback | None) -> None:
         members = rf.namelist()
         total = len(members)
         for i, name in enumerate(members, start=1):
+            safe_target = _safe_extract_check(name, dst)
+            if safe_target is None:
+                if cb:
+                    cb(i, total, f"跳过可疑路径：{name} ({i}/{total})")
+                continue
             rf.extract(name, dst)
             if cb:
                 cb(i, total, f"解压中：{name} ({i}/{total})")

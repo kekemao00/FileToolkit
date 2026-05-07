@@ -10,6 +10,7 @@ from pathlib import Path
 import flet as ft
 
 from services import history_service
+from ui.utils import show_toast
 
 _STATUS_COLORS = {
     "success":   ("#d1fae5", "#047857", "已完成"),
@@ -564,8 +565,4 @@ class HistoryPage(ft.Column):
             self._show_snack(f"打开失败：{exc}", color="#be123c")
 
     def _show_snack(self, msg: str, color: str = "#005f98") -> None:
-        self._page.snack_bar = ft.SnackBar(
-            content=ft.Text(msg), bgcolor=color, duration=2200,
-        )
-        self._page.snack_bar.open = True
-        self._page.update()
+        show_toast(self._page, msg, duration=2200, color=color)

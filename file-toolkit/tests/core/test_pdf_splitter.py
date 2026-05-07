@@ -1,14 +1,12 @@
 """PDF 分割/合并/压缩模块真实集成测试"""
-import io
-import pytest
 from pathlib import Path
 
 import pypdf
 
-from core.pdf.splitter import split_pdf
-from core.pdf.merger import merge_pdf
-from core.pdf.compressor import compress_pdf
 from core.models import TaskStatus
+from core.pdf.compressor import compress_pdf
+from core.pdf.merger import merge_pdf
+from core.pdf.splitter import split_pdf
 
 
 def _make_pdf(path: Path, num_pages: int = 3) -> Path:

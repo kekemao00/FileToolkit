@@ -3,10 +3,10 @@ File Toolkit — 核心数据模型
 
 所有跨层传递的数据结构定义于此，保持与 UI 层和 Service 层的解耦。
 """
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Callable
 
 
 class TaskStatus(Enum):

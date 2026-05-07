@@ -13,6 +13,7 @@ import flet as ft
 from core.ocr.client import recognize
 from services import history_service, settings_service
 from services.task_service import run_task
+from ui.utils import show_toast
 
 # 语言选项（并排按钮）
 _LANGUAGES = [
@@ -843,8 +844,4 @@ class OcrPage(ft.Column):
             subprocess.Popen(["xdg-open", str(folder)])
 
     def _show_snack(self, msg: str, color: str = "#005f98") -> None:
-        self._page.snack_bar = ft.SnackBar(
-            content=ft.Text(msg), bgcolor=color, duration=2200,
-        )
-        self._page.snack_bar.open = True
-        self._page.update()
+        show_toast(self._page, msg, duration=2200, color=color)

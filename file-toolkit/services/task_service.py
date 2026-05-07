@@ -5,8 +5,8 @@ File Toolkit — 任务服务层
 大文件任务在 ThreadPoolExecutor 中运行，UI 永不卡顿。
 """
 import asyncio
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Callable
 
 from core.models import ProgressCallback, TaskResult
 

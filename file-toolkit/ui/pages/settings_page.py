@@ -2,6 +2,7 @@
 import flet as ft
 
 from services import settings_service
+from ui.utils import show_toast
 
 
 class SettingsPage(ft.Column):
@@ -193,9 +194,7 @@ class SettingsPage(ft.Column):
     def _save_api_keys(self, _) -> None:
         settings_service.set("ocr_api_key", self._api_key_field.value or "")
         settings_service.set("ocr_secret_key", self._secret_key_field.value or "")
-        self._page.snack_bar = ft.SnackBar(content=ft.Text("API 配置已保存"), bgcolor="#005f98")
-        self._page.snack_bar.open = True
-        self._page.update()
+        show_toast(self._page, "API 配置已保存")
 
     # ── 关于 ──────────────────────────────────────────────────────────
     def _build_about(self) -> ft.Control:

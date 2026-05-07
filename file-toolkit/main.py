@@ -1,12 +1,13 @@
 """
 File Toolkit — Flet 应用入口
 """
-import flet as ft
 from pathlib import Path
 
+import flet as ft
+
 from services import history_service, settings_service
-from ui.theme import get_app_theme
 from ui.router import setup_router
+from ui.theme import get_app_theme
 
 # 运行时数据目录（开发环境放项目根，打包后用 flet 提供的用户目录）
 _DATA_DIR = Path(__file__).parent / ".data"

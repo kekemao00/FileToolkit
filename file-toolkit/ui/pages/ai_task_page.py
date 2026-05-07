@@ -8,6 +8,7 @@ from pathlib import Path
 import flet as ft
 
 from services import settings_service
+from ui.utils import show_toast
 
 # Prompt 建议按钮数据
 _PROMPT_SUGGESTIONS = [
@@ -444,13 +445,7 @@ class AiTaskPage(ft.Column):
         self._show_snack("语音输入需要系统麦克风权限，请在系统设置中授权后重试")
 
     def _show_snack(self, msg: str, color: str = "#005f98", duration: int = 2200) -> None:
-        self._page.snack_bar = ft.SnackBar(
-            content=ft.Text(msg),
-            bgcolor=color,
-            duration=duration,
-        )
-        self._page.snack_bar.open = True
-        self._page.update()
+        show_toast(self._page, msg, duration=duration, color=color)
 
     @staticmethod
     def _on_btn_hover(e: ft.ControlEvent) -> None:

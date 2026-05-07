@@ -125,10 +125,8 @@ def pdf_to_pptx(
     """PDF 转 PowerPoint（.pptx）。每页渲染为图片嵌入 slide。"""
     t0 = time.time()
     try:
-        import io
 
         import pypdf
-        from PIL import Image
         from pptx import Presentation
         from pptx.util import Inches
 
@@ -158,8 +156,8 @@ def pdf_to_pptx(
             page_text = reader.pages[page_num].extract_text() or ""
             if page_text.strip():
                 from pptx.util import Pt
-                txBox = slide.shapes.add_textbox(Inches(0.5), Inches(0.5), Inches(9), Inches(6.5))
-                tf = txBox.text_frame
+                tx_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.5), Inches(9), Inches(6.5))
+                tf = tx_box.text_frame
                 tf.word_wrap = True
                 p = tf.paragraphs[0]
                 p.text = page_text

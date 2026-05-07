@@ -1,8 +1,9 @@
 """图片格式转换模块单元测试"""
-import pytest
 from pathlib import Path
 
-from core.image.converter import convert_image, batch_convert
+import pytest
+
+from core.image.converter import batch_convert, convert_image
 
 
 class TestConvertImage:

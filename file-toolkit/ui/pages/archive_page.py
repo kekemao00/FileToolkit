@@ -15,6 +15,7 @@ from core.archive.handler import compress, extract
 from core.models import TaskResult, TaskStatus
 from services import history_service, settings_service
 from services.task_service import run_task
+from ui.utils import show_toast
 
 _FUNCTIONS = [
     {"label": "ZIP 压缩", "desc": "通用兼容格式", "icon": ft.Icons.FOLDER_ZIP,
@@ -637,11 +638,7 @@ class ArchivePage(ft.Column):
                     allow_multiple=True,
                 )
         except RuntimeError:
-            self._page.snack_bar = ft.SnackBar(
-                content=ft.Text("无法打开文件选择器，请检查系统环境"), duration=3000,
-            )
-            self._page.snack_bar.open = True
-            self._page.update()
+            show_toast(self._page, "无法打开文件选择器，请检查系统环境", duration=3000)
             files = None
         if not files:
             self._page.update()
@@ -800,10 +797,7 @@ class ArchivePage(ft.Column):
 
     def _start_task(self, _) -> None:
         if not self._files:
-            self._page.snack_bar = ft.SnackBar(
-                content=ft.Text("请先选择文件"), duration=2000)
-            self._page.snack_bar.open = True
-            self._page.update()
+            show_toast(self._page, "请先选择文件")
             return
 
         out_dir = settings_service.resolve_output_dir(self._files[0])
@@ -814,11 +808,7 @@ class ArchivePage(ft.Column):
             archive_files = [p for p in self._files
                              if p.suffix.lower().lstrip(".") in _ARCHIVE_EXTS]
             if not archive_files:
-                self._page.snack_bar = ft.SnackBar(
-                    content=ft.Text("解压需要选择压缩包文件"), duration=2000,
-                )
-                self._page.snack_bar.open = True
-                self._page.update()
+                show_toast(self._page, "解压需要选择压缩包文件")
                 return
             kwargs = {"input_file": archive_files[0], "output_dir": out_dir}
             fn = extract
@@ -835,11 +825,7 @@ class ArchivePage(ft.Column):
                       "format": "tar.gz"}
             fn = compress
         else:
-            self._page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"未知功能：{func}"), duration=2000,
-            )
-            self._page.snack_bar.open = True
-            self._page.update()
+            show_toast(self._page, f"未知功能：{func}")
             return
 
         self._show_processing(f"{len(self._files)} 个文件")

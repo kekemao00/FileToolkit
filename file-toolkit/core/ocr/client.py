@@ -1,9 +1,6 @@
 """OCR 识别模块 — 调用百度/腾讯 OCR API 或本地 Tesseract"""
-import base64
 import time
 from pathlib import Path
-
-import httpx
 
 from core.models import ProgressCallback, TaskResult, TaskStatus
 

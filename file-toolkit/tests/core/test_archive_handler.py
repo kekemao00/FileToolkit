@@ -1,6 +1,7 @@
 """压缩解压模块单元测试"""
-import pytest
 from pathlib import Path
+
+import pytest
 
 from core.archive.handler import compress, extract
 

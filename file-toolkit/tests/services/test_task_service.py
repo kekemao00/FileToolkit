@@ -1,9 +1,6 @@
 """任务服务层单元测试"""
-import pytest
 import asyncio
-from unittest.mock import MagicMock
 
-from core.models import TaskResult, TaskStatus
 from services import task_service
 
 
