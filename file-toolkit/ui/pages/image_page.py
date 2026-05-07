@@ -3,7 +3,6 @@
 布局：左侧主内容区（标题+拖拽区+文件列表） + 右侧参数面板
 """
 import asyncio
-import time
 from pathlib import Path
 
 import flet as ft
@@ -82,19 +81,17 @@ class ImagePage(ft.Column):
             width=270,
         )
 
-        # 格式选择
-        self._format_dropdown = ft.Dropdown(
-            value="webp",
-            options=[
-                ft.dropdown.Option("png", "PNG"),
-                ft.dropdown.Option("jpg", "JPG"),
-                ft.dropdown.Option("webp", "WebP"),
-            ],
-            border_radius=12,
-            bgcolor="#d5e3ff",
-            border_color="transparent",
-            text_size=14,
-        )
+        # 格式选择（3 个并排按钮）
+        self._format_value = "webp"
+        self._format_btns: list[ft.Container] = []
+        for fmt_key, fmt_label in [("png", "PNG"), ("jpg", "JPG"), ("webp", "WebP")]:
+            self._format_btns.append(self._make_format_btn(fmt_key, fmt_label))
+
+        # 水印位置（3×3 网格，值为 tl/tc/tr/cl/cc/cr/bl/bc/br）
+        self._watermark_pos = "br"
+        self._watermark_pos_btns: dict[str, ft.Container] = {}
+        for pos_key in ["tl", "tc", "tr", "cl", "cc", "cr", "bl", "bc", "br"]:
+            self._watermark_pos_btns[pos_key] = self._make_pos_btn(pos_key)
 
         # 尺寸输入
         self._width_field = ft.TextField(
@@ -117,8 +114,13 @@ class ImagePage(ft.Column):
             text_size=14, expand=True,
         )
 
-        # 文件列表
-        self._file_list = ft.Column(spacing=0)
+        # 文件列表（缩略图卡片网格）
+        self._file_list = ft.Row(
+            controls=[],
+            wrap=True,
+            spacing=12,
+            run_spacing=12,
+        )
         self._file_count = ft.Text("待处理文件 (0)", size=18, color="#162f50", font_family="42dot Sans")
 
         # 运行按钮
@@ -155,13 +157,13 @@ class ImagePage(ft.Column):
             icon_block = ft.Container(
                 content=ft.Icon(f["icon"], color="#ffffff" if active else f["color"], size=28),
                 width=56, height=56,
-                bgcolor=f["color"] if active else f["bg"],
+                bgcolor="#005f98" if active else f["bg"],
                 border_radius=14,
                 alignment=ft.Alignment(0, 0),
             )
             badge = ft.Container(
                 content=ft.Text(
-                    str(idx + 1), size=10, color=f["color"] if active else "#ffffff",
+                    str(idx + 1), size=10, color="#005f98" if active else "#ffffff",
                     weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER,
                 ),
                 width=20, height=20,
@@ -379,7 +381,6 @@ class ImagePage(ft.Column):
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
-            bgcolor="#F4F6FF",
             padding=ft.padding.symmetric(vertical=36, horizontal=24),
             expand=True,
             on_click=self._pick_files,
@@ -388,6 +389,7 @@ class ImagePage(ft.Column):
         self._drop_zone_body = ft.Container(
             content=ft.Stack(
                 controls=[
+                    ft.Container(content=body, expand=True, padding=ft.padding.all(0)),
                     ft.Container(
                         content=ft.Column(
                             controls=[
@@ -410,7 +412,6 @@ class ImagePage(ft.Column):
                         ignore_interactions=True,
                         expand=True,
                     ),
-                    ft.Container(content=body, expand=True, padding=ft.padding.all(0)),
                 ],
             ),
             border_radius=20,
@@ -420,11 +421,13 @@ class ImagePage(ft.Column):
             expand=True,
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
         )
-        return ft.Container(
+        self._drop_zone_wrapper = ft.Container(
             content=self._drop_zone_body,
             padding=ft.padding.symmetric(horizontal=32),
-            height=200,
+            height=260,
+            animate=ft.Animation(200, ft.AnimationCurve.EASE_IN_OUT),
         )
+        return self._drop_zone_wrapper
 
     def _on_drop_zone_hover(self, e: ft.ControlEvent) -> None:
         self._drop_zone_body.bgcolor = (
@@ -433,7 +436,7 @@ class ImagePage(ft.Column):
         self._drop_zone_body.update()
 
     def _build_file_list(self) -> ft.Control:
-        return ft.Container(
+        self._file_list_container = ft.Container(
             content=ft.Column(
                 controls=[
                     ft.Row(
@@ -443,28 +446,14 @@ class ImagePage(ft.Column):
                             ft.TextButton("清空全部", style=ft.ButtonStyle(color="#005f98"), on_click=self._clear_files),
                         ],
                     ),
-                    ft.Container(
-                        content=ft.Row(
-                            controls=[
-                                ft.Container(width=32),
-                                ft.Text("文件名", size=12, color="#94a3b8", font_family="Plus Jakarta Sans", expand=True),
-                                ft.Text("大小", size=12, color="#94a3b8", font_family="Plus Jakarta Sans", width=72),
-                                ft.Text("操作", size=12, color="#94a3b8", font_family="Plus Jakarta Sans", width=40,
-                                        text_align=ft.TextAlign.CENTER),
-                            ],
-                            spacing=12,
-                        ),
-                        bgcolor="#f8fafc",
-                        border_radius=ft.border_radius.only(top_left=8, top_right=8),
-                        padding=ft.padding.symmetric(horizontal=12, vertical=8),
-                        border=ft.border.only(bottom=ft.BorderSide(1, "#e2e8f0")),
-                    ),
                     self._file_list,
                 ],
-                spacing=0,
+                spacing=12,
             ),
             padding=ft.padding.symmetric(horizontal=32),
+            visible=False,
         )
+        return self._file_list_container
 
     def _build_param_panel(self) -> ft.Control:
         self._param_panel = ft.Container(
@@ -492,7 +481,9 @@ class ImagePage(ft.Column):
                             ft.Text("画质优先", size=10, color="#455c7f"),
                         ]),
                     ], spacing=8)),
-                    self._section("目标格式 (转换)", self._format_dropdown),
+                    self._section("目标格式 (转换)", ft.Row(
+                        controls=self._format_btns, spacing=8,
+                    )),
                     self._section("尺寸调整", ft.Column(controls=[
                         ft.Row(controls=[self._width_field, self._height_field], spacing=8),
                         ft.Row(controls=[
@@ -503,6 +494,35 @@ class ImagePage(ft.Column):
                         ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     ], spacing=8)),
                     self._section("水印文字", self._watermark_field),
+                    self._section("水印位置", ft.Column(controls=[
+                        ft.Row(
+                            controls=[
+                                self._watermark_pos_btns["tl"],
+                                self._watermark_pos_btns["tc"],
+                                self._watermark_pos_btns["tr"],
+                            ],
+                            spacing=8,
+                            alignment=ft.MainAxisAlignment.START,
+                        ),
+                        ft.Row(
+                            controls=[
+                                self._watermark_pos_btns["cl"],
+                                self._watermark_pos_btns["cc"],
+                                self._watermark_pos_btns["cr"],
+                            ],
+                            spacing=8,
+                            alignment=ft.MainAxisAlignment.START,
+                        ),
+                        ft.Row(
+                            controls=[
+                                self._watermark_pos_btns["bl"],
+                                self._watermark_pos_btns["bc"],
+                                self._watermark_pos_btns["br"],
+                            ],
+                            spacing=8,
+                            alignment=ft.MainAxisAlignment.START,
+                        ),
+                    ], spacing=8)),
                     self._run_btn,
                     ft.Text("预计耗时: 8秒 • 隐私保护已开启", size=10, color="#455c7f",
                             font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
@@ -524,6 +544,61 @@ class ImagePage(ft.Column):
             ft.Text(label.upper(), size=12, color="#455c7f", font_family="42dot Sans"),
             content,
         ], spacing=12)
+
+    def _make_format_btn(self, key: str, label: str) -> ft.Container:
+        active = key == getattr(self, "_format_value", "webp")
+        return ft.Container(
+            content=ft.Text(
+                label, size=13, weight=ft.FontWeight.W_600,
+                color="#ffffff" if active else "#162f50",
+                text_align=ft.TextAlign.CENTER,
+                font_family="42dot Sans",
+            ),
+            bgcolor="#005f98" if active else "#ffffff",
+            border=ft.border.all(1, "#005f98" if active else "#e2e8f0"),
+            border_radius=10,
+            padding=ft.padding.symmetric(vertical=10),
+            on_click=lambda _, k=key: self._select_format(k),
+            ink=True,
+            data=key,
+            expand=True,
+            alignment=ft.Alignment(0, 0),
+        )
+
+    def _select_format(self, key: str) -> None:
+        self._format_value = key
+        for btn in self._format_btns:
+            active = btn.data == key
+            btn.bgcolor = "#005f98" if active else "#ffffff"
+            btn.border = ft.border.all(1, "#005f98" if active else "#e2e8f0")
+            btn.content.color = "#ffffff" if active else "#162f50"
+        self.update()
+
+    def _make_pos_btn(self, key: str) -> ft.Container:
+        active = key == getattr(self, "_watermark_pos", "br")
+        return ft.Container(
+            content=ft.Container(
+                width=6, height=6, bgcolor="#ffffff" if active else "#94a3b8",
+                border_radius=9999,
+            ),
+            width=40, height=40,
+            bgcolor="#005f98" if active else "#ffffff",
+            border=ft.border.all(1, "#005f98" if active else "#e2e8f0"),
+            border_radius=8,
+            on_click=lambda _, k=key: self._select_pos(k),
+            ink=True,
+            data=key,
+            alignment=ft.Alignment(0, 0),
+        )
+
+    def _select_pos(self, key: str) -> None:
+        self._watermark_pos = key
+        for pk, btn in self._watermark_pos_btns.items():
+            active = pk == key
+            btn.bgcolor = "#005f98" if active else "#ffffff"
+            btn.border = ft.border.all(1, "#005f98" if active else "#e2e8f0")
+            btn.content.bgcolor = "#ffffff" if active else "#94a3b8"
+        self.update()
 
     def _build_processing_view(self) -> ft.Container:
         return ft.Container(
@@ -605,10 +680,10 @@ class ImagePage(ft.Column):
             icon_stack = col.controls[0]
             icon_block = icon_stack.controls[0]
             badge = icon_stack.controls[1]
-            icon_block.bgcolor = f["color"] if active else f["bg"]
-            icon_block.content.color = "#ffffff"
+            icon_block.bgcolor = "#005f98" if active else f["bg"]
+            icon_block.content.color = "#ffffff" if active else f["color"]
             badge.bgcolor = "#ffffff" if active else "#005f98"
-            badge.content.color = f["color"] if active else "#ffffff"
+            badge.content.color = "#005f98" if active else "#ffffff"
             col.controls[1].color = "#ffffff" if active else "#162f50"
             col.controls[2].color = ft.Colors.with_opacity(0.7, "#ffffff") if active else "#455c7f"
         if self._files:
@@ -650,56 +725,89 @@ class ImagePage(ft.Column):
     def _rebuild_file_list(self) -> None:
         self._file_list.controls.clear()
         self._file_count.value = f"待处理文件 ({len(self._files)})"
-        for idx, f in enumerate(self._files):
+        has_files = bool(self._files)
+        self._file_list_container.visible = has_files
+        # 空态显示大拖拽区；有文件时拖拽区收缩到顶部
+        self._drop_zone_wrapper.height = 140 if has_files else 260
+        for f in self._files:
             try:
                 size = f.stat().st_size
                 size_str = f"{size / 1024:.1f} KB" if size < 1024 * 1024 else f"{size / 1024 / 1024:.1f} MB"
             except OSError:
                 size_str = "?"
-            is_last = idx == len(self._files) - 1
             ext = f.suffix.lower().lstrip(".")
-            color_map = {
-                "png": "#dcfce7", "jpg": "#fef2f2", "jpeg": "#fef2f2",
-                "webp": "#eff6ff", "bmp": "#faf5ff", "heic": "#fff7ed",
+            tag_color_map = {
+                "png": "#16a34a", "jpg": "#dc2626", "jpeg": "#dc2626",
+                "webp": "#2563eb", "bmp": "#7c3aed", "heic": "#ea580c",
+                "tiff": "#0891b2", "tif": "#0891b2",
             }
-            icon_bg = color_map.get(ext, "#f1f5f9")
-            item = ft.Container(
-                content=ft.Row(
+            tag_bg_map = {
+                "png": "#dcfce7", "jpg": "#fef2f2", "jpeg": "#fef2f2",
+                "webp": "#dbeafe", "bmp": "#ede9fe", "heic": "#ffedd5",
+                "tiff": "#cffafe", "tif": "#cffafe",
+            }
+            tag_color = tag_color_map.get(ext, "#475569")
+            tag_bg = tag_bg_map.get(ext, "#f1f5f9")
+            try:
+                thumb = ft.Image(
+                    src=str(f), width=48, height=48, fit=ft.ImageFit.COVER,
+                    border_radius=8,
+                )
+            except Exception:
+                thumb = ft.Container(
+                    content=ft.Icon(ft.Icons.IMAGE, color="#005f98", size=24),
+                    width=48, height=48, bgcolor="#eff6ff", border_radius=8,
+                    alignment=ft.Alignment(0, 0),
+                )
+            card = ft.Container(
+                content=ft.Column(
                     controls=[
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.IMAGE, color="#005f98", size=16),
-                            width=32, height=32, bgcolor=icon_bg, border_radius=6,
-                            alignment=ft.Alignment(0, 0),
+                        ft.Row(
+                            controls=[
+                                thumb,
+                                ft.Container(
+                                    content=ft.Text(
+                                        ext.upper() or "?", size=10, weight=ft.FontWeight.BOLD,
+                                        color=tag_color, font_family="Plus Jakarta Sans",
+                                    ),
+                                    bgcolor=tag_bg,
+                                    border_radius=6,
+                                    padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                                ),
+                                ft.Container(expand=True),
+                                ft.IconButton(
+                                    icon=ft.Icons.CLOSE,
+                                    icon_color="#94a3b8",
+                                    icon_size=14,
+                                    tooltip="移除",
+                                    on_click=lambda _, path=f: self._remove_file(path),
+                                    style=ft.ButtonStyle(
+                                        overlay_color=ft.Colors.with_opacity(0.08, "#dc2626"),
+                                        padding=ft.padding.all(4),
+                                    ),
+                                ),
+                            ],
+                            spacing=8,
+                            vertical_alignment=ft.CrossAxisAlignment.START,
                         ),
                         ft.Text(
-                            f.name, size=14, color="#162f50", font_family="42dot Sans",
-                            max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, expand=True,
+                            f.name, size=13, color="#162f50", font_family="42dot Sans",
+                            weight=ft.FontWeight.W_500,
+                            max_lines=2, overflow=ft.TextOverflow.ELLIPSIS,
                         ),
-                        ft.Text(size_str, size=12, color="#455c7f", width=72),
-                        ft.IconButton(
-                            icon=ft.Icons.CLOSE,
-                            icon_color="#94a3b8",
-                            icon_size=16,
-                            tooltip="移除",
-                            on_click=lambda _, path=f: self._remove_file(path),
-                            style=ft.ButtonStyle(
-                                overlay_color=ft.Colors.with_opacity(0.08, "#dc2626"),
-                                padding=ft.padding.all(4),
-                            ),
-                        ),
+                        ft.Text(size_str, size=11, color="#455c7f", font_family="Plus Jakarta Sans"),
                     ],
-                    spacing=12,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=6,
                 ),
                 bgcolor="#ffffff",
-                padding=ft.padding.symmetric(horizontal=12, vertical=10),
-                border=ft.border.only(
-                    bottom=ft.BorderSide(1, "#e2e8f0") if not is_last else ft.BorderSide(0)
-                ),
+                border=ft.border.all(1, "#e2e8f0"),
+                border_radius=12,
+                padding=ft.padding.all(12),
+                width=220,
             )
-            self._file_list.controls.append(item)
+            self._file_list.controls.append(card)
         self._run_btn.content.controls[1].value = f"立即处理 ({len(self._files)}张图片)"
-        self._run_btn.opacity = 1.0 if self._files else 0.4
+        self._run_btn.opacity = 1.0 if has_files else 0.4
         self.update()
 
     def _clear_files(self, _) -> None:
@@ -766,7 +874,7 @@ class ImagePage(ft.Column):
             kwargs = {
                 "input_files": self._files,
                 "output_dir": out_dir,
-                "target_format": self._format_dropdown.value,
+                "target_format": self._format_value,
                 "quality": quality,
             }
             fn = convert_image
@@ -855,18 +963,43 @@ class ImagePage(ft.Column):
 
         self._result_file_rows.controls.clear()
         if result.output_files:
-            for fp in result.output_files[:5]:
+            for fp in result.output_files[:8]:
                 self._result_file_rows.controls.append(
-                    ft.Row(
-                        controls=[
-                            ft.Icon(ft.Icons.IMAGE, color="#005f98", size=14),
-                            ft.Text(fp.name, size=13, color="#162f50", expand=True,
-                                    max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                        ],
-                        spacing=8,
+                    ft.Container(
+                        content=ft.Row(
+                            controls=[
+                                ft.Icon(ft.Icons.IMAGE, color="#005f98", size=16),
+                                ft.Text(
+                                    fp.name, size=13, color="#162f50",
+                                    expand=True, max_lines=1,
+                                    overflow=ft.TextOverflow.ELLIPSIS,
+                                ),
+                                ft.Container(
+                                    content=ft.Text(
+                                        "已完成", size=10, color="#16a34a",
+                                        weight=ft.FontWeight.BOLD,
+                                    ),
+                                    bgcolor="#dcfce7",
+                                    border_radius=6,
+                                    padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                                ),
+                                ft.IconButton(
+                                    icon=ft.Icons.FOLDER_OPEN,
+                                    icon_color="#005f98",
+                                    icon_size=16,
+                                    tooltip="打开所在文件夹",
+                                    on_click=lambda _, p=fp: self._open_file_location(p),
+                                ),
+                            ],
+                            spacing=8,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        ),
+                        bgcolor="#f8fafc",
+                        border_radius=8,
+                        padding=ft.padding.symmetric(horizontal=12, vertical=8),
                     )
                 )
-            if len(result.output_files) > 5:
+            if len(result.output_files) > 8:
                 self._result_file_rows.controls.append(
                     ft.Text(f"…共 {len(result.output_files)} 个文件", size=12, color="#455c7f")
                 )
@@ -888,3 +1021,15 @@ class ImagePage(ft.Column):
                 subprocess.Popen(["open", str(self._output_dir)])
             else:
                 subprocess.Popen(["xdg-open", str(self._output_dir)])
+
+    def _open_file_location(self, path: Path) -> None:
+        import subprocess, sys
+        folder = path.parent
+        if not folder.exists():
+            return
+        if sys.platform == "win32":
+            subprocess.Popen(["explorer", "/select,", str(path)])
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", "-R", str(path)])
+        else:
+            subprocess.Popen(["xdg-open", str(folder)])
