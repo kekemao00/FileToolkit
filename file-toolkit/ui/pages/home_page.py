@@ -82,36 +82,34 @@ class HomePage(ft.Column):
                     ft.Container(
                         content=ft.Row(
                             controls=[
-                                # 搜索框（功能未实现，视觉禁用）
                                 ft.Container(
                                     content=ft.Row(
                                         controls=[
                                             ft.Icon(
                                                 ft.Icons.SEARCH,
-                                                color=ft.Colors.with_opacity(0.4, "#94a3b8"),
+                                                color="#94A3B8",
                                                 size=15,
                                             ),
                                             ft.Container(
                                                 content=ft.Text(
-                                                    "搜索功能即将上线...",
+                                                    "搜索功能或指令...",
                                                     size=13,
-                                                    color=ft.Colors.with_opacity(0.4, "#94a3b8"),
-                                                    font_family="Manrope",
+                                                    color="#94A3B8",
+                                                    font_family="42dot Sans",
+                                                    weight=ft.FontWeight.W_500,
                                                 ),
-                                                padding=ft.padding.only(left=8),
                                                 expand=True,
                                             ),
                                         ],
-                                        spacing=0,
+                                        spacing=8,
                                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                                     ),
                                     width=288,
-                                    height=36,
-                                    bgcolor=ft.Colors.with_opacity(0.3, "#f8fafc"),
-                                    border=ft.border.all(1, ft.Colors.with_opacity(0.3, "#e2e8f0")),
-                                    border_radius=18,
-                                    padding=ft.padding.symmetric(horizontal=15),
-                                    tooltip="搜索功能即将上线",
+                                    height=54,
+                                    bgcolor="#F8FAFC",
+                                    border_radius=9999,
+                                    padding=ft.padding.symmetric(horizontal=14, vertical=6),
+                                    tooltip="搜索功能或指令",
                                 ),
                                 # 通知按钮（功能未实现）
                                 ft.IconButton(
@@ -138,11 +136,9 @@ class HomePage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             height=80,
-            bgcolor=ft.Colors.with_opacity(0.8, "#ffffff"),
-            blur=ft.Blur(12, 12),
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.5, "#e2e8f0"))),
+            bgcolor="#FFFFFF",
             shadow=ft.BoxShadow(
-                blur_radius=1,
+                blur_radius=2,
                 color=ft.Colors.with_opacity(0.05, "#000000"),
                 offset=ft.Offset(0, 1),
             ),
