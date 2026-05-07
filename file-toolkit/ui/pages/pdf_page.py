@@ -3,41 +3,19 @@
 布局：左侧主内容区（标题+拖拽区+文件列表） + 右侧参数面板
 """
 import asyncio
-import subprocess
-import sys
 import time
 from pathlib import Path
 
 import flet as ft
-import flet.canvas as cv
 
-from core.models import TaskResult, TaskStatus
 from core.pdf.compressor import compress_pdf
 from core.pdf.converter import pdf_to_docx
 from core.pdf.merger import merge_pdf
 from core.pdf.splitter import split_pdf
 from services import history_service, settings_service
 from services.task_service import run_task
-from ui.theme import build_color_scheme
-
-_THEME = build_color_scheme()
-PRIMARY = _THEME.primary
-ON_PRIMARY = _THEME.on_primary
-PRIMARY_CONTAINER = _THEME.primary_container
-SECONDARY = _THEME.secondary
-SURFACE = _THEME.surface
-SURFACE_LOW = _THEME.surface_container_low
-SURFACE_HIGH = _THEME.surface_container_high
-SURFACE_HIGHEST = _THEME.surface_container_highest
-SURFACE_LOWEST = _THEME.surface_container_lowest
-OUTLINE = _THEME.outline
-OUTLINE_VARIANT = _THEME.outline_variant
-ERROR = _THEME.error
-ERROR_CONTAINER = _THEME.error_container
-TERTIARY = _THEME.tertiary
-TERTIARY_CONTAINER = _THEME.tertiary_container
-TITLE_FONT = "42dot Sans"
-BODY_FONT = "Plus Jakarta Sans"
+from ui.components.progress_card import ProgressCard
+from ui.components.result_card import ResultCard
 
 _FUNCTIONS = [
     {"label": "合并", "desc": "PDF 合并与优化", "icon": ft.Icons.MERGE, "key": "merge",
@@ -154,18 +132,31 @@ class PdfPage(ft.Column):
 
         # 功能卡片（2×2 网格）
         self._func_btns = []
-        for f in _FUNCTIONS:
+        for idx, f in enumerate(_FUNCTIONS):
             active = f["key"] == self._selected_func
+            icon_block = ft.Container(
+                content=ft.Icon(f["icon"], color=f["color"] if not active else "#ffffff", size=28),
+                width=56, height=56,
+                bgcolor=f["bg"] if not active else f["color"],
+                border_radius=14,
+                alignment=ft.Alignment(0, 0),
+            )
+            badge = ft.Container(
+                content=ft.Text(
+                    str(idx + 1), size=10, color="#ffffff",
+                    weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER,
+                ),
+                width=20, height=20,
+                bgcolor="#005f98" if not active else "#ffffff",
+                border_radius=9999,
+                alignment=ft.Alignment(0, 0),
+                right=0, top=0,
+            )
+            icon_stack = ft.Stack(controls=[icon_block, badge], width=60, height=60)
             btn = ft.Container(
                 content=ft.Column(
                     controls=[
-                        ft.Container(
-                            content=ft.Icon(f["icon"], color=f["color"] if not active else "#ffffff", size=20),
-                            width=40, height=40,
-                            bgcolor=f["bg"] if not active else f["color"],
-                            border_radius=10,
-                            alignment=ft.Alignment(0, 0),
-                        ),
+                        icon_stack,
                         ft.Text(
                             f["label"], size=13, weight=ft.FontWeight.W_600,
                             color="#162f50" if not active else "#005f98",

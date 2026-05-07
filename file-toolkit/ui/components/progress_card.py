@@ -26,14 +26,14 @@ class ProgressCard(ft.Container):
     def __init__(self, on_cancel: Callable[[], None] | None = None) -> None:
         self._on_cancel = on_cancel
 
-        self._filename_text = ft.Text("", size=14, weight=ft.FontWeight.W_500, color=ft.Colors.ON_SURFACE)
-        self._desc_text = ft.Text("准备中...", size=12, color=ft.Colors.ON_SURFACE_VARIANT)
-        self._percent_text = ft.Text("", size=12, color=ft.Colors.ON_SURFACE_VARIANT)
+        self._filename_text = ft.Text("", size=14, weight=ft.FontWeight.W_600, color="#162f50")
+        self._desc_text = ft.Text("准备中...", size=12, color="#455c7f")
+        self._percent_text = ft.Text("", size=12, color="#005f98", weight=ft.FontWeight.W_600)
 
         self._progress_bar = ft.ProgressBar(
             value=None,           # None = 不确定（循环）
-            bgcolor=ft.Colors.SECONDARY_CONTAINER,
-            color=ft.Colors.PRIMARY,
+            bgcolor="#d5e3ff",
+            color="#005f98",
             border_radius=ft.border_radius.all(999),
             height=8,
         )
