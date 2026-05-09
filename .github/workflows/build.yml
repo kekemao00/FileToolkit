@@ -37,6 +37,9 @@ on:
       - ".github/workflows/build.yml"
       - "file-toolkit/**"
 
+permissions:
+  contents: write
+
 env:
   FLET_CLI_NO_RICH_OUTPUT: "1"
 
@@ -242,21 +245,25 @@ jobs:
             --yes
 
       - name: Zip app bundle
-        working-directory: file-toolkit
         run: |
-          app_path="$(find build/linux -maxdepth 1 -name '*.AppImage' -print -quit)"
-          if [ -z "$app_path" ]; then
-            echo "No AppImage found, looking for bundle..."
-            cd build/linux
-            zip -r ../../../FileToolkit-linux.zip .
+          if [ ! -d file-toolkit/build/linux ]; then
+            echo "ERROR: file-toolkit/build/linux not found — build may have failed"
+            ls -la file-toolkit/build/ || true
+            exit 1
+          fi
+          app_path="$(find file-toolkit/build/linux -name '*.AppImage' -print -quit)"
+          if [ -n "$app_path" ]; then
+            cp "$app_path" FileToolkit-linux.zip
           else
-            cp "$app_path" ../FileToolkit-linux.zip
+            echo "No AppImage found, zipping bundle directory..."
+            cd file-toolkit/build/linux
+            zip -r "$GITHUB_WORKSPACE/FileToolkit-linux.zip" .
           fi
 
       - uses: actions/upload-artifact@v4
         with:
           name: FileToolkit-linux
-          path: file-toolkit/FileToolkit-linux.zip
+          path: FileToolkit-linux.zip
           if-no-files-found: error
 
   # ── Create Release ─────────────────────────────────
