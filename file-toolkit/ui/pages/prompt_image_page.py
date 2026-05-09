@@ -105,7 +105,7 @@ class PromptImagePage(ft.Column):
 
         # 结果区
         self._result_image = ft.Image(
-            src_base64=None,
+            src="",
             width=800, height=600,
             fit=ft.BoxFit.CONTAIN,
             border_radius=12,
@@ -611,7 +611,7 @@ class PromptImagePage(ft.Column):
         elapsed: float,
     ) -> None:
         b64 = base64.b64encode(image_bytes).decode("ascii")
-        self._result_image.src_base64 = b64
+        self._result_image.src = f"data:image/png;base64,{b64}"
         self._result_image.visible = True
         self._result_empty.visible = False
         self._result_area.visible = True
