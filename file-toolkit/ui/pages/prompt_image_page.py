@@ -425,7 +425,7 @@ class PromptImagePage(ft.Column):
                     options=[ft.dropdown.Option(o) for o in var.get("options", [])],
                     border_radius=12,
                     expand=True,
-                    on_change=lambda _e: self._update_prompt_preview(),
+                    on_select=lambda _e: self._update_prompt_preview(),
                 )
             elif var_type == "textarea":
                 ctrl = ft.TextField(
