@@ -38,6 +38,7 @@ class PromptImagePage(ft.Column):
         self._generating: bool = False
         self._last_image_bytes: bytes | None = None
         self._last_image_path: Path | None = None
+        self._mounted: bool = False
 
         # 先构建各动态区域，后续事件回调直接访问
         self._search_field = ft.TextField(
@@ -164,6 +165,9 @@ class PromptImagePage(ft.Column):
         if tpl.TEMPLATES:
             self._select_template(tpl.TEMPLATES[0])
 
+    def did_mount(self) -> None:
+        self._mounted = True
+
     # ── 主体布局 ──────────────────────────────────────────────────────
     def _build_body(self) -> ft.Control:
         left = ft.Container(
@@ -285,7 +289,7 @@ class PromptImagePage(ft.Column):
                 ink=True,
             )
             self._category_bar.controls.append(chip)
-        if self._category_bar.page:
+        if self._mounted:
             self._category_bar.update()
 
     def _on_category_change(self, cat: str) -> None:
@@ -324,7 +328,7 @@ class PromptImagePage(ft.Column):
                 if len(row_items) == 1:
                     row.controls.append(ft.Container(expand=True))
                 self._template_grid.controls.append(row)
-        if self._template_grid.page:
+        if self._mounted:
             self._template_grid.update()
 
     def _build_template_card(self, template: dict) -> ft.Control:
@@ -399,7 +403,7 @@ class PromptImagePage(ft.Column):
         self._render_form()
         self._render_template_grid()
         self._update_prompt_preview()
-        if self._size_dropdown.page:
+        if self._mounted:
             self._size_dropdown.update()
 
     def _render_form(self) -> None:
@@ -458,7 +462,7 @@ class PromptImagePage(ft.Column):
                 )
             )
 
-        if self._form_area.page:
+        if self._mounted:
             self._form_area.update()
 
     def _collect_values(self) -> dict:
@@ -472,7 +476,7 @@ class PromptImagePage(ft.Column):
             return
         prompt = tpl.assemble_prompt(self._current_template, self._collect_values())
         self._prompt_preview.value = prompt
-        if self._prompt_preview.page:
+        if self._mounted:
             self._prompt_preview.update()
 
     # ── 生成按钮 & 配置提示 ──────────────────────────────────────────
@@ -551,7 +555,8 @@ class PromptImagePage(ft.Column):
 
         if not prompt_image_service.is_configured():
             self._config_hint.visible = True
-            self._config_hint.update()
+            if self._mounted:
+                self._config_hint.update()
             show_toast(self._page, "请先在设置中配置 AI 生图 API Key", color="#b45309")
             return
 
