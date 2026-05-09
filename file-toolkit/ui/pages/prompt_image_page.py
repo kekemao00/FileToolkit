@@ -107,7 +107,7 @@ class PromptImagePage(ft.Column):
         self._result_image = ft.Image(
             src_base64=None,
             width=800, height=600,
-            fit=ft.ImageFit.CONTAIN,
+            fit=ft.BoxFit.CONTAIN,
             border_radius=12,
             visible=False,
         )
