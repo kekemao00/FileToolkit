@@ -48,3 +48,16 @@ def resolve_output_dir(input_file: Path) -> Path:
     if not user_setting:
         return input_file.parent / "output"
     return Path(user_setting)
+
+
+def get_ai_api_key() -> str:
+    """获取通用 AI API Key（兼容历史键名 openai_api_key）。
+
+    优先顺序：ai_image_api_key（提示词出图专用） → ai_api_key → openai_api_key。
+    AI 智能任务页在未配置时会用它判断是否进入引导分支。
+    """
+    return (
+        get("ai_image_api_key", "")
+        or get("ai_api_key", "")
+        or get("openai_api_key", "")
+    )
