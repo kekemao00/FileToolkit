@@ -2,11 +2,12 @@
 import flet as ft
 
 from services import settings_service
+from services.prompt_image_service import DEFAULT_BASE_URL, DEFAULT_MODEL
 from ui.utils import show_toast
 
 
 class SettingsPage(ft.Column):
-    """设置页：外观 / 文件 / 网络(OCR) / 关于"""
+    """设置页：外观 / 文件 / 网络(OCR) / AI 生图 / 关于"""
 
     def __init__(self, page: ft.Page) -> None:
         super().__init__(expand=True, scroll=ft.ScrollMode.AUTO, spacing=0)
@@ -16,6 +17,7 @@ class SettingsPage(ft.Column):
             self._build_appearance(),
             self._build_file(),
             self._build_network(),
+            self._build_ai_image(),
             self._build_about(),
             ft.Container(height=40),
         ]
@@ -195,6 +197,108 @@ class SettingsPage(ft.Column):
         settings_service.set("ocr_api_key", self._api_key_field.value or "")
         settings_service.set("ocr_secret_key", self._secret_key_field.value or "")
         show_toast(self._page, "API 配置已保存")
+
+    # ── AI 生图 ────────────────────────────────────────────────────────
+    def _build_ai_image(self) -> ft.Control:
+        current_key = settings_service.get("ai_image_api_key", "")
+        current_base = settings_service.get("ai_image_base_url", "") or DEFAULT_BASE_URL
+        current_model = settings_service.get("ai_image_model", "") or DEFAULT_MODEL
+
+        self._ai_image_key = ft.TextField(
+            value=current_key, password=True, can_reveal_password=True,
+            hint_text="sk-...（留空则不启用）",
+            border_radius=12, expand=True,
+            bgcolor="#f8fafc", border_color="transparent",
+        )
+        self._ai_image_base = ft.TextField(
+            value=current_base, hint_text=DEFAULT_BASE_URL,
+            border_radius=12, expand=True,
+            bgcolor="#f8fafc", border_color="transparent",
+        )
+        self._ai_image_model = ft.TextField(
+            value=current_model, hint_text=DEFAULT_MODEL,
+            border_radius=12, expand=True,
+            bgcolor="#f8fafc", border_color="transparent",
+        )
+
+        save_btn = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.SAVE, color="#ffffff", size=16),
+                    ft.Text("保存生图配置", size=14, color="#ffffff",
+                            font_family="42dot Sans", weight=ft.FontWeight.W_500),
+                ],
+                spacing=8,
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+            gradient=ft.LinearGradient(
+                begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
+                colors=["#005f98", "#6b1ef3"],
+            ),
+            border_radius=12,
+            padding=ft.padding.symmetric(vertical=10, horizontal=20),
+            shadow=ft.BoxShadow(
+                blur_radius=12, spread_radius=-3,
+                color=ft.Colors.with_opacity(0.15, "#005f98"),
+                offset=ft.Offset(0, 6),
+            ),
+            on_click=self._save_ai_image_config,
+            ink=True,
+        )
+        test_btn = ft.OutlinedButton(
+            "测试连接",
+            icon=ft.Icons.SCIENCE_OUTLINED,
+            on_click=self._test_ai_image_connection,
+            style=ft.ButtonStyle(
+                color="#005f98",
+                side=ft.BorderSide(1, "#d5e3ff"),
+                shape=ft.RoundedRectangleBorder(radius=12),
+            ),
+        )
+
+        return self._card("AI 生图", ft.Icons.AUTO_FIX_HIGH, "#e11d48", "#fff1f2", [
+            self._row("API Key", self._ai_image_key),
+            self._row("Base URL", self._ai_image_base),
+            self._row("模型名称", self._ai_image_model),
+            ft.Container(
+                content=ft.Row(
+                    controls=[save_btn, test_btn],
+                    spacing=12,
+                ),
+                padding=ft.padding.only(left=156, top=4),
+            ),
+        ])
+
+    def _save_ai_image_config(self, _) -> None:
+        settings_service.set("ai_image_api_key", self._ai_image_key.value or "")
+        settings_service.set("ai_image_base_url", self._ai_image_base.value or "")
+        settings_service.set("ai_image_model", self._ai_image_model.value or "")
+        show_toast(self._page, "AI 生图配置已保存")
+
+    def _test_ai_image_connection(self, _) -> None:
+        # 保证使用最新输入进行测试
+        self._save_ai_image_config(None)
+        if not (self._ai_image_key.value or "").strip():
+            show_toast(self._page, "请先填写 API Key", color="#b45309")
+            return
+        show_toast(self._page, "正在测试连接…", color="#005f98")
+        self._page.run_task(self._test_ai_image_connection_async)
+
+    async def _test_ai_image_connection_async(self) -> None:
+        from services import prompt_image_service
+        result = await prompt_image_service.generate_image(
+            prompt="A tiny red apple on a white background, minimal photo",
+            size="1024x1024",
+            quality="low",
+        )
+        if result.get("success"):
+            show_toast(self._page, "连接成功，已成功生成测试图片", color="#047857")
+        else:
+            show_toast(
+                self._page,
+                f"连接失败：{result.get('error', '未知错误')}",
+                color="#b91c1c", duration=4000,
+            )
 
     # ── 关于 ──────────────────────────────────────────────────────────
     def _build_about(self) -> ft.Control:

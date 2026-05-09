@@ -16,6 +16,7 @@ import flet as ft
 _NAV_ITEMS = [
     ("首页",      "/",        ft.Icons.HOME_OUTLINED,          ft.Icons.HOME),
     ("AI 智能任务", "/ai",    ft.Icons.AUTO_AWESOME_OUTLINED,  ft.Icons.AUTO_AWESOME),
+    ("提示词出图", "/prompt-image", ft.Icons.AUTO_FIX_HIGH_OUTLINED, ft.Icons.AUTO_FIX_HIGH),
     ("PDF工具",   "/pdf",     ft.Icons.PICTURE_AS_PDF_OUTLINED, ft.Icons.PICTURE_AS_PDF),
     ("图片工具",  "/image",   ft.Icons.IMAGE_OUTLINED,          ft.Icons.IMAGE),
     ("音视频工具", "/media",  ft.Icons.MOVIE_OUTLINED,          ft.Icons.MOVIE),

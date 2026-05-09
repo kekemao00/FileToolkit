@@ -44,6 +44,12 @@ _TOOL_CARDS = [
         "TXT", "OCR", "#CFFAFE", "#DBEAFE",
         "/ocr",
     ),
+    (
+        "提示词出图", "AI 智能生成精美图片",
+        ft.Icons.AUTO_FIX_HIGH, "#E11D48", "#FFF1F2",
+        "AI", "IMG", "#FFE4E6", "#DBEAFE",
+        "/prompt-image",
+    ),
 ]
 
 _STATUS_COLORS = {
@@ -308,6 +314,8 @@ class HomePage(ft.Column):
                 for card in _TOOL_CARDS
             ],
             spacing=20,
+            wrap=True,
+            run_spacing=20,
         )
         return ft.Column(
             controls=[
