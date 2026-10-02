@@ -1,6 +1,7 @@
 """设置页 — Figma 设计语言统一"""
 import flet as ft
 
+from core.version import app_license, app_version
 from services import settings_service
 from services.prompt_image_service import DEFAULT_BASE_URL, DEFAULT_MODEL
 from ui.palette import c
@@ -303,8 +304,8 @@ class SettingsPage(ft.Column):
     # ── 关于 ──────────────────────────────────────────────────────────
     def _build_about(self) -> ft.Control:
         return self._card("关于", ft.Icons.INFO_OUTLINED, c("#005f98"), c("#dee9ff"), [
-            self._row("版本", ft.Text("v1.0.0（Windows MVP）", size=13, color=c("#455c7f", "fg"))),
-            self._row("开源协议", ft.Text("MIT License", size=13, color=c("#455c7f", "fg"))),
+            self._row("版本", ft.Text(f"v{app_version()}", size=13, color=c("#455c7f", "fg"))),
+            self._row("开源协议", ft.Text(app_license() or "Apache-2.0", size=13, color=c("#455c7f", "fg"))),
         ])
 
     # ── 通用布局 ──────────────────────────────────────────────────────
