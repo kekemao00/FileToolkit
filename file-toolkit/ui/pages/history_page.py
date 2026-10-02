@@ -211,13 +211,13 @@ class HistoryPage(ft.Column):
                             "最近操作", size=30,
                             weight=ft.FontWeight.W_800,
                             color="#162f50",
-                            font_family="WenQuanYi Zen Hei",
+                            font_family="42dot Sans",
                         ),
                         ft.Text(
                             "管理并回顾您在过去 30 天内的所有文件处理记录。",
                             size=16, weight=ft.FontWeight.W_400,
                             color="#455c7f",
-                            font_family="WenQuanYi Zen Hei",
+                            font_family="42dot Sans",
                         ),
                     ],
                     spacing=4,
@@ -287,17 +287,17 @@ class HistoryPage(ft.Column):
                 bg=ft.Colors.with_opacity(0.1, "#2aa7ff"), border="#005f98",
             ),
             self._build_stat_card(
-                "节省空间", "#6b1ef3",
+                "累计处理", "#6b1ef3",
                 self._stat_saved_value, self._stat_saved_unit,
                 bg=ft.Colors.with_opacity(0.2, "#d9caff"), border="#6b1ef3",
             ),
             self._build_stat_card(
-                "转换成功率", "#006571",
+                "成功率", "#006571",
                 self._stat_rate_value, self._stat_rate_unit,
                 bg=ft.Colors.with_opacity(0.1, "#00e3fd"), border="#006571",
             ),
             self._build_stat_card(
-                "云端占用", "#455c7f",
+                "失败任务", "#455c7f",
                 self._stat_cloud_value, self._stat_cloud_unit,
                 bg="#d5e3ff", border="#61789c",
             ),
@@ -315,7 +315,7 @@ class HistoryPage(ft.Column):
                     ft.Text(
                         label, size=10, weight=ft.FontWeight.W_900,
                         color=label_color,
-                        font_family="WenQuanYi Zen Hei",
+                        font_family="42dot Sans",
                     ),
                     ft.Row(
                         controls=[value, unit],
@@ -423,7 +423,7 @@ class HistoryPage(ft.Column):
                                 font_family="42dot Sans",
                             ),
                             ft.Text(
-                                "对于处理失败的大型视频文件，可能因为高峰期同时处理文件过多，您可选择稍后重试！",
+                                "所有处理均在本地完成，不上传任何文件。处理大文件时请确保磁盘有足够剩余空间，失败时可重新选择文件重试。",
                                 size=14, weight=ft.FontWeight.W_500,
                                 color="#455c7f", font_family="42dot Sans",
                             ),
@@ -631,7 +631,7 @@ class HistoryPage(ft.Column):
                 content=ft.Text(
                     action_label, size=12,
                     weight=ft.FontWeight.W_700, color="#455c7f",
-                    font_family="WenQuanYi Zen Hei",
+                    font_family="42dot Sans",
                 ),
                 bgcolor="#dee9ff",
                 border_radius=9999,
@@ -768,15 +768,16 @@ class HistoryPage(ft.Column):
         success = sum(1 for t in self._all_tasks if t.get("status") == "success")
         rate = (success / total * 100) if total > 0 else 0.0
 
+        failed = sum(1 for t in self._all_tasks if t.get("status") == "failed")
+
         self._stat_today_value.value = str(today_count)
         self._stat_today_unit.value = "个文件"
+        self._stat_saved_value.value = str(total)
+        self._stat_saved_unit.value = "条"
         self._stat_rate_value.value = f"{rate:.1f}"
         self._stat_rate_unit.value = "%"
-        # 节省空间 / 云端占用：无数据源，占位
-        self._stat_saved_value.value = "—"
-        self._stat_saved_unit.value = ""
-        self._stat_cloud_value.value = "—"
-        self._stat_cloud_unit.value = ""
+        self._stat_cloud_value.value = str(failed)
+        self._stat_cloud_unit.value = "个"
 
     # ── 格式化 ────────────────────────────────────────────────
     @staticmethod
