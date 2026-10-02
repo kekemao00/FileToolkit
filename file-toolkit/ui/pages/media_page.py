@@ -13,6 +13,7 @@ from core.media.audio import convert_audio, extract_audio
 from core.media.video import compress_video, convert_video
 from services import history_service, settings_service
 from services.task_service import run_task
+from ui.components.top_bar import TopBar
 from ui.utils import show_toast
 
 _FUNCTIONS = [
@@ -33,11 +34,11 @@ _AUDIO_EXTS = {"mp3", "wav", "flac", "aac", "ogg", "wma", "m4a"}
 class MediaPage(ft.Column):
     """音视频处理中心 — 工作台布局"""
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, page: ft.Page, initial_func: str | None = None) -> None:
         super().__init__(expand=True, spacing=0)
         self._page = page
         self._files: list[Path] = []
-        self._selected_func = "video_convert"
+        self._selected_func = initial_func if initial_func in ("video_convert", "video_compress", "audio_extract", "audio_convert") else "video_convert"
         self._task: asyncio.Task | None = None
         self._output_dir: Path | None = None
 
@@ -240,60 +241,7 @@ class MediaPage(ft.Column):
             self._page.on_resize = self._prev_on_resize
 
     def _build_topbar(self) -> ft.Control:
-        return ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Container(expand=True),
-                    ft.Container(
-                        content=ft.Row(
-                            controls=[
-                                ft.Container(
-                                    content=ft.Row(
-                                        controls=[
-                                            ft.Icon(ft.Icons.SEARCH, color="#94a3b8", size=15),
-                                            ft.Container(
-                                                content=ft.Text("搜索功能或指令...", size=13, color="#94a3b8"),
-                                                padding=ft.padding.only(left=8),
-                                                expand=True,
-                                            ),
-                                        ],
-                                        spacing=0,
-                                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                                    ),
-                                    width=288, height=54,
-                                    bgcolor=ft.Colors.with_opacity(0.5, "#f8fafc"),
-                                    border=ft.border.all(1, ft.Colors.with_opacity(0.6, "#e2e8f0")),
-                                    border_radius=9999,
-                                    padding=ft.padding.symmetric(horizontal=15),
-                                    opacity=0.45,
-                                    tooltip="搜索",
-                                ),
-                                ft.IconButton(
-                                    icon=ft.Icons.NOTIFICATIONS_OUTLINED,
-                                    icon_color="#475569", icon_size=20,
-                                    disabled=True, opacity=0.45,
-                                    tooltip="通知",
-                                ),
-                                ft.IconButton(
-                                    icon=ft.Icons.SETTINGS_OUTLINED,
-                                    icon_color="#475569", icon_size=20,
-                                    on_click=lambda _: self._page.go("/settings"),
-                                ),
-                            ],
-                            spacing=12,
-                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        ),
-                    ),
-                ],
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            height=80,
-            bgcolor="#ffffff",
-            shadow=ft.BoxShadow(
-                blur_radius=2, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1),
-            ),
-            padding=ft.padding.symmetric(horizontal=32),
-        )
+        return TopBar(self._page)
 
     def _build_main_content(self) -> ft.Control:
         self._workspace_view = self._build_workspace_view()
@@ -617,18 +565,17 @@ class MediaPage(ft.Column):
         )
 
     def _build_complete_view(self) -> ft.Container:
+        self._result_icon = ft.Icon(ft.Icons.CHECK_CIRCLE, color="#16a34a", size=28)
+        self._result_icon_box = ft.Container(
+            content=self._result_icon, width=44, height=44,
+            bgcolor="#d1fae5", border_radius=9999, alignment=ft.Alignment(0, 0),
+        )
         return ft.Container(
             content=ft.Column(
                 controls=[
                     ft.Row(
                         controls=[
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.CHECK_CIRCLE, color="#16a34a", size=28),
-                                width=44, height=44,
-                                bgcolor="#d1fae5",
-                                border_radius=9999,
-                                alignment=ft.Alignment(0, 0),
-                            ),
+                            self._result_icon_box,
                             self._result_title,
                         ],
                         spacing=12,
@@ -824,6 +771,7 @@ class MediaPage(ft.Column):
             new_body = ft.Row(
                 controls=[self._main_content, self._param_panel],
                 expand=True, spacing=0,
+                vertical_alignment=ft.CrossAxisAlignment.STRETCH,
             )
         self._body_container = new_body
         self.controls[1] = new_body
@@ -981,6 +929,17 @@ class MediaPage(ft.Column):
         else:
             self._result_title.value = f"处理失败：{result.error_message or '未知错误'}"
             self._result_title.color = "#dc2626"
+
+        if result.status == TaskStatus.SUCCESS:
+            self._result_icon.icon = ft.Icons.CHECK_CIRCLE
+            self._result_icon.color = "#16a34a"
+            self._result_icon_box.bgcolor = "#d1fae5"
+            self._complete_view.border = ft.border.all(1, "#d1fae5")
+        else:
+            self._result_icon.icon = ft.Icons.ERROR_OUTLINE
+            self._result_icon.color = "#dc2626"
+            self._result_icon_box.bgcolor = "#fee2e2"
+            self._complete_view.border = ft.border.all(1, "#fecaca")
 
         self._result_file_rows.controls.clear()
         if result.output_files:

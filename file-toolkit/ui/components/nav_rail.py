@@ -227,10 +227,10 @@ class NavRail(ft.Container):
 
     # ── 公共方法 ─────────────────────────────────────────────────────────
     def sync_selected(self, route: str) -> None:
-        """根据当前路由同步导航栏高亮。"""
-        new_index = 0
-        for i, (label, r, icon, sel_icon) in enumerate(_NAV_ITEMS):
-            if route == r or (r != "/" and route.startswith(r)):
+        """根据当前路由同步导航栏高亮；路由不属于任何导航项（如 /settings）时全部取消高亮。"""
+        new_index = -1
+        for i, (_label, r, _icon, _sel_icon) in enumerate(_NAV_ITEMS):
+            if route == r or (r != "/" and route.startswith(r + "/")):
                 new_index = i
                 break
 
@@ -239,23 +239,16 @@ class NavRail(ft.Container):
 
         old_index = self._selected_index
         self._selected_index = new_index
+        if 0 <= old_index < len(self._nav_item_refs):
+            self._style_item(old_index, selected=False)
+        if 0 <= new_index < len(self._nav_item_refs):
+            self._style_item(new_index, selected=True)
 
-        # 更新旧选中项
-        if old_index < len(self._nav_item_refs):
-            old_item = self._nav_item_refs[old_index]
-            _, _, icon, sel_icon = _NAV_ITEMS[old_index]
-            row: ft.Row = old_item.content
-            row.controls[0].name = icon
-            row.controls[0].color = "#475569"
-            row.controls[1].color = "#475569"
-            old_item.bgcolor = None
-
-        # 更新新选中项
-        if new_index < len(self._nav_item_refs):
-            new_item = self._nav_item_refs[new_index]
-            _, _, icon, sel_icon = _NAV_ITEMS[new_index]
-            row: ft.Row = new_item.content
-            row.controls[0].name = sel_icon
-            row.controls[0].color = "#FFFFFF"
-            row.controls[1].color = "#FFFFFF"
-            new_item.bgcolor = "#00A3FF"
+    def _style_item(self, index: int, selected: bool) -> None:
+        item = self._nav_item_refs[index]
+        _, _, icon, sel_icon = _NAV_ITEMS[index]
+        row: ft.Row = item.content
+        row.controls[0].icon = sel_icon if selected else icon
+        row.controls[0].color = "#FFFFFF" if selected else "#475569"
+        row.controls[1].color = "#FFFFFF" if selected else "#475569"
+        item.bgcolor = "#00A3FF" if selected else None

@@ -3,6 +3,8 @@
 布局：左侧主内容区（标题+拖拽区+文件列表） + 右侧参数面板
 """
 import asyncio
+import functools
+import os
 import subprocess
 import sys
 import time
@@ -10,14 +12,61 @@ from pathlib import Path
 
 import flet as ft
 
-from core.models import TaskResult
+from core.models import TaskResult, TaskStatus
 from core.pdf.compressor import compress_pdf
 from core.pdf.converter import pdf_to_docx
+from core.pdf.encryptor import encrypt_pdf
 from core.pdf.merger import merge_pdf
 from core.pdf.splitter import split_pdf
+from core.pdf.watermark import add_text_watermark
 from services import history_service, settings_service
 from services.task_service import run_task
+from ui.components.top_bar import TopBar
 from ui.utils import show_toast
+
+
+def _pdf_with_enhancements(
+    base_fn,
+    add_pwd: bool,
+    pwd: str,
+    add_wm: bool,
+    wm_text: str,
+    *,
+    progress_callback=None,
+    **base_kwargs,
+) -> TaskResult:
+    """先执行基础操作，再对其输出的每个 PDF 追加水印 / 加密。
+
+    水印在前、加密在后（加密后内容不可再改）。每步写临时文件后原子替换，
+    避免 pikepdf 读写同一路径导致损坏。
+    """
+    result = base_fn(progress_callback=progress_callback, **base_kwargs)
+    if result.status != TaskStatus.SUCCESS or not result.output_files:
+        return result
+
+    steps: list = []
+    if add_wm and wm_text:
+        steps.append(lambda src, dst: add_text_watermark(
+            input_file=src, output_file=dst, text=wm_text))
+    if add_pwd and pwd:
+        steps.append(lambda src, dst: encrypt_pdf(
+            input_file=src, output_file=dst, user_password=pwd))
+
+    for out in result.output_files:
+        for step in steps:
+            tmp = out.with_name(out.name + ".tmp")
+            sub = step(out, tmp)
+            if sub.status != TaskStatus.SUCCESS:
+                if tmp.exists():
+                    tmp.unlink()
+                return TaskResult(
+                    status=TaskStatus.FAILED,
+                    error_message=sub.error_message or "增强处理失败",
+                    duration_seconds=result.duration_seconds,
+                )
+            os.replace(tmp, out)
+
+    return result
 
 _FUNCTIONS = [
     {"label": "合并", "desc": "PDF 合并与优化", "icon": ft.Icons.MERGE, "key": "merge",
@@ -46,13 +95,13 @@ def _parse_ranges(text: str) -> list[str]:
 class PdfPage(ft.Column):
     """PDF 万能编辑器 — 工作台布局"""
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, page: ft.Page, initial_func: str | None = None) -> None:
         super().__init__(expand=True, spacing=0)
         self._page = page
         self._files: list[Path] = []
         self._active_files: list[Path] = []
         self._page_count_cache: dict[Path, int | None] = {}
-        self._selected_func = "merge"
+        self._selected_func = initial_func if initial_func in ("merge", "split", "compress", "to_word") else "merge"
         self._task: asyncio.Task | None = None
         self._current_result: TaskResult | None = None
 
@@ -132,9 +181,29 @@ class PdfPage(ft.Column):
             expand=True,
         )
 
-        # 增强选项（功能尚未接入，disabled 防止误操作）
-        self._pwd_switch = ft.Switch(value=False, active_color="#005f98", inactive_thumb_color="#ffffff", inactive_track_color="#cbdeff", disabled=True)
-        self._watermark_switch = ft.Switch(value=True, active_color="#005f98", inactive_thumb_color="#ffffff", inactive_track_color="#cbdeff", disabled=True)
+        # 增强选项（仅对输出单个 PDF 的「合并」「压缩」生效）
+        self._pwd_switch = ft.Switch(
+            value=False, active_color="#005f98", inactive_thumb_color="#ffffff",
+            inactive_track_color="#cbdeff", on_change=self._on_pwd_toggle,
+        )
+        self._watermark_switch = ft.Switch(
+            value=False, active_color="#005f98", inactive_thumb_color="#ffffff",
+            inactive_track_color="#cbdeff", on_change=self._on_watermark_toggle,
+        )
+        self._pwd_field = ft.TextField(
+            password=True, can_reveal_password=True, hint_text="设置打开密码",
+            border_radius=12, bgcolor="#ffffff", border_color="#d5e3ff",
+            text_size=14, visible=False, content_padding=ft.padding.symmetric(horizontal=12, vertical=8),
+        )
+        self._watermark_field = ft.TextField(
+            value="FileToolkit", hint_text="水印文字",
+            border_radius=12, bgcolor="#ffffff", border_color="#d5e3ff",
+            text_size=14, visible=False, content_padding=ft.padding.symmetric(horizontal=12, vertical=8),
+        )
+        self._enhance_hint = ft.Text(
+            "密码 / 水印仅在「合并」「压缩」时生效", size=10, color="#94a3b8",
+            font_family="42dot Sans", visible=False,
+        )
 
         # 文件列表
         self._file_list = ft.Column(spacing=0)
@@ -227,6 +296,7 @@ class PdfPage(ft.Column):
 
         self._main_content = self._build_main_content()
         self._build_param_panel()
+        self._sync_enhancements_enabled()
 
         # 响应式断点
         self._NARROW_BREAKPOINT = 800
@@ -248,59 +318,7 @@ class PdfPage(ft.Column):
             self._page.on_resize = self._prev_on_resize
 
     def _build_topbar(self) -> ft.Control:
-        return ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Container(expand=True),
-                    ft.Container(
-                        content=ft.Row(
-                            controls=[
-                                # 搜索框：功能未上线，降低视觉权重
-                                ft.Container(
-                                    content=ft.Row(
-                                        controls=[
-                                            ft.Icon(ft.Icons.SEARCH, color="#94a3b8", size=15),
-                                            ft.Container(
-                                                content=ft.Text("搜索功能或指令...", size=13, color="#94a3b8"),
-                                                padding=ft.padding.only(left=8),
-                                                expand=True,
-                                            ),
-                                        ],
-                                        spacing=0,
-                                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                                    ),
-                                    width=288, height=54,
-                                    bgcolor=ft.Colors.with_opacity(0.5, "#f8fafc"),
-                                    border=ft.border.all(1, ft.Colors.with_opacity(0.6, "#e2e8f0")),
-                                    border_radius=9999,
-                                    padding=ft.padding.symmetric(horizontal=15),
-                                    opacity=0.45,
-                                    tooltip="搜索",
-                                ),
-                                ft.IconButton(
-                                    icon=ft.Icons.NOTIFICATIONS_OUTLINED,
-                                    icon_color="#475569", icon_size=20,
-                                    disabled=True,
-                                    opacity=0.45,
-                                    tooltip="通知",
-                                ),
-                                ft.IconButton(icon=ft.Icons.SETTINGS_OUTLINED, icon_color="#475569", icon_size=20,
-                                              on_click=lambda _: self._page.go("/settings")),
-                            ],
-                            spacing=12,
-                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        ),
-                    ),
-                ],
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            height=80,
-            bgcolor="#ffffff",
-            shadow=ft.BoxShadow(
-                blur_radius=2, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1),
-            ),
-            padding=ft.padding.symmetric(horizontal=32),
-        )
+        return TopBar(self._page)
 
     def _build_main_content(self) -> ft.Control:
         self._workspace_view = self._build_workspace_view()
@@ -347,35 +365,6 @@ class PdfPage(ft.Column):
                                     spacing=4,
                                 ),
                                 ft.Container(expand=True),
-                                ft.Row(
-                                    controls=[
-                                        ft.Container(
-                                            content=ft.Icon(
-                                                ft.Icons.GRID_VIEW,
-                                                color="#005f98",
-                                                size=16,
-                                            ),
-                                            bgcolor="#d5e3ff",
-                                            border_radius=12,
-                                            padding=ft.padding.all(8),
-                                            opacity=0.45,
-                                            tooltip="网格视图",
-                                        ),
-                                        ft.Container(
-                                            content=ft.Icon(
-                                                ft.Icons.VIEW_LIST,
-                                                color="#005f98",
-                                                size=16,
-                                            ),
-                                            bgcolor="#d5e3ff",
-                                            border_radius=12,
-                                            padding=ft.padding.all(8),
-                                            opacity=0.45,
-                                            tooltip="列表视图",
-                                        ),
-                                    ],
-                                    spacing=8,
-                                ),
                             ],
                             vertical_alignment=ft.CrossAxisAlignment.END,
                         ),
@@ -579,14 +568,17 @@ class PdfPage(ft.Column):
                         ft.IconButton(icon=ft.Icons.REFRESH, icon_color="#005f98", icon_size=20,
                                       on_click=lambda _: self._reset_range()),
                     ], spacing=8)),
-                    # 增强选项（规划中）
+                    # 增强选项（合并 / 压缩 时对输出 PDF 生效）
                     self._section("增强选项", ft.Column(controls=[
                         self._toggle_row("添加密码", ft.Icons.LOCK_OUTLINED, self._pwd_switch),
+                        self._pwd_field,
                         self._toggle_row("添加水印", ft.Icons.WATER_DROP_OUTLINED, self._watermark_switch),
+                        self._watermark_field,
+                        self._enhance_hint,
                     ], spacing=12)),
                     # 处理按钮
                     self._run_btn,
-                    ft.Text("预计耗时: 12秒 • 隐私保护已开启", size=10, color="#455c7f", font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
+                    ft.Text("本地处理 · 隐私保护已开启", size=10, color="#455c7f", font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
                 ],
                 spacing=24,
                 scroll=ft.ScrollMode.AUTO,
@@ -607,7 +599,7 @@ class PdfPage(ft.Column):
         ], spacing=12)
 
     def _toggle_row(self, label: str, icon: str, switch: ft.Switch) -> ft.Control:
-        return ft.Container(
+        row = ft.Container(
             content=ft.Row(
                 controls=[
                     ft.Icon(icon, color="#162f50", size=16),
@@ -620,9 +612,35 @@ class PdfPage(ft.Column):
             bgcolor="#ffffff",
             border_radius=12,
             padding=ft.padding.all(12),
-            opacity=0.5,
-            tooltip="暂未启用",
         )
+        switch.data = row  # 便于按功能启停时联动行透明度
+        return row
+
+    def _enhancements_available(self) -> bool:
+        """仅输出单个 PDF 的功能支持加密/水印。"""
+        return self._selected_func in ("merge", "compress")
+
+    def _on_pwd_toggle(self, e: ft.ControlEvent) -> None:
+        self._pwd_field.visible = bool(e.control.value)
+        self._pwd_field.update()
+
+    def _on_watermark_toggle(self, e: ft.ControlEvent) -> None:
+        self._watermark_field.visible = bool(e.control.value)
+        self._watermark_field.update()
+
+    def _sync_enhancements_enabled(self) -> None:
+        """根据当前功能启停增强选项，并给出说明。"""
+        available = self._enhancements_available()
+        for sw in (self._pwd_switch, self._watermark_switch):
+            sw.disabled = not available
+            if not available:
+                sw.value = False
+            row = getattr(sw, "data", None)
+            if isinstance(row, ft.Container):
+                row.opacity = 1.0 if available else 0.5
+        self._pwd_field.visible = available and self._pwd_switch.value
+        self._watermark_field.visible = available and self._watermark_switch.value
+        self._enhance_hint.visible = not available
 
     def _select_func(self, key: str) -> None:
         self._selected_func = key
@@ -651,6 +669,7 @@ class PdfPage(ft.Column):
             single_func = key in ("split", "compress", "to_word")
             count_label = "1个文件" if (single_func and len(self._files) > 1) else f"{len(self._files)}个文件"
             self._run_btn.content.controls[1].value = f"立即处理 ({count_label})"
+        self._sync_enhancements_enabled()
         self.update()
 
     def _on_quality_change(self, e) -> None:
@@ -779,6 +798,24 @@ class PdfPage(ft.Column):
             }
             fn = pdf_to_docx
 
+        # 增强选项：合并 / 压缩 时对输出 PDF 追加水印 / 加密
+        if self._enhancements_available():
+            add_pwd = self._pwd_switch.value
+            add_wm = self._watermark_switch.value
+            pwd = (self._pwd_field.value or "").strip()
+            wm_text = (self._watermark_field.value or "").strip()
+            if add_pwd and not pwd:
+                show_toast(self._page, "请先输入打开密码")
+                return
+            if add_wm and not wm_text:
+                show_toast(self._page, "请先输入水印文字")
+                return
+            if add_pwd or add_wm:
+                fn = functools.partial(
+                    _pdf_with_enhancements, fn,
+                    add_pwd, pwd, add_wm, wm_text,
+                )
+
         single_func = self._selected_func in ("split", "compress", "to_word")
         file_count_label = "1 个文件" if (single_func and len(self._files) > 1) else f"{len(self._files)} 个文件"
         self._show_processing(file_count_label)
@@ -833,6 +870,7 @@ class PdfPage(ft.Column):
                 controls=[self._main_content, self._param_panel],
                 expand=True,
                 spacing=0,
+                vertical_alignment=ft.CrossAxisAlignment.STRETCH,
             )
         self._body_container = new_body
         self.controls[1] = new_body
@@ -885,19 +923,18 @@ class PdfPage(ft.Column):
         )
 
     def _build_complete_view(self) -> ft.Container:
+        self._result_icon = ft.Icon(ft.Icons.CHECK_CIRCLE, color="#16a34a", size=28)
+        self._result_icon_box = ft.Container(
+            content=self._result_icon, width=44, height=44,
+            bgcolor="#d1fae5", border_radius=9999, alignment=ft.Alignment(0, 0),
+        )
         return ft.Container(
             content=ft.Column(
                 controls=[
                     # 顶部：成功图标 + 标题
                     ft.Row(
                         controls=[
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.CHECK_CIRCLE, color="#16a34a", size=28),
-                                width=44, height=44,
-                                bgcolor="#d1fae5",
-                                border_radius=9999,
-                                alignment=ft.Alignment(0, 0),
-                            ),
+                            self._result_icon_box,
                             self._result_title,
                         ],
                         spacing=12,
@@ -969,6 +1006,17 @@ class PdfPage(ft.Column):
         else:
             self._result_title.value = f"处理失败：{result.error_message or '未知错误'}"
             self._result_title.color = "#dc2626"
+
+        if result.status == TaskStatus.SUCCESS:
+            self._result_icon.icon = ft.Icons.CHECK_CIRCLE
+            self._result_icon.color = "#16a34a"
+            self._result_icon_box.bgcolor = "#d1fae5"
+            self._complete_view.border = ft.border.all(1, "#d1fae5")
+        else:
+            self._result_icon.icon = ft.Icons.ERROR_OUTLINE
+            self._result_icon.color = "#dc2626"
+            self._result_icon_box.bgcolor = "#fee2e2"
+            self._complete_view.border = ft.border.all(1, "#fecaca")
 
         self._result_file_rows.controls.clear()
         if result.output_files:

@@ -1,6 +1,7 @@
 """
 File Toolkit — Flet 应用入口
 """
+import os
 from pathlib import Path
 
 import flet as ft
@@ -9,14 +10,27 @@ from services import history_service, settings_service
 from ui.router import setup_router
 from ui.theme import get_app_theme
 
-# 运行时数据目录（开发环境放项目根，打包后用 flet 提供的用户目录）
-_DATA_DIR = Path(__file__).parent / ".data"
+
+def _resolve_data_dir() -> Path:
+    """运行时数据目录。
+
+    打包后 flet 会设置 FLET_APP_STORAGE_DATA 指向可写的用户数据目录；
+    直接写程序安装目录在 Windows「Program Files」下会因只读权限失败。
+    开发环境无此变量时退回项目根的 .data/。
+    """
+    storage = os.environ.get("FLET_APP_STORAGE_DATA")
+    if storage:
+        return Path(storage)
+    return Path(__file__).parent / ".data"
+
+
+_DATA_DIR = _resolve_data_dir()
 _DB_FILE  = _DATA_DIR / "file_toolkit.db"
 
 
 def _init_services() -> None:
     """初始化数据库和设置服务（幂等，应用启动时调用一次）。"""
-    _DATA_DIR.mkdir(exist_ok=True)
+    _DATA_DIR.mkdir(parents=True, exist_ok=True)
     history_service.init_db(_DB_FILE)
     settings_service.init_settings(_DB_FILE)
 
