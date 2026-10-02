@@ -100,15 +100,15 @@ jobs:
       - name: Install build dependencies
         run: |
           uv sync --locked --group build
-          # flet-cli 要求的 Flutter 版本写在 flet 包里，用来做缓存 key
+          # flet-cli 要求的 Flutter 版本写在 flet 包里，据此安装同版本 SDK
           echo "FLUTTER_VERSION=$(uv run --no-sync python -c 'import flet.version as v; print(v.flutter_version)')" >> "$GITHUB_ENV"
 
-      # flet build 找不到匹配的 Flutter 时会自动装到 ~/flutter/<版本>，这里只做缓存
-      - name: Cache Flutter SDK
-        uses: actions/cache@v4
+      # 不交给 flet 自动装 Flutter：Windows 上它装完后打包步骤找不到 dart（"The system cannot find the file specified"）
+      - uses: subosito/flutter-action@v2
         with:
-          path: ~/flutter/${{ env.FLUTTER_VERSION }}
-          key: flutter-${{ runner.os }}-${{ runner.arch }}-${{ env.FLUTTER_VERSION }}
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
 
       - name: Install Linux system packages
         if: matrix.platform == 'linux'
