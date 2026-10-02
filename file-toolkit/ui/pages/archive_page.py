@@ -495,19 +495,17 @@ class ArchivePage(ft.Column):
         )
 
     def _build_complete_view(self) -> ft.Container:
+        self._result_icon = ft.Icon(ft.Icons.CHECK_CIRCLE, color="#16a34a", size=28)
+        self._result_icon_box = ft.Container(
+            content=self._result_icon, width=44, height=44,
+            bgcolor="#d1fae5", border_radius=9999, alignment=ft.Alignment(0, 0),
+        )
         return ft.Container(
             content=ft.Column(
                 controls=[
                     ft.Row(
                         controls=[
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.CHECK_CIRCLE,
-                                                color="#16a34a", size=28),
-                                width=44, height=44,
-                                bgcolor="#d1fae5",
-                                border_radius=9999,
-                                alignment=ft.Alignment(0, 0),
-                            ),
+                            self._result_icon_box,
                             self._result_title,
                         ],
                         spacing=12,
@@ -733,6 +731,7 @@ class ArchivePage(ft.Column):
             new_body = ft.Row(
                 controls=[self._main_content, self._param_panel],
                 expand=True, spacing=0,
+                vertical_alignment=ft.CrossAxisAlignment.STRETCH,
             )
         self._body_container = new_body
         self.controls[1] = new_body
@@ -853,6 +852,17 @@ class ArchivePage(ft.Column):
         else:
             self._result_title.value = f"处理失败：{result.error_message or '未知错误'}"
             self._result_title.color = "#dc2626"
+
+        if result.status == TaskStatus.SUCCESS:
+            self._result_icon.icon = ft.Icons.CHECK_CIRCLE
+            self._result_icon.color = "#16a34a"
+            self._result_icon_box.bgcolor = "#d1fae5"
+            self._complete_view.border = ft.border.all(1, "#d1fae5")
+        else:
+            self._result_icon.icon = ft.Icons.ERROR_OUTLINE
+            self._result_icon.color = "#dc2626"
+            self._result_icon_box.bgcolor = "#fee2e2"
+            self._complete_view.border = ft.border.all(1, "#fecaca")
 
         self._result_file_rows.controls.clear()
         # 对于压缩：output_files 是生成的归档；对于解压：output_dir 是解压目标

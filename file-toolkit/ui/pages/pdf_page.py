@@ -296,35 +296,6 @@ class PdfPage(ft.Column):
                                     spacing=4,
                                 ),
                                 ft.Container(expand=True),
-                                ft.Row(
-                                    controls=[
-                                        ft.Container(
-                                            content=ft.Icon(
-                                                ft.Icons.GRID_VIEW,
-                                                color="#005f98",
-                                                size=16,
-                                            ),
-                                            bgcolor="#d5e3ff",
-                                            border_radius=12,
-                                            padding=ft.padding.all(8),
-                                            opacity=0.45,
-                                            tooltip="网格视图",
-                                        ),
-                                        ft.Container(
-                                            content=ft.Icon(
-                                                ft.Icons.VIEW_LIST,
-                                                color="#005f98",
-                                                size=16,
-                                            ),
-                                            bgcolor="#d5e3ff",
-                                            border_radius=12,
-                                            padding=ft.padding.all(8),
-                                            opacity=0.45,
-                                            tooltip="列表视图",
-                                        ),
-                                    ],
-                                    spacing=8,
-                                ),
                             ],
                             vertical_alignment=ft.CrossAxisAlignment.END,
                         ),
@@ -535,7 +506,7 @@ class PdfPage(ft.Column):
                     ], spacing=12)),
                     # 处理按钮
                     self._run_btn,
-                    ft.Text("预计耗时: 12秒 • 隐私保护已开启", size=10, color="#455c7f", font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
+                    ft.Text("本地处理 · 隐私保护已开启", size=10, color="#455c7f", font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
                 ],
                 spacing=24,
                 scroll=ft.ScrollMode.AUTO,
@@ -782,6 +753,7 @@ class PdfPage(ft.Column):
                 controls=[self._main_content, self._param_panel],
                 expand=True,
                 spacing=0,
+                vertical_alignment=ft.CrossAxisAlignment.STRETCH,
             )
         self._body_container = new_body
         self.controls[1] = new_body
@@ -834,19 +806,18 @@ class PdfPage(ft.Column):
         )
 
     def _build_complete_view(self) -> ft.Container:
+        self._result_icon = ft.Icon(ft.Icons.CHECK_CIRCLE, color="#16a34a", size=28)
+        self._result_icon_box = ft.Container(
+            content=self._result_icon, width=44, height=44,
+            bgcolor="#d1fae5", border_radius=9999, alignment=ft.Alignment(0, 0),
+        )
         return ft.Container(
             content=ft.Column(
                 controls=[
                     # 顶部：成功图标 + 标题
                     ft.Row(
                         controls=[
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.CHECK_CIRCLE, color="#16a34a", size=28),
-                                width=44, height=44,
-                                bgcolor="#d1fae5",
-                                border_radius=9999,
-                                alignment=ft.Alignment(0, 0),
-                            ),
+                            self._result_icon_box,
                             self._result_title,
                         ],
                         spacing=12,
@@ -918,6 +889,17 @@ class PdfPage(ft.Column):
         else:
             self._result_title.value = f"处理失败：{result.error_message or '未知错误'}"
             self._result_title.color = "#dc2626"
+
+        if result.status == TaskStatus.SUCCESS:
+            self._result_icon.icon = ft.Icons.CHECK_CIRCLE
+            self._result_icon.color = "#16a34a"
+            self._result_icon_box.bgcolor = "#d1fae5"
+            self._complete_view.border = ft.border.all(1, "#d1fae5")
+        else:
+            self._result_icon.icon = ft.Icons.ERROR_OUTLINE
+            self._result_icon.color = "#dc2626"
+            self._result_icon_box.bgcolor = "#fee2e2"
+            self._complete_view.border = ft.border.all(1, "#fecaca")
 
         self._result_file_rows.controls.clear()
         if result.output_files:

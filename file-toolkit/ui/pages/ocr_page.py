@@ -602,6 +602,7 @@ class OcrPage(ft.Column):
             new_body = ft.Row(
                 controls=[self._main_content, self._param_panel],
                 expand=True, spacing=0,
+                vertical_alignment=ft.CrossAxisAlignment.STRETCH,
             )
         self._body_container = new_body
         self.controls[1] = new_body
