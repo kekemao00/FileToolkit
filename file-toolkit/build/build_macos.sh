@@ -1,31 +1,20 @@
 #!/usr/bin/env bash
+# File Toolkit — macOS build (run on macOS; product name, bundle id, etc. come from
+# [tool.flet] in pyproject.toml, version from [project].version).
+#   MACOS_ARCH=arm64|x86_64|universal (default: arm64)
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 arch="${MACOS_ARCH:-arm64}"
-if [ "$arch" = "x64" ]; then
-  arch="x86_64"
-fi
+[ "$arch" = "x64" ] && arch="x86_64"
 
-set -- build macos
-
+args=(build macos --yes)
 if [ "$arch" != "universal" ]; then
-  set -- "$@" --arch "$arch"
+  args+=(--arch "$arch")
+fi
+if [ -n "${BUILD_NUMBER:-}" ]; then
+  args+=(--build-number "$BUILD_NUMBER")
 fi
 
-set -- "$@" \
-  --product "File Toolkit" \
-  --artifact "File Toolkit" \
-  --project "file_toolkit" \
-  --bundle-id "com.kekemao00.filetoolkit" \
-  --company "FileToolkit" \
-  --copyright "MIT License"
-
-if [ -f "assets/icons/app_icon.png" ]; then
-  set -- "$@" --icon assets/icons/app_icon.png
-elif [ -f "assets/icons/app_icon.icns" ]; then
-  set -- "$@" --icon assets/icons/app_icon.icns
-fi
-
-flet "$@"
+uv run --group build -- flet "${args[@]}" "$@"

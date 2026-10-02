@@ -12,12 +12,13 @@ This repository contains a Flet desktop app in `file-toolkit/`. Core file-proces
 
 Run commands from `file-toolkit/` unless noted.
 
-- `uv sync --all-extras`: install runtime and development dependencies.
+- `uv sync --all-groups`: install runtime, development, and packaging (`flet-cli`) dependencies.
 - `uv run python main.py` or `make -C file-toolkit/build run`: start the app locally.
 - `uv run pytest`: run the full test suite.
 - `uv run ruff check .`: run lint checks.
 - `uv run mypy .`: run type checks.
-- `flet build windows ...` or `make -C file-toolkit/build windows`: build the Windows app in a native Windows environment.
+- `bash build/build_macos.sh`, `bash build/build_linux.sh`, `build\build_windows.bat`: build the desktop app on the matching OS. Packaging metadata lives in `[tool.flet]` in `pyproject.toml`; the version comes from `[project].version`.
+- Releases: bump `version` in `pyproject.toml`, run `uv lock`, merge to `main`, then push tag `vX.Y.Z` (must match). `.github/workflows/release.yml` builds all three platforms and publishes the GitHub Release.
 
 ## Coding Style & Naming Conventions
 

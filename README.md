@@ -1,348 +1,141 @@
 <div align="center">
 
-# File Toolkit（文件全能王）
+# File Toolkit · 文件全能王
 
-**本地离线 · 安全可靠 · 现代美观 · 一站式文件处理**
+**本地处理 PDF、图片、音视频与压缩包的跨平台桌面工具箱**
 
-一款跨平台本地文件处理桌面工具，覆盖 PDF、图片、音视频、压缩解压、OCR 五大场景。
-所有文件处理均在本地完成，不上传任何数据。
+文件只在你自己的电脑上处理，不经过任何服务器。
 
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
-[![Flet](https://img.shields.io/badge/Flet-0.24+-02569B?logo=flutter&logoColor=white)](https://flet.dev)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows&logoColor=white)](https://github.com/kekemao00/file-toolkit)
+[![CI](https://github.com/kekemao00/FileToolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/kekemao00/FileToolkit/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/kekemao00/FileToolkit?include_prereleases&sort=semver)](https://github.com/kekemao00/FileToolkit/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-informational)](#下载安装)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-</div>
+[下载](#下载安装) · [功能](#功能) · [从源码运行](#从源码运行) · [打包与发布](#打包与发布)
 
----
-
-<div align="center">
-<table>
-<tr>
-<td align="center"><b>首页</b></td>
-<td align="center"><b>AI 智能任务</b></td>
-</tr>
-<tr>
-<td><img src="docs/screenshots/home.png" alt="首页" width="400"></td>
-<td><img src="docs/screenshots/ai.png" alt="AI 智能任务" width="400"></td>
-</tr>
-<tr>
-<td align="center"><b>最近操作</b></td>
-<td align="center"><b>PDF 工具</b></td>
-</tr>
-<tr>
-<td><img src="docs/screenshots/history.png" alt="最近操作" width="400"></td>
-<td><img src="docs/screenshots/pdf.png" alt="PDF 工具" width="400"></td>
-</tr>
-<tr>
-<td align="center"><b>图片工具</b></td>
-<td align="center"><b>音视频工具</b></td>
-</tr>
-<tr>
-<td><img src="docs/screenshots/image.png" alt="图片工具" width="400"></td>
-<td><img src="docs/screenshots/media.png" alt="音视频工具" width="400"></td>
-</tr>
-</table>
-
-
-
+<img src="docs/screenshots/home.png" alt="File Toolkit 首页" width="720">
 
 </div>
 
----
+## 下载安装
 
-## 功能矩阵
+到 [Releases](https://github.com/kekemao00/FileToolkit/releases/latest) 下载对应平台的安装包：
 
-### 📄 PDF 工具
+| 平台 | 文件 | 说明 |
+|---|---|---|
+| Windows 10/11 (x64) | `FileToolkit-<版本>-windows-x64.zip` | 解压后运行 `FileToolkit` 文件夹里的 `.exe`；SmartScreen 拦截时选「更多信息 → 仍要运行」 |
+| macOS (Apple 芯片) | `FileToolkit-<版本>-macos-arm64.zip` | 解压后把 `.app` 拖进「应用程序」，首次打开请右键 → 打开（应用暂未签名） |
+| Linux (x64) | `FileToolkit-<版本>-linux-x64.tar.gz` | `tar -xzf` 解压后运行 `FileToolkit/` 里的可执行文件 |
 
-| 功能 | 说明 | 离线 |
+每个版本都附带 `SHA256SUMS.txt`，可用 `sha256sum -c SHA256SUMS.txt` 校验下载是否完整。
+
+> macOS 提示「已损坏，无法打开」时，执行 `xattr -dr com.apple.quarantine "/Applications/<应用名>.app"` 后再打开。
+
+## 功能
+
+✅ 开箱即用 &nbsp; 🔧 需要先装外部程序或填写 API Key（见[外部依赖](#外部依赖)） &nbsp; 🚧 开发中
+
+| 分类 | 功能 | 状态 |
 |---|---|:---:|
-| PDF 分割 | 按页数 / 按范围 / 每页单独拆分 | ✅ |
-| PDF 合并 | 多文件合并，支持拖拽排序 | ✅ |
-| PDF 压缩 | 可选压缩质量（高 / 中 / 低） | ✅ |
-| PDF → Word | 还原排版转为 `.docx` | ✅ |
-| PDF → Excel | 表格提取转为 `.xlsx` | ✅ |
-| PDF → PPT | 转为 `.pptx` | ✅ |
-| Office → PDF | Word / Excel / PPT 转 PDF | ✅ |
+| **PDF** | 合并、拆分（按页数 / 范围 / 逐页）、压缩 | ✅ |
+| | 合并 / 压缩时顺带加文字水印、设置打开密码 | ✅ |
+| | PDF 转 Word、Excel（表格提取）、PPT | ✅ |
+| | Word / Excel / PPT 转 PDF | 🔧 LibreOffice |
+| **图片** | 格式转换（JPG / PNG / WebP / BMP / TIFF / HEIC） | ✅ |
+| | 批量压缩、尺寸调整、文字水印、批量重命名（`{name}` `{n}` `{date}` `{ext}` 模板） | ✅ |
+| **音视频** | 视频格式转换、压缩（可选分辨率）、按时间段剪辑 | 🔧 FFmpeg |
+| | 从视频提取音频、音频格式转换 | 🔧 FFmpeg |
+| **压缩解压** | 压缩为 ZIP / 7Z / TAR.GZ；解压 ZIP / 7Z / TAR | ✅ |
+| | 解压 RAR | 🔧 unrar |
+| **文字识别** | 从图片识别文字 | 🔧 Tesseract |
+| | 提取 PDF 内嵌文字 | ✅ |
+| **AI** | 提示词出图（OpenAI Images 兼容接口） | 🔧 API Key |
+| | 用自然语言描述任务、自动执行 | 🚧 |
+| **应用** | 全局功能搜索、最近操作记录、偏好设置 | ✅ |
 
-### 🖼️ 图片工具
+### 外部依赖
 
-| 功能 | 说明 | 离线 |
-|---|---|:---:|
-| 格式转换 | JPG / PNG / WebP / BMP / TIFF 互转 | ✅ |
-| 批量压缩 | 三档压缩级别（轻度 / 标准 / 极限） | ✅ |
-| 添加水印 | 文字水印，支持位置 / 透明度 / 字号 / 平铺 | ✅ |
-| 批量重命名 | 模板变量：`{name}` `{n}` `{date}` `{ext}` | ✅ |
+只有对应功能才需要，其他功能不受影响。
 
-### 🎬 音视频工具
+| 程序 | 用于 | 获取方式 |
+|---|---|---|
+| FFmpeg | 音视频全部功能 | **Windows / Linux 安装包已内置**；macOS：`brew install ffmpeg`；源码运行时放到 `file-toolkit/assets/bin/` 或装到系统 PATH |
+| LibreOffice | Office 转 PDF | [官网下载](https://www.libreoffice.org/download/)，装在默认位置或 PATH 中即可被识别 |
+| Tesseract | 图片文字识别 | Windows：[UB-Mannheim 安装包](https://github.com/UB-Mannheim/tesseract/wiki)；macOS：`brew install tesseract tesseract-lang`；Linux：`sudo apt install tesseract-ocr tesseract-ocr-chi-sim` |
+| unrar | 解压 RAR | macOS：`brew install rar`；Linux：`sudo apt install unrar`；Windows：安装 [WinRAR](https://www.win-rar.com/) 或 7-Zip 并加入 PATH |
+| API Key | 提示词出图 | 在应用「设置」里填写 API Key，可改 Base URL 与模型以接入兼容服务 |
 
-| 功能 | 说明 | 离线 |
-|---|---|:---:|
-| 视频格式转换 | MP4 / AVI / MKV / MOV / WebM 互转 | ✅ |
-| 视频压缩 | 三档质量 + 分辨率选择（1080p / 720p / 480p） | ✅ |
-| 视频剪辑 | 按时间段裁剪（HH:MM:SS） | ✅ |
-| 音频提取 | 从视频提取 MP3 / WAV / FLAC / AAC | ✅ |
-| 音频格式转换 | MP3 / WAV / FLAC / AAC / OGG 互转，可选比特率 | ✅ |
+## 从源码运行
 
-### 📦 压缩解压
-
-| 功能 | 说明 | 离线 |
-|---|---|:---:|
-| 压缩 | zip / 7z / tar.gz | ✅ |
-| 解压 | zip / 7z / rar / tar.gz | ✅ |
-| 加密压缩 | 支持密码保护 | ✅ |
-| 分卷压缩 | 按大小分卷 | ✅ |
-
-### 🔍 OCR 识别 &nbsp;·&nbsp; 🤖 AI 智能任务
-
-| 功能 | 说明 | 离线 |
-|---|---|:---:|
-| 图片文字识别 | 百度 / 腾讯 OCR API | ❌ 联网 |
-| AI 智能处理 | 自然语言描述任务，AI 自动执行 | ❌ 联网 |
-
----
-
-## 技术架构
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        UI Layer                              │
-│  Flet (Flutter Engine) · Material Design 3 · 深色/浅色主题   │
-│  22 pages · 11 components · router.py (23 routes)           │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│                      Service Layer                           │
-│  TaskService · HistoryService · SettingsService              │
-│  参数验证 → 任务调度 → 进度回调 → 结果封装                    │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│                      Core Engine                             │
-│  ┌───────────┐ ┌────────────┐ ┌──────────┐ ┌────────────┐  │
-│  │ core/pdf/ │ │core/image/ │ │core/media│ │core/archive│  │
-│  │ pypdf     │ │ Pillow     │ │ ffmpeg   │ │ py7zr      │  │
-│  │ pikepdf   │ │ pillow-heif│ │ -python  │ │ rarfile    │  │
-│  │ pdf2docx  │ │            │ │          │ │ zipfile    │  │
-│  └───────────┘ └────────────┘ └──────────┘ └────────────┘  │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │  platform.py — FFmpeg / LibreOffice 路径检测与注入      │ │
-│  └────────────────────────────────────────────────────────┘ │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ 可选联网
-┌──────────────────────────▼──────────────────────────────────┐
-│                     Cloud API Layer                          │
-│  OCR：百度 / 腾讯 OCR API（httpx 异步调用）                  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 核心技术栈
-
-| 层级 | 选型 | 版本 | 说明 |
-|---|---|---|---|
-| UI 框架 | Flet | >= 0.24 | Flutter 渲染引擎，Material Design 3 |
-| 运行时 | Python | >= 3.11 | asyncio + ThreadPoolExecutor 异步模型 |
-| PDF 处理 | pypdf + pikepdf | 4.x / 9.x | 分割 / 合并 / 加密 / 压缩 |
-| PDF↔Office | pdf2docx + LibreOffice CLI | 0.5.x | PDF→Word + Office→PDF |
-| 图片处理 | Pillow + pillow-heif | 10.x / 0.16.x | 含 HEIC/HEIF 格式支持 |
-| 音视频处理 | ffmpeg-python | 0.2.x | 需内嵌 FFmpeg 二进制（LGPL） |
-| 压缩解压 | py7zr + rarfile + zipfile | 0.21.x / 4.x | 7z / rar / zip / tar.gz |
-| HTTP 客户端 | httpx | >= 0.27 | OCR API 异步调用 |
-| 本地存储 | SQLite | 内置 | 任务历史 + 设置持久化 |
-| 打包 | PyInstaller + flet build | — | Windows .exe 输出 |
-
-### 外部二进制依赖
-
-| 依赖 | 版本 | 内嵌方式 | 授权 |
-|---|---|---|---|
-| FFmpeg | 7.x | `assets/bin/ffmpeg.exe` | LGPL v2.1 |
-| LibreOffice | 24.x | 按需检测系统安装，未安装时引导下载 | MPL v2 |
-
----
-
-## 快速开始
-
-### 环境要求
-
-- Python >= 3.11
-- [uv](https://docs.astral.sh/uv/)（推荐）或 pip
-- FFmpeg（音视频功能需要）
-- LibreOffice（Office↔PDF 功能需要，可选）
-
-### 安装与运行
+需要 Python 3.11+ 和 [uv](https://docs.astral.sh/uv/getting-started/installation/)。
 
 ```bash
-# 克隆项目
-git clone https://github.com/kekemao00/file-toolkit.git
-cd file-toolkit/file-toolkit
-
-# 安装依赖
+git clone https://github.com/kekemao00/FileToolkit.git
+cd FileToolkit/file-toolkit
 uv sync
-
-# 启动应用
 uv run python main.py
 ```
 
-### 打包（Windows）
+运行数据（数据库、设置）保存在 `file-toolkit/.data/`，打包后的应用改存到系统的用户数据目录。
 
-```bat
-cd file-toolkit
-flet build windows --product-name "File Toolkit" --product-version "1.0.0"
-```
-
----
-
-## 项目结构
-
-```
-file-toolkit/
-├── main.py                    # 应用入口：窗口配置、字体注册、路由初始化
-├── pyproject.toml             # 项目配置、依赖声明
-├── assets/
-│   ├── fonts/                 # Manrope（标题）+ Inter（正文）
-│   └── icons/                 # 应用图标
-├── core/                      # 核心引擎层（纯 Python，无 UI 依赖）
-│   ├── pdf/                   # splitter / merger / compressor / converter / encryptor / watermark
-│   ├── image/                 # converter / compressor / watermark / renamer
-│   ├── media/                 # video.py / audio.py
-│   ├── archive/               # handler.py（zip / 7z / rar / tar）
-│   ├── ocr/                   # client.py（百度 / 腾讯 OCR）
-│   ├── models.py              # 统一数据模型（TaskResult 等）
-│   └── platform.py            # FFmpeg / LibreOffice 路径检测
-├── services/                  # 服务层
-│   ├── task_service.py        # 异步任务调度 + 进度回调
-│   ├── history_service.py     # SQLite 任务历史
-│   └── settings_service.py    # 用户设置持久化
-├── ui/                        # UI 层（Flet）
-│   ├── router.py              # 23 条路由映射
-│   ├── theme.py               # Material Design 3 主题配置
-│   ├── components/            # 11 个可复用组件
-│   │   ├── nav_rail.py        # 侧边导航栏（可折叠）
-│   │   ├── top_bar.py         # 毛玻璃顶部栏
-│   │   ├── sub_page_header.py # 子页面统一标题栏
-│   │   ├── drop_zone.py       # 拖拽文件区域
-│   │   ├── action_card.py     # 功能入口卡片
-│   │   ├── progress_card.py   # 任务进度卡片
-│   │   ├── result_card.py     # 结果展示卡片
-│   │   └── ...
-│   └── pages/                 # 22 个页面
-│       ├── home_page.py       # 首页（快速入口 + 最近任务）
-│       ├── pdf_page.py        # PDF 工具列表
-│       ├── image_page.py      # 图片工具列表
-│       ├── media_page.py      # 音视频工具列表
-│       ├── settings_page.py   # 设置（外观 / 文件 / OCR / 关于）
-│       └── ...                # 各操作子页面
-└── tests/                     # 测试
-    ├── core/                  # 核心引擎单元测试
-    └── services/              # 服务层单元测试
-```
-
----
-
-## 设计系统
-
-基于 Figma「The Fluid Architect」设计系统，通过 Figma MCP 1:1 还原至代码。
-
-### 色彩
-
-| Token | 值 | 用途 |
-|---|---|---|
-| `primary` | `#005f98` | 主按钮、CTA 渐变起点 |
-| `primary-light` | `#2aa7ff` | CTA 渐变终点 |
-| `surface` | `#f4f6ff` | 页面背景 |
-| `surface-card` | `#ffffff` | 卡片背景 |
-| `on-surface` | `#162f50` | 主文字 |
-| `on-surface-variant` | `#455c7f` | 辅助文字 |
-| `error` | `#dc2626` | 错误状态 / PDF 模块强调 |
-| `success` | `#16a34a` | 成功状态 |
-
-### 字体
-
-| 用途 | 字体 | 场景 |
-|---|---|---|
-| 标题 / Display | **Manrope** | 页面标题、卡片标题、按钮文字 |
-| 正文 / Label | **Inter** | 说明文字、表单标签 |
-
-### 圆角
-
-| 元素 | 圆角 |
-|---|---|
-| 功能卡片 | 24px |
-| 标准卡片 / 按钮 | 16px |
-| 输入框 / 下拉框 | 12px |
-| 搜索框 / 进度条 | 9999px（pill） |
-
----
-
-## 开发指南
+## 开发
 
 ```bash
 cd file-toolkit
-
-# 运行测试
-uv run pytest
-
-# 代码检查
-uv run ruff check .
-
-# 类型检查
-uv run mypy .
+uv sync --all-groups   # 运行、测试、打包依赖全部装上
+uv run ruff check .    # 代码检查
+uv run pytest          # 单元测试
 ```
 
-### 异步任务模型
+每次推送到 `main` 和每个 PR 都会在 [CI](.github/workflows/ci.yml) 里跑上面两项检查。
 
 ```
-用户点击"开始"
-    │
-    ▼
-TaskService.submit(task_params)
-    ├── 参数验证（同步）
-    ▼
-asyncio.run_in_executor(ThreadPoolExecutor, core_function)
-    ├── 进度回调：progress_callback(current, total, desc)
-    ▼
-UI 层 page.update() 刷新进度条
-    ▼
-完成 → HistoryService.save(task_result)
-    ▼
-UI 展示结果（文件列表 + 打开目录）
+file-toolkit/
+├── main.py        # 入口：窗口、字体、主题、路由
+├── core/          # 处理引擎（纯 Python，不依赖 UI）：pdf / image / media / archive / ocr
+├── services/      # 任务调度、历史记录、设置持久化（SQLite）
+├── ui/            # Flet 界面：router、主题、组件、页面
+│   └── features.py  # 功能目录，首页入口与全局搜索共用；新增功能在这里登记
+├── assets/        # 字体、图标；打包时 FFmpeg 放到 assets/bin/
+├── build/         # 各平台打包脚本
+└── tests/         # pytest 单元测试，目录结构与源码对应
 ```
 
----
+技术栈：[Flet](https://flet.dev) 0.84（Flutter 渲染）、pypdf / pikepdf / pdf2docx、Pillow、FFmpeg、py7zr。更多设计细节见 [docs/](docs/) 下的需求、技术与设计文档。
 
-## 路线图
+## 打包与发布
 
-| 阶段 | 平台 | 交付物 | 状态 |
-|---|---|---|---|
-| **Phase 1** | Windows | `.exe` 安装包 | 🚧 开发中 |
-| Phase 2 | macOS / Linux | `.dmg` / `.app` / AppImage / `.deb` | 📋 计划中 |
-| Phase 3 | Android / iOS | 原生 Kotlin + FastAPI 服务 / Flet 打包 | 📋 计划中 |
+### 本地打包
 
-### V2 迭代功能
+桌面应用只能在对应系统上打包（flet 不支持交叉编译）。产品名、Bundle ID 等元数据写在 `pyproject.toml` 的 `[tool.flet]`，版本号取自 `[project].version`。首次打包会自动下载所需的 Flutter SDK。
 
-- [ ] PDF 加密 / 解密
-- [ ] PDF 水印
-- [ ] 图片裁剪 / 旋转
-- [ ] Excel ↔ CSV / JSON
-- [ ] 二维码生成 / 识别
-- [ ] 文件哈希校验（MD5 / SHA256）
+```bash
+cd file-toolkit
+bash build/build_macos.sh          # macOS，MACOS_ARCH=x86_64 / universal 可切换架构
+bash build/build_linux.sh          # Linux，需 libgtk-3-dev clang cmake ninja-build
+build\build_windows.bat            # Windows
+```
 
----
+产物在 `file-toolkit/build/<平台>/`。想把 FFmpeg 打进包里，先把二进制放到 `file-toolkit/assets/bin/`。
 
-## 文档
+### 发布新版本
 
-| 文档 | 说明 |
-|---|---|
-| [完整需求文档](docs/File%20Toolkit%20完整需求文档.md) | 产品定位、功能清单、平台策略 |
-| [技术开发文档](docs/File%20Toolkit%20技术开发文档.md) | 架构设计、技术选型、接口规范 |
-| [设计原型文档](docs/File%20Toolkit%20设计原型文档.md) | 视觉规范、页面原型、交互流程 |
-| [产品全景图](docs/File%20Toolkit%20产品全景.png) | 功能模块全景思维导图 |
-| [产品全景脑图](docs/File%20Toolkit%20产品全景.xmind) | XMind 源文件 |
+[Release 工作流](.github/workflows/release.yml) 在推送版本 tag 时自动测试、三平台打包并创建 GitHub Release：
 
----
+1. 修改 `file-toolkit/pyproject.toml` 里的 `version`，然后在 `file-toolkit/` 下执行 `uv lock` 同步锁文件。
+2. 提交并合入 `main`。
+3. 打 tag 并推送，tag 必须是 `v` + 同一个版本号：
+   ```bash
+   git tag v1.1.0
+   git push origin v1.1.0
+   ```
 
-## 授权
+tag 与 `pyproject.toml` 版本不一致时工作流会直接失败，不会发出错误版本号的安装包。带 `-` 的版本（如 `v1.1.0-beta.1`）发布为预发布版。Release 说明由 GitHub 根据合入的 PR 自动生成。
 
-[MIT License](LICENSE)
+只想试打包、不发布时，在 Actions 页面手动运行 Release 工作流，安装包会作为构建产物上传；改动打包相关文件的 PR 也会自动试打包一次。
 
-Copyright © 2026 kekemao00
+## 许可证
+
+[MIT](LICENSE) © 2026 kekemao00
+
+Windows / Linux 安装包内置的 FFmpeg 来自 [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds)，以 GPL 授权单独分发。

@@ -1,0 +1,220 @@
+# 三平台打包与发布
+#
+#   推送 vX.Y.Z tag      → 测试 → 三平台打包 → 创建 GitHub Release（含 SHA256SUMS）
+#   手动运行 / 改动打包相关文件的 PR → 只打包并上传 Actions 产物，不发布
+#
+# 版本号唯一来源是 file-toolkit/pyproject.toml 的 [project].version；
+# tag 必须与之一致，否则发布中止。带 "-" 的 tag（如 v1.2.0-beta.1）发布为预发布版。
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - ".github/workflows/release.yml"
+      - "file-toolkit/build/**"
+      - "file-toolkit/pyproject.toml"
+      - "file-toolkit/uv.lock"
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  FLET_CLI_NO_RICH_OUTPUT: "1"
+  PYTHONUTF8: "1"
+  # BtbN 静态构建；视频转码用到 libx264，必须用 GPL 版
+  FFMPEG_BASE_URL: https://github.com/BtbN/FFmpeg-Builds/releases/download/latest
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  meta:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: v
+        name: Read version from pyproject.toml
+        run: |
+          version=$(python3 -c "import tomllib;print(tomllib.load(open('file-toolkit/pyproject.toml','rb'))['project']['version'])")
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            tag="${GITHUB_REF_NAME#v}"
+            if [ "$tag" != "$version" ]; then
+              echo "::error::tag ${GITHUB_REF_NAME} 与 pyproject.toml 版本 ${version} 不一致，请先改版本号再打 tag"
+              exit 1
+            fi
+          fi
+
+          prerelease=false
+          case "$version" in *-*) prerelease=true ;; esac
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "Version: $version | Prerelease: $prerelease"
+
+  build:
+    name: Build (${{ matrix.name }})
+    needs: [test, meta]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macos-arm64
+            runner: macos-14
+            platform: macos
+          - name: windows-x64
+            runner: windows-latest
+            platform: windows
+          - name: linux-x64
+            runner: ubuntu-22.04
+            platform: linux
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+      PACKAGE: FileToolkit-${{ needs.meta.outputs.version }}-${{ matrix.name }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: file-toolkit
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+          enable-cache: true
+          cache-dependency-glob: file-toolkit/uv.lock
+
+      - name: Install build dependencies
+        run: |
+          uv sync --locked --group build
+          # flet-cli 要求的 Flutter 版本写在 flet 包里，据此安装同版本 SDK
+          echo "FLUTTER_VERSION=$(uv run --no-sync python -c 'import flet.version as v; print(v.flutter_version)')" >> "$GITHUB_ENV"
+
+      # 不交给 flet 自动装 Flutter：Windows 上它装完后打包步骤找不到 dart（"The system cannot find the file specified"）
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install Linux system packages
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-3-dev libblkid-dev liblzma-dev \
+            clang cmake ninja-build pkg-config
+
+      - name: Bundle FFmpeg (Windows)
+        if: matrix.platform == 'windows'
+        run: |
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/ffmpeg.zip" "$FFMPEG_BASE_URL/ffmpeg-master-latest-win64-gpl.zip"
+          7z x -y -o"$RUNNER_TEMP/ffmpeg" "$RUNNER_TEMP/ffmpeg.zip" >/dev/null
+          mkdir -p assets/bin
+          cp "$RUNNER_TEMP"/ffmpeg/*/bin/ffmpeg.exe assets/bin/
+          ls -lh assets/bin
+
+      - name: Bundle FFmpeg (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/ffmpeg.tar.xz" "$FFMPEG_BASE_URL/ffmpeg-master-latest-linux64-gpl.tar.xz"
+          mkdir -p "$RUNNER_TEMP/ffmpeg" assets/bin
+          tar -xf "$RUNNER_TEMP/ffmpeg.tar.xz" -C "$RUNNER_TEMP/ffmpeg" --strip-components=1
+          install -m 755 "$RUNNER_TEMP/ffmpeg/bin/ffmpeg" assets/bin/ffmpeg
+          ls -lh assets/bin
+
+      - name: flet build ${{ matrix.platform }}
+        run: |
+          args=(build "${{ matrix.platform }}" --yes --build-number "${{ github.run_number }}")
+          if [ "${{ matrix.platform }}" = "macos" ]; then args+=(--arch arm64); fi
+          uv run --no-sync -- flet "${args[@]}"
+
+      - name: Package
+        run: |
+          out="build/${{ matrix.platform }}"
+          ls -la "$out"
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          case "${{ matrix.platform }}" in
+            macos)
+              app=$(find "$out" -maxdepth 1 -name '*.app' -print -quit)
+              [ -n "$app" ] || { echo "::error::$out 下没有 .app"; exit 1; }
+              ditto -c -k --sequesterRsrc --keepParent "$app" "$GITHUB_WORKSPACE/dist/$PACKAGE.zip"
+              ;;
+            windows)
+              ls "$out"/*.exe >/dev/null || { echo "::error::$out 下没有 .exe"; exit 1; }
+              # 外面包一层 FileToolkit/ 文件夹，解压后不会散落一地
+              mkdir -p "$RUNNER_TEMP/pkg"
+              cp -r "$out" "$RUNNER_TEMP/pkg/FileToolkit"
+              (cd "$RUNNER_TEMP/pkg" && 7z a -tzip -mx=7 "$GITHUB_WORKSPACE/dist/$PACKAGE.zip" FileToolkit >/dev/null)
+              ;;
+            linux)
+              [ -n "$(find "$out" -maxdepth 1 -type f -perm -u+x -print -quit)" ] || { echo "::error::$out 下没有可执行文件"; exit 1; }
+              # tar 保留可执行权限，zip 不行
+              tar -czf "$GITHUB_WORKSPACE/dist/$PACKAGE.tar.gz" -C "build" --transform "s|^linux|FileToolkit|" linux
+              ;;
+          esac
+          ls -lh "$GITHUB_WORKSPACE/dist"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PACKAGE }}
+          path: dist/*
+          if-no-files-found: error
+          compression-level: 0
+
+  release:
+    name: Publish GitHub Release
+    needs: [meta, build]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums & release notes
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          cat > ../notes.md <<EOF
+          ## 下载
+
+          | 平台 | 文件 |
+          |---|---|
+          | Windows 10/11 (x64) | \`FileToolkit-${VERSION}-windows-x64.zip\` |
+          | macOS (Apple 芯片) | \`FileToolkit-${VERSION}-macos-arm64.zip\` |
+          | Linux (x64，glibc 2.35+) | \`FileToolkit-${VERSION}-linux-x64.tar.gz\` |
+
+          - **Windows**：解压后运行 \`FileToolkit\` 文件夹里的 \`.exe\`。首次运行若出现 SmartScreen 提示，点「更多信息 → 仍要运行」。
+          - **macOS**：解压后把 \`.app\` 拖进「应用程序」。应用未签名，首次打开请右键 → 打开；若提示「已损坏」，对该 .app 执行 \`xattr -dr com.apple.quarantine <路径>\`。音视频功能需要 \`brew install ffmpeg\`。
+          - **Linux**：\`tar -xzf\` 解压后运行 \`FileToolkit/\` 里的可执行文件。
+
+          Windows / Linux 包内置 FFmpeg（GPL 构建，来自 [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds)）。校验和见 \`SHA256SUMS.txt\`。
+          EOF
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: File Toolkit v${{ env.VERSION }}
+          body_path: notes.md
+          generate_release_notes: true
+          prerelease: ${{ needs.meta.outputs.prerelease == 'true' }}
+          files: dist/*
