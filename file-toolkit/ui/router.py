@@ -4,31 +4,18 @@ File Toolkit — 路由管理
 布局策略：page.add(shell) 挂载一次，内容区通过 controls 列表动态切换。
 不使用 page.views / page.go() 路由栈，避免 Flet 0.84 的白屏和渲染问题。
 
-路由表（共 24 个路由）：
-  /                         → HomePage
-  /pdf                      → PdfPage
-  /pdf/split                → PdfSplitPage
-  /pdf/merge                → PdfMergePage
-  /pdf/compress             → PdfCompressPage
-  /pdf/to-office            → PdfConvertPage (mode=to_office)
-  /pdf/from-office          → PdfConvertPage (mode=from_office)
-  /pdf/ocr                  → OcrPage
-  /image                    → ImagePage
-  /image/convert            → ImageConvertPage
-  /image/compress           → ImageCompressPage
-  /image/watermark          → ImageWatermarkPage
-  /image/rename             → ImageRenamePage
-  /media                    → MediaPage
-  /media/video-convert      → VideoConvertPage
-  /media/video-compress     → VideoCompressPage
-  /media/audio-extract      → AudioExtractPage
-  /media/audio-convert      → AudioConvertPage
-  /media/video-cut          → VideoCutPage
-  /archive                  → ArchivePage
-  /ai                       → AiTaskPage
-  /prompt-image             → PromptImagePage
-  /history                  → HistoryPage
-  /settings                 → SettingsPage
+路由表：
+  /                → HomePage
+  /pdf             → PdfPage      （?func=merge|split|compress|to_office|from_office|protect）
+  /image           → ImagePage    （?func=compress|convert|resize|watermark|rename）
+  /media           → MediaPage    （?func=video_convert|video_compress|video_cut|audio_extract|audio_convert）
+  /archive         → ArchivePage  （?func=compress_zip|compress_7z|compress_targz|extract）
+  /ocr             → OcrPage
+  /ai              → AiTaskPage
+  /prompt-image    → PromptImagePage
+  /history         → HistoryPage
+  /settings        → SettingsPage
+旧的独立子页路由（如 /pdf/merge）重定向到对应工作台功能，见 _LEGACY_ROUTES。
 """
 import flet as ft
 
@@ -37,23 +24,10 @@ from ui.pages.ai_task_page import AiTaskPage
 from ui.pages.archive_page import ArchivePage
 from ui.pages.history_page import HistoryPage
 from ui.pages.home_page import HomePage
-from ui.pages.image_compress_page import ImageCompressPage
-from ui.pages.image_convert_page import ImageConvertPage
 from ui.pages.image_page import ImagePage
-from ui.pages.image_rename_page import ImageRenamePage
-from ui.pages.image_watermark_page import ImageWatermarkPage
-from ui.pages.media_audio_convert_page import AudioConvertPage
-from ui.pages.media_audio_extract_page import AudioExtractPage
 from ui.pages.media_page import MediaPage
-from ui.pages.media_video_compress_page import VideoCompressPage
-from ui.pages.media_video_convert_page import VideoConvertPage
-from ui.pages.media_video_cut_page import VideoCutPage
 from ui.pages.ocr_page import OcrPage
-from ui.pages.pdf_compress_page import PdfCompressPage
-from ui.pages.pdf_convert_page import PdfConvertPage
-from ui.pages.pdf_merge_page import PdfMergePage
 from ui.pages.pdf_page import PdfPage
-from ui.pages.pdf_split_page import PdfSplitPage
 from ui.pages.prompt_image_page import PromptImagePage
 from ui.pages.settings_page import SettingsPage
 from ui.palette import c
@@ -71,50 +45,41 @@ def _parse_route(route: str) -> tuple[str, dict[str, str]]:
     return path, params
 
 
+# 旧的独立子页路由 → 工作台对应功能（功能已并入工作台）
+_LEGACY_ROUTES = {
+    "/pdf/merge": "/pdf?func=merge",
+    "/pdf/split": "/pdf?func=split",
+    "/pdf/compress": "/pdf?func=compress",
+    "/pdf/to-office": "/pdf?func=to_office",
+    "/pdf/from-office": "/pdf?func=from_office",
+    "/pdf/ocr": "/ocr",
+    "/image/convert": "/image?func=convert",
+    "/image/compress": "/image?func=compress",
+    "/image/watermark": "/image?func=watermark",
+    "/image/rename": "/image?func=rename",
+    "/media/video-convert": "/media?func=video_convert",
+    "/media/video-compress": "/media?func=video_compress",
+    "/media/audio-extract": "/media?func=audio_extract",
+    "/media/audio-convert": "/media?func=audio_convert",
+    "/media/video-cut": "/media?func=video_cut",
+}
+
+
 def _resolve_page(route: str, page: ft.Page) -> ft.Control:
     """根据路由字符串返回对应页面控件。"""
+    route = _LEGACY_ROUTES.get(route, route)
     route, params = _parse_route(route)
     func = params.get("func")
     if route == "/":
         return HomePage(page)
     if route == "/pdf":
         return PdfPage(page, initial_func=func)
-    if route == "/pdf/split":
-        return PdfSplitPage(page)
-    if route == "/pdf/merge":
-        return PdfMergePage(page)
-    if route == "/pdf/compress":
-        return PdfCompressPage(page)
-    if route == "/pdf/to-office":
-        return PdfConvertPage(page, mode="to_office")
-    if route == "/pdf/from-office":
-        return PdfConvertPage(page, mode="from_office")
-    if route == "/pdf/ocr":
-        return OcrPage(page)
     if route == "/ocr":
         return OcrPage(page)
     if route == "/image":
         return ImagePage(page, initial_func=func)
-    if route == "/image/convert":
-        return ImageConvertPage(page)
-    if route == "/image/compress":
-        return ImageCompressPage(page)
-    if route == "/image/watermark":
-        return ImageWatermarkPage(page)
-    if route == "/image/rename":
-        return ImageRenamePage(page)
     if route == "/media":
         return MediaPage(page, initial_func=func)
-    if route == "/media/video-convert":
-        return VideoConvertPage(page)
-    if route == "/media/video-compress":
-        return VideoCompressPage(page)
-    if route == "/media/audio-extract":
-        return AudioExtractPage(page)
-    if route == "/media/audio-convert":
-        return AudioConvertPage(page)
-    if route == "/media/video-cut":
-        return VideoCutPage(page)
     if route == "/archive":
         return ArchivePage(page, initial_func=func)
     if route == "/ai":

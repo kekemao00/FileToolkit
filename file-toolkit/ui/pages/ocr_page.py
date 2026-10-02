@@ -261,7 +261,7 @@ class OcrPage(ft.Column):
                         alignment=ft.Alignment(0, 0),
                     ),
                     ft.Text(
-                        "拖放文件或点击扫描",
+                        "点击选择图片或 PDF",
                         size=18, color=c("#005f98", "fg"),
                         font_family="42dot Sans",
                         text_align=ft.TextAlign.CENTER,

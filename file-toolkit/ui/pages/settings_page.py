@@ -73,7 +73,7 @@ class SettingsPage(ft.Column):
     def _build_file(self) -> ft.Control:
         current_dir = settings_service.get("default_output_dir", "")
         self._output_dir_text = ft.Text(
-            current_dir or "（使用输入文件所在目录）",
+            current_dir or "（输入文件旁的 output 文件夹）",
             size=13, color=c("#455c7f", "fg"), expand=True,
         )
         current_after = settings_service.get("after_complete", "open_dir")

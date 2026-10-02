@@ -34,12 +34,12 @@ FEATURES: list[Feature] = [
     Feature("PDF 合并", "/pdf?func=merge", ft.Icons.MERGE, "PDF", ("合并", "merge", "pdf")),
     Feature("PDF 拆分", "/pdf?func=split", ft.Icons.CONTENT_CUT, "PDF", ("拆分", "分割", "split", "页码")),
     Feature("PDF 压缩", "/pdf?func=compress", ft.Icons.COMPRESS, "PDF", ("压缩", "减小", "compress")),
-    Feature("PDF 转 Word", "/pdf?func=to_word", ft.Icons.SWAP_HORIZ, "PDF",
-            ("转换", "word", "docx", "office")),
-    Feature("PDF 转 Excel / PPT", "/pdf/to-office", ft.Icons.TABLE_CHART_OUTLINED, "PDF",
-            ("转换", "excel", "xlsx", "ppt", "pptx", "office")),
-    Feature("Office 转 PDF", "/pdf/from-office", ft.Icons.PICTURE_AS_PDF_OUTLINED, "PDF",
+    Feature("PDF 转 Word / Excel / PPT", "/pdf?func=to_office", ft.Icons.DESCRIPTION_OUTLINED, "PDF",
+            ("转换", "word", "docx", "excel", "xlsx", "ppt", "pptx", "office")),
+    Feature("Office 转 PDF", "/pdf?func=from_office", ft.Icons.PICTURE_AS_PDF_OUTLINED, "PDF",
             ("转换", "word", "excel", "ppt", "docx", "office", "libreoffice")),
+    Feature("PDF 加密 / 水印", "/pdf?func=protect", ft.Icons.LOCK_OUTLINED, "PDF",
+            ("加密", "密码", "水印", "保护", "watermark")),
     # 图片
     Feature("图片压缩", "/image?func=compress", ft.Icons.COMPRESS, "图片", ("压缩", "减小", "jpg", "png")),
     Feature("图片格式转换", "/image?func=convert", ft.Icons.TRANSFORM, "图片",
@@ -47,13 +47,13 @@ FEATURES: list[Feature] = [
     Feature("图片尺寸调整", "/image?func=resize", ft.Icons.PHOTO_SIZE_SELECT_LARGE, "图片",
             ("尺寸", "缩放", "分辨率", "resize")),
     Feature("图片加水印", "/image?func=watermark", ft.Icons.WATER_DROP_OUTLINED, "图片", ("水印", "watermark")),
-    Feature("图片批量重命名", "/image/rename", ft.Icons.DRIVE_FILE_RENAME_OUTLINE, "图片",
+    Feature("图片批量重命名", "/image?func=rename", ft.Icons.DRIVE_FILE_RENAME_OUTLINE, "图片",
             ("重命名", "改名", "批量", "rename")),
     # 音视频
     Feature("视频格式转换", "/media?func=video_convert", ft.Icons.SWAP_HORIZ, "音视频",
             ("视频", "转换", "mp4", "avi", "mov", "mkv")),
     Feature("视频压缩", "/media?func=video_compress", ft.Icons.COMPRESS, "音视频", ("视频", "压缩", "码率")),
-    Feature("视频剪辑", "/media/video-cut", ft.Icons.CONTENT_CUT, "音视频", ("视频", "剪辑", "裁剪", "截取")),
+    Feature("视频剪辑", "/media?func=video_cut", ft.Icons.CONTENT_CUT, "音视频", ("视频", "剪辑", "裁剪", "截取")),
     Feature("提取音频", "/media?func=audio_extract", ft.Icons.MUSIC_NOTE, "音视频", ("音频", "提取", "mp3")),
     Feature("音频格式转换", "/media?func=audio_convert", ft.Icons.GRAPHIC_EQ, "音视频",
             ("音频", "转换", "mp3", "wav", "aac", "flac")),
@@ -70,6 +70,18 @@ FEATURES: list[Feature] = [
     Feature("最近操作", "/history", ft.Icons.HISTORY, "应用", ("历史", "记录")),
     Feature("设置", "/settings", ft.Icons.SETTINGS_OUTLINED, "应用", ("设置", "主题", "输出目录", "api key")),
 ]
+
+
+# 历史记录里的 action 键 → 显示名（最近操作页、首页共用）
+ACTION_LABELS: dict[str, str] = {
+    "merge": "合并", "split": "拆分", "compress": "压缩", "protect": "加密水印",
+    "to_word": "转 Word", "to_office": "转 Office", "from_office": "Office 转 PDF",
+    "convert": "格式转换", "resize": "尺寸调整", "watermark": "加水印", "rename": "批量重命名",
+    "video_convert": "视频转换", "video_compress": "视频压缩", "video_cut": "视频剪辑",
+    "audio_extract": "音频提取", "audio_convert": "音频转换",
+    "compress_zip": "ZIP 压缩", "compress_7z": "7Z 压缩", "compress_targz": "TAR.GZ 压缩", "extract": "解压",
+    "recognize": "文字识别", "ocr": "OCR 识别", "ai_task": "AI 处理",
+}
 
 
 def search_features(query: str, limit: int = 8) -> list[Feature]:

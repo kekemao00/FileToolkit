@@ -11,6 +11,7 @@ import flet as ft
 
 from services import history_service
 from ui.components.top_bar import TopBar
+from ui.features import ACTION_LABELS
 from ui.palette import c
 from ui.utils import show_toast
 
@@ -647,7 +648,7 @@ class HomePage(ft.Column):
                     # 类型列
                     ft.Container(
                         content=ft.Text(
-                            action,
+                            ACTION_LABELS.get(action, action),
                             size=12,
                             color=c("#455c7f", "fg"),
                             font_family="42dot Sans",
