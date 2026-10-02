@@ -8,6 +8,8 @@ from pathlib import Path
 
 import flet as ft
 
+from ui.palette import c
+
 
 class FileList(ft.Column):
     """
@@ -120,11 +122,11 @@ class FileList(ft.Column):
                 spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor="#ffffff",
+            bgcolor=c("#ffffff"),
             border_radius=ft.border_radius.all(12),
             padding=ft.padding.symmetric(horizontal=12, vertical=8),
             shadow=ft.BoxShadow(
-                blur_radius=2, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1),
+                blur_radius=2, color=ft.Colors.with_opacity(0.05, c("#000000", "fg")), offset=ft.Offset(0, 1),
             ),
         )
 

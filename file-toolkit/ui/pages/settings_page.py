@@ -3,6 +3,8 @@ import flet as ft
 
 from services import settings_service
 from services.prompt_image_service import DEFAULT_BASE_URL, DEFAULT_MODEL
+from ui.palette import c
+from ui.theme import apply_theme_mode
 from ui.utils import show_toast
 
 
@@ -28,14 +30,14 @@ class SettingsPage(ft.Column):
             content=ft.Row(
                 controls=[
                     ft.Container(
-                        content=ft.Icon(ft.Icons.SETTINGS, color="#005f98", size=24),
-                        width=48, height=48, bgcolor="#dee9ff", border_radius=12,
+                        content=ft.Icon(ft.Icons.SETTINGS, color=c("#005f98", "fg"), size=24),
+                        width=48, height=48, bgcolor=c("#dee9ff"), border_radius=12,
                         alignment=ft.Alignment(0, 0),
                     ),
                     ft.Column(
                         controls=[
-                            ft.Text("设置", size=24, weight=ft.FontWeight.W_600, color="#162f50", font_family="42dot Sans"),
-                            ft.Text("个性化配置与系统偏好", size=14, color="#455c7f", font_family="42dot Sans"),
+                            ft.Text("设置", size=24, weight=ft.FontWeight.W_600, color=c("#162f50", "fg"), font_family="42dot Sans"),
+                            ft.Text("个性化配置与系统偏好", size=14, color=c("#455c7f", "fg"), font_family="42dot Sans"),
                         ],
                         spacing=2,
                     ),
@@ -58,23 +60,21 @@ class SettingsPage(ft.Column):
             ], spacing=24),
             on_change=self._on_theme_change,
         )
-        return self._card("外观", ft.Icons.PALETTE_OUTLINED, "#9333ea", "#faf5ff", [
+        return self._card("外观", ft.Icons.PALETTE_OUTLINED, c("#9333ea"), c("#faf5ff"), [
             self._row("主题模式", self._theme_radio),
         ])
 
     def _on_theme_change(self, e: ft.ControlEvent) -> None:
         mode = e.data
         settings_service.set("theme_mode", mode)
-        mode_enum = {"system": ft.ThemeMode.SYSTEM, "light": ft.ThemeMode.LIGHT, "dark": ft.ThemeMode.DARK}
-        self._page.theme_mode = mode_enum[mode]
-        self._page.update()
+        apply_theme_mode(self._page, mode)
 
     # ── 文件 ──────────────────────────────────────────────────────────
     def _build_file(self) -> ft.Control:
         current_dir = settings_service.get("default_output_dir", "")
         self._output_dir_text = ft.Text(
             current_dir or "（使用输入文件所在目录）",
-            size=13, color="#455c7f", expand=True,
+            size=13, color=c("#455c7f", "fg"), expand=True,
         )
         current_after = settings_service.get("after_complete", "open_dir")
         self._after_radio = ft.RadioGroup(
@@ -98,15 +98,15 @@ class SettingsPage(ft.Column):
             width=180, border_radius=12,
             on_select=lambda e: settings_service.set("history_limit", e.control.value),
         )
-        return self._card("文件", ft.Icons.FOLDER_OUTLINED, "#2563eb", "#eff6ff", [
+        return self._card("文件", ft.Icons.FOLDER_OUTLINED, c("#2563eb"), c("#eff6ff"), [
             self._row("默认输出目录", ft.Row(controls=[
                 self._output_dir_text,
                 ft.OutlinedButton(
                     "更改", on_click=self._pick_output_dir,
                     icon=ft.Icons.FOLDER_OPEN,
                     style=ft.ButtonStyle(
-                        color="#005f98",
-                        side=ft.BorderSide(1, "#d5e3ff"),
+                        color=c("#005f98", "fg"),
+                        side=ft.BorderSide(1, c("#d5e3ff")),
                         shape=ft.RoundedRectangleBorder(radius=12),
                     ),
                 ),
@@ -147,14 +147,14 @@ class SettingsPage(ft.Column):
         self._api_key_field = ft.TextField(
             value="", password=True, can_reveal_password=True,
             hint_text="API Key", border_radius=12, expand=True,
-            bgcolor="#f8fafc", border_color="transparent",
+            bgcolor=c("#f8fafc"), border_color="transparent",
         )
         self._secret_key_field = ft.TextField(
             value="", password=True, can_reveal_password=True,
             hint_text="Secret Key", border_radius=12, expand=True,
-            bgcolor="#f8fafc", border_color="transparent",
+            bgcolor=c("#f8fafc"), border_color="transparent",
         )
-        return self._card("网络（OCR 高级功能）", ft.Icons.LANGUAGE, "#0891b2", "#ecfeff", [
+        return self._card("网络（OCR 高级功能）", ft.Icons.LANGUAGE, c("#0891b2"), c("#ecfeff"), [
             self._row("OCR 服务商", self._ocr_provider),
             self._row("API Key", self._api_key_field),
             self._row("Secret Key", self._secret_key_field),
@@ -168,25 +168,25 @@ class SettingsPage(ft.Column):
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.SAVE, color="#ffffff", size=16),
+                    ft.Icon(ft.Icons.SAVE, color=c("#ffffff", "fg"), size=16),
                     ft.Text(
-                        "保存 API 配置", size=14, color="#ffffff",
+                        "保存 API 配置", size=14, color=c("#ffffff", "fg"),
                         font_family="42dot Sans", weight=ft.FontWeight.W_500,
                     ),
                 ],
                 spacing=8,
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
-            bgcolor="#005f98",
+            bgcolor=c("#005f98"),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
-                colors=["#005f98", "#2aa7ff"],
+                colors=[c("#005f98"), c("#2aa7ff")],
             ),
             border_radius=12,
             padding=ft.padding.symmetric(vertical=10, horizontal=20),
             shadow=ft.BoxShadow(
                 blur_radius=12, spread_radius=-3,
-                color=ft.Colors.with_opacity(0.15, "#005f98"),
+                color=ft.Colors.with_opacity(0.15, c("#005f98", "fg")),
                 offset=ft.Offset(0, 6),
             ),
             on_click=self._save_api_keys,
@@ -208,24 +208,24 @@ class SettingsPage(ft.Column):
             value=current_key, password=True, can_reveal_password=True,
             hint_text="sk-...（留空则不启用）",
             border_radius=12, expand=True,
-            bgcolor="#f8fafc", border_color="transparent",
+            bgcolor=c("#f8fafc"), border_color="transparent",
         )
         self._ai_image_base = ft.TextField(
             value=current_base, hint_text=DEFAULT_BASE_URL,
             border_radius=12, expand=True,
-            bgcolor="#f8fafc", border_color="transparent",
+            bgcolor=c("#f8fafc"), border_color="transparent",
         )
         self._ai_image_model = ft.TextField(
             value=current_model, hint_text=DEFAULT_MODEL,
             border_radius=12, expand=True,
-            bgcolor="#f8fafc", border_color="transparent",
+            bgcolor=c("#f8fafc"), border_color="transparent",
         )
 
         save_btn = ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.SAVE, color="#ffffff", size=16),
-                    ft.Text("保存生图配置", size=14, color="#ffffff",
+                    ft.Icon(ft.Icons.SAVE, color=c("#ffffff", "fg"), size=16),
+                    ft.Text("保存生图配置", size=14, color=c("#ffffff", "fg"),
                             font_family="42dot Sans", weight=ft.FontWeight.W_500),
                 ],
                 spacing=8,
@@ -233,13 +233,13 @@ class SettingsPage(ft.Column):
             ),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
-                colors=["#005f98", "#6b1ef3"],
+                colors=[c("#005f98"), c("#6b1ef3")],
             ),
             border_radius=12,
             padding=ft.padding.symmetric(vertical=10, horizontal=20),
             shadow=ft.BoxShadow(
                 blur_radius=12, spread_radius=-3,
-                color=ft.Colors.with_opacity(0.15, "#005f98"),
+                color=ft.Colors.with_opacity(0.15, c("#005f98", "fg")),
                 offset=ft.Offset(0, 6),
             ),
             on_click=self._save_ai_image_config,
@@ -250,13 +250,13 @@ class SettingsPage(ft.Column):
             icon=ft.Icons.SCIENCE_OUTLINED,
             on_click=self._test_ai_image_connection,
             style=ft.ButtonStyle(
-                color="#005f98",
-                side=ft.BorderSide(1, "#d5e3ff"),
+                color=c("#005f98", "fg"),
+                side=ft.BorderSide(1, c("#d5e3ff")),
                 shape=ft.RoundedRectangleBorder(radius=12),
             ),
         )
 
-        return self._card("AI 生图", ft.Icons.AUTO_FIX_HIGH, "#e11d48", "#fff1f2", [
+        return self._card("AI 生图", ft.Icons.AUTO_FIX_HIGH, c("#e11d48"), c("#fff1f2"), [
             self._row("API Key", self._ai_image_key),
             self._row("Base URL", self._ai_image_base),
             self._row("模型名称", self._ai_image_model),
@@ -297,14 +297,14 @@ class SettingsPage(ft.Column):
             show_toast(
                 self._page,
                 f"连接失败：{result.get('error', '未知错误')}",
-                color="#b91c1c", duration=4000,
+                color=c("#b91c1c", "fg"), duration=4000,
             )
 
     # ── 关于 ──────────────────────────────────────────────────────────
     def _build_about(self) -> ft.Control:
-        return self._card("关于", ft.Icons.INFO_OUTLINED, "#005f98", "#dee9ff", [
-            self._row("版本", ft.Text("v1.0.0（Windows MVP）", size=13, color="#455c7f")),
-            self._row("开源协议", ft.Text("MIT License", size=13, color="#455c7f")),
+        return self._card("关于", ft.Icons.INFO_OUTLINED, c("#005f98"), c("#dee9ff"), [
+            self._row("版本", ft.Text("v1.0.0（Windows MVP）", size=13, color=c("#455c7f", "fg"))),
+            self._row("开源协议", ft.Text("MIT License", size=13, color=c("#455c7f", "fg"))),
         ])
 
     # ── 通用布局 ──────────────────────────────────────────────────────
@@ -319,7 +319,7 @@ class SettingsPage(ft.Column):
                                 width=36, height=36, bgcolor=icon_bg, border_radius=10,
                                 alignment=ft.Alignment(0, 0),
                             ),
-                            ft.Text(title, size=16, weight=ft.FontWeight.W_600, color="#162f50", font_family="42dot Sans"),
+                            ft.Text(title, size=16, weight=ft.FontWeight.W_600, color=c("#162f50", "fg"), font_family="42dot Sans"),
                         ],
                         spacing=12,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -328,23 +328,23 @@ class SettingsPage(ft.Column):
                 ],
                 spacing=16,
             ),
-            bgcolor="#ffffff",
+            bgcolor=c("#ffffff"),
             border_radius=16,
             padding=ft.padding.all(24),
             margin=ft.margin.only(left=40, right=40, top=8, bottom=8),
-            shadow=ft.BoxShadow(blur_radius=1, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1)),
+            shadow=ft.BoxShadow(blur_radius=1, color=ft.Colors.with_opacity(0.05, c("#000000", "fg")), offset=ft.Offset(0, 1)),
         )
 
     def _row(self, label: str, control: ft.Control) -> ft.Control:
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Text(label, size=14, color="#162f50", width=140, font_family="42dot Sans"),
+                    ft.Text(label, size=14, color=c("#162f50", "fg"), width=140, font_family="42dot Sans"),
                     ft.Container(content=control, expand=True),
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=16,
             ),
             padding=ft.padding.symmetric(vertical=12),
-            border=ft.border.only(top=ft.BorderSide(1, ft.Colors.with_opacity(0.3, "#dee9ff"))),
+            border=ft.border.only(top=ft.BorderSide(1, ft.Colors.with_opacity(0.3, c("#dee9ff")))),
         )

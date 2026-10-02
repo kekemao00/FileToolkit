@@ -8,7 +8,7 @@ import flet as ft
 
 from services import history_service, settings_service
 from ui.router import setup_router
-from ui.theme import get_app_theme
+from ui.theme import apply_theme_mode, get_app_theme
 
 
 def _resolve_data_dir() -> Path:
@@ -45,7 +45,6 @@ def main(page: ft.Page) -> None:
     page.window.height = 800
     page.window.min_width = 1024
     page.window.min_height = 640
-    page.bgcolor = "#F4F6FF"
 
     # 字体注册（42dot Sans + Plus Jakarta Sans，从 assets/fonts/ 加载）
     page.fonts = {
@@ -57,12 +56,18 @@ def main(page: ft.Page) -> None:
     light_theme, dark_theme = get_app_theme()
     page.theme = light_theme
     page.dark_theme = dark_theme
+    # 先确定深浅色再构建界面，页面颜色在构建时按当前主题求值
     saved_mode = settings_service.get("theme_mode", "system")
-    page.theme_mode = {
-        "system": ft.ThemeMode.SYSTEM,
-        "light":  ft.ThemeMode.LIGHT,
-        "dark":   ft.ThemeMode.DARK,
-    }.get(saved_mode, ft.ThemeMode.SYSTEM)
+    if saved_mode not in ("system", "light", "dark"):
+        saved_mode = "system"
+    apply_theme_mode(page, saved_mode)
+
+    # 跟随系统时，系统亮度变化后重建界面
+    def _on_brightness_change(_) -> None:
+        if settings_service.get("theme_mode", "system") == "system":
+            apply_theme_mode(page, "system")
+
+    page.on_platform_brightness_change = _on_brightness_change
 
     # 路由初始化
     setup_router(page)

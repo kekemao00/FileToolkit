@@ -12,6 +12,7 @@ from ui.components.drop_zone import DropZone
 from ui.components.progress_card import ProgressCard
 from ui.components.result_card import ResultCard
 from ui.components.sub_page_header import SubPageHeader
+from ui.palette import c
 
 
 class PdfConvertPage(ft.Column):
@@ -27,8 +28,8 @@ class PdfConvertPage(ft.Column):
 
         is_to_office = mode == "to_office"
         title = "PDF 转 Office" if is_to_office else "Office 转 PDF"
-        icon_color = "#9333ea" if is_to_office else "#ea580c"
-        icon_bg = "#faf5ff" if is_to_office else "#fff7ed"
+        icon_color = c("#9333ea", "fg") if is_to_office else c("#ea580c", "fg")
+        icon_bg = c("#faf5ff") if is_to_office else c("#fff7ed")
         icon = ft.Icons.SWAP_HORIZ if is_to_office else ft.Icons.PICTURE_AS_PDF
         exts = ["pdf"] if is_to_office else ["docx", "doc", "xlsx", "xls", "pptx", "ppt"]
         ext_hint = "PDF" if is_to_office else "Word / Excel / PPT"
@@ -52,14 +53,14 @@ class PdfConvertPage(ft.Column):
                     ft.dropdown.Option("pptx", "PowerPoint (.pptx)"),
                 ],
                 width=200, border_radius=12,
-                bgcolor="#f8fafc", border_color="transparent",
+                bgcolor=c("#f8fafc"), border_color="transparent",
             )
         else:
             self._format_dropdown = None
 
         self._output_dir_text = ft.Text(
             "（与输入文件同级 output/ 目录）",
-            size=12, color="#455c7f", expand=True,
+            size=12, color=c("#455c7f", "fg"), expand=True,
         )
 
         self._progress = ProgressCard(on_cancel=self._cancel)
@@ -83,14 +84,14 @@ class PdfConvertPage(ft.Column):
                 "输出设置",
                 ft.Row(
                     controls=[
-                        ft.Icon(ft.Icons.FOLDER_OUTLINED, color="#455c7f", size=18),
+                        ft.Icon(ft.Icons.FOLDER_OUTLINED, color=c("#455c7f", "fg"), size=18),
                         self._output_dir_text,
                         ft.OutlinedButton(
                             "更改", on_click=self._pick_output_dir,
                             icon=ft.Icons.FOLDER_OPEN,
                             style=ft.ButtonStyle(
-                                color="#005f98",
-                                side=ft.BorderSide(1, "#d5e3ff"),
+                                color=c("#005f98", "fg"),
+                                side=ft.BorderSide(1, c("#d5e3ff")),
                                 shape=ft.RoundedRectangleBorder(radius=12),
                             ),
                         ),
@@ -114,28 +115,28 @@ class PdfConvertPage(ft.Column):
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Text(title, size=14, weight=ft.FontWeight.W_600, color="#162f50", font_family="42dot Sans"),
+                    ft.Text(title, size=14, weight=ft.FontWeight.W_600, color=c("#162f50", "fg"), font_family="42dot Sans"),
                     content,
                 ],
                 spacing=10,
             ),
-            bgcolor="#ffffff", border_radius=12, padding=ft.padding.all(20),
-            shadow=ft.BoxShadow(blur_radius=2, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1)),
+            bgcolor=c("#ffffff"), border_radius=12, padding=ft.padding.all(20),
+            shadow=ft.BoxShadow(blur_radius=2, color=ft.Colors.with_opacity(0.05, c("#000000", "fg")), offset=ft.Offset(0, 1)),
         )
 
     def _build_run_button(self) -> ft.Control:
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.SWAP_HORIZ, color="#ffffff", size=18),
-                    ft.Text("开始转换", size=16, color="#ffffff", font_family="42dot Sans", weight=ft.FontWeight.W_500),
+                    ft.Icon(ft.Icons.SWAP_HORIZ, color=c("#ffffff", "fg"), size=18),
+                    ft.Text("开始转换", size=16, color=c("#ffffff", "fg"), font_family="42dot Sans", weight=ft.FontWeight.W_500),
                 ],
                 spacing=8, alignment=ft.MainAxisAlignment.CENTER,
             ),
-            bgcolor="#005f98",
-            gradient=ft.LinearGradient(begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0), colors=["#005f98", "#00a3ff"]),
+            bgcolor=c("#005f98"),
+            gradient=ft.LinearGradient(begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0), colors=[c("#005f98"), c("#00a3ff")]),
             border_radius=16, padding=ft.padding.symmetric(vertical=14),
-            shadow=ft.BoxShadow(blur_radius=20, spread_radius=-5, color=ft.Colors.with_opacity(0.2, "#005f98"), offset=ft.Offset(0, 10)),
+            shadow=ft.BoxShadow(blur_radius=20, spread_radius=-5, color=ft.Colors.with_opacity(0.2, c("#005f98", "fg")), offset=ft.Offset(0, 10)),
             on_click=self._start_task, ink=True,
         )
 

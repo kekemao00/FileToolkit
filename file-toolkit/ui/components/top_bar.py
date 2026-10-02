@@ -11,6 +11,7 @@
 import flet as ft
 
 from ui.features import Feature, search_features
+from ui.palette import c
 
 
 class TopBar(ft.Container):
@@ -22,18 +23,18 @@ class TopBar(ft.Container):
         self._search = ft.SearchBar(
             bar_hint_text="搜索功能，如：压缩、转 Word、水印",
             view_hint_text="输入功能名或关键词，回车打开第一个结果",
-            bar_leading=ft.Icon(ft.Icons.SEARCH, color="#94a3b8", size=18),
-            bar_bgcolor="#f8fafc",
+            bar_leading=ft.Icon(ft.Icons.SEARCH, color=c("#94a3b8", "fg"), size=18),
+            bar_bgcolor=c("#f8fafc"),
             bar_elevation=0,
-            bar_border_side=ft.BorderSide(1, "#e2e8f0"),
-            bar_text_style=ft.TextStyle(size=13, color="#162f50", font_family="42dot Sans"),
-            bar_hint_text_style=ft.TextStyle(size=13, color="#94a3b8", font_family="42dot Sans"),
+            bar_border_side=ft.BorderSide(1, c("#e2e8f0")),
+            bar_text_style=ft.TextStyle(size=13, color=c("#162f50", "fg"), font_family="42dot Sans"),
+            bar_hint_text_style=ft.TextStyle(size=13, color=c("#94a3b8", "fg"), font_family="42dot Sans"),
             bar_size_constraints=ft.BoxConstraints(min_height=40, max_height=40),
-            view_bgcolor="#ffffff",
+            view_bgcolor=c("#ffffff"),
             view_elevation=8,
             view_size_constraints=ft.BoxConstraints(max_height=420),
-            view_hint_text_style=ft.TextStyle(size=13, color="#94a3b8", font_family="42dot Sans"),
-            divider_color="#e2e8f0",
+            view_hint_text_style=ft.TextStyle(size=13, color=c("#94a3b8", "fg"), font_family="42dot Sans"),
+            divider_color=c("#e2e8f0"),
             on_change=self._on_change,
             on_submit=self._on_submit,
             on_tap=self._on_tap,
@@ -43,10 +44,10 @@ class TopBar(ft.Container):
 
         super().__init__(
             height=80,
-            bgcolor="#ffffff",
+            bgcolor=c("#ffffff"),
             shadow=ft.BoxShadow(
                 blur_radius=2,
-                color=ft.Colors.with_opacity(0.05, "#000000"),
+                color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
                 offset=ft.Offset(0, 1),
             ),
             padding=ft.padding.only(left=32, right=24),
@@ -57,7 +58,7 @@ class TopBar(ft.Container):
                     self._search,
                     ft.IconButton(
                         icon=ft.Icons.SETTINGS_OUTLINED,
-                        icon_color="#475569",
+                        icon_color=c("#475569", "fg"),
                         icon_size=20,
                         tooltip="设置",
                         on_click=lambda _: self._page.go("/settings"),
@@ -76,24 +77,24 @@ class TopBar(ft.Container):
         else:
             self._search.controls = [
                 ft.ListTile(
-                    leading=ft.Icon(ft.Icons.SEARCH_OFF, color="#94a3b8"),
-                    title=ft.Text("没有找到相关功能", size=13, color="#455c7f"),
-                    subtitle=ft.Text("换个关键词试试，例如「合并」「mp4」「解压」", size=11, color="#94a3b8"),
+                    leading=ft.Icon(ft.Icons.SEARCH_OFF, color=c("#94a3b8", "fg")),
+                    title=ft.Text("没有找到相关功能", size=13, color=c("#455c7f", "fg")),
+                    subtitle=ft.Text("换个关键词试试，例如「合并」「mp4」「解压」", size=11, color=c("#94a3b8", "fg")),
                 )
             ]
 
     def _result_tile(self, feature: Feature) -> ft.Control:
         return ft.ListTile(
             leading=ft.Container(
-                content=ft.Icon(feature.icon, color="#005f98", size=18),
+                content=ft.Icon(feature.icon, color=c("#005f98", "fg"), size=18),
                 width=32,
                 height=32,
-                bgcolor="#e0f0ff",
+                bgcolor=c("#e0f0ff"),
                 border_radius=8,
                 alignment=ft.Alignment(0, 0),
             ),
-            title=ft.Text(feature.title, size=13, color="#162f50", font_family="42dot Sans"),
-            trailing=ft.Text(feature.group, size=11, color="#94a3b8"),
+            title=ft.Text(feature.title, size=13, color=c("#162f50", "fg"), font_family="42dot Sans"),
+            trailing=ft.Text(feature.group, size=11, color=c("#94a3b8", "fg")),
             dense=True,
             on_click=lambda _, f=feature: self._page.run_task(self._open, f),
         )

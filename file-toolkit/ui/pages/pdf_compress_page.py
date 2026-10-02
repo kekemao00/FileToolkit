@@ -11,6 +11,7 @@ from ui.components.drop_zone import DropZone
 from ui.components.progress_card import ProgressCard
 from ui.components.result_card import ResultCard
 from ui.components.sub_page_header import SubPageHeader
+from ui.palette import c
 
 
 class PdfCompressPage(ft.Column):
@@ -48,11 +49,11 @@ class PdfCompressPage(ft.Column):
         self._output_suffix_field = ft.TextField(
             value="_compressed", label="输出文件名后缀",
             width=180, border_radius=12,
-            bgcolor="#f8fafc", border_color="transparent",
+            bgcolor=c("#f8fafc"), border_color="transparent",
         )
         self._output_dir_text = ft.Text(
             "（与输入文件同级 output/ 目录）",
-            size=12, color="#455c7f", expand=True,
+            size=12, color=c("#455c7f", "fg"), expand=True,
         )
 
         self._progress_card = ProgressCard(on_cancel=self._cancel_task)
@@ -62,8 +63,8 @@ class PdfCompressPage(ft.Column):
             SubPageHeader(
                 title="PDF 压缩",
                 icon=ft.Icons.COMPRESS,
-                icon_color="#ea580c",
-                icon_bg="#fff7ed",
+                icon_color=c("#ea580c", "fg"),
+                icon_bg=c("#fff7ed"),
                 on_back=lambda: self._page.go("/pdf"),
             ),
             self._build_body(),
@@ -82,14 +83,14 @@ class PdfCompressPage(ft.Column):
                                 self._output_suffix_field,
                                 ft.Row(
                                     controls=[
-                                        ft.Icon(ft.Icons.FOLDER_OUTLINED, color="#455c7f", size=18),
+                                        ft.Icon(ft.Icons.FOLDER_OUTLINED, color=c("#455c7f", "fg"), size=18),
                                         self._output_dir_text,
                                         ft.OutlinedButton(
                                             "更改", on_click=self._pick_output_dir,
                                             icon=ft.Icons.FOLDER_OPEN,
                                             style=ft.ButtonStyle(
-                                                color="#005f98",
-                                                side=ft.BorderSide(1, "#d5e3ff"),
+                                                color=c("#005f98", "fg"),
+                                                side=ft.BorderSide(1, c("#d5e3ff")),
                                                 shape=ft.RoundedRectangleBorder(radius=12),
                                             ),
                                         ),
@@ -117,28 +118,28 @@ class PdfCompressPage(ft.Column):
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Text(title, size=14, weight=ft.FontWeight.W_600, color="#162f50", font_family="42dot Sans"),
+                    ft.Text(title, size=14, weight=ft.FontWeight.W_600, color=c("#162f50", "fg"), font_family="42dot Sans"),
                     content,
                 ],
                 spacing=10,
             ),
-            bgcolor="#ffffff", border_radius=12, padding=ft.padding.all(20),
-            shadow=ft.BoxShadow(blur_radius=2, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1)),
+            bgcolor=c("#ffffff"), border_radius=12, padding=ft.padding.all(20),
+            shadow=ft.BoxShadow(blur_radius=2, color=ft.Colors.with_opacity(0.05, c("#000000", "fg")), offset=ft.Offset(0, 1)),
         )
 
     def _build_run_button(self) -> ft.Control:
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.COMPRESS, color="#ffffff", size=18),
-                    ft.Text("开始压缩", size=16, color="#ffffff", font_family="42dot Sans", weight=ft.FontWeight.W_500),
+                    ft.Icon(ft.Icons.COMPRESS, color=c("#ffffff", "fg"), size=18),
+                    ft.Text("开始压缩", size=16, color=c("#ffffff", "fg"), font_family="42dot Sans", weight=ft.FontWeight.W_500),
                 ],
                 spacing=8, alignment=ft.MainAxisAlignment.CENTER,
             ),
-            bgcolor="#005f98",
-            gradient=ft.LinearGradient(begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0), colors=["#005f98", "#00a3ff"]),
+            bgcolor=c("#005f98"),
+            gradient=ft.LinearGradient(begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0), colors=[c("#005f98"), c("#00a3ff")]),
             border_radius=16, padding=ft.padding.symmetric(vertical=14),
-            shadow=ft.BoxShadow(blur_radius=20, spread_radius=-5, color=ft.Colors.with_opacity(0.2, "#005f98"), offset=ft.Offset(0, 10)),
+            shadow=ft.BoxShadow(blur_radius=20, spread_radius=-5, color=ft.Colors.with_opacity(0.2, c("#005f98", "fg")), offset=ft.Offset(0, 10)),
             on_click=self._start_task, ink=True,
         )
 

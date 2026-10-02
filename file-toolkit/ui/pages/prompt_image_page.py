@@ -22,6 +22,7 @@ import flet as ft
 from core.prompt_image import templates as tpl
 from services import prompt_image_service, settings_service
 from ui.components.sub_page_header import SubPageHeader
+from ui.palette import c
 from ui.utils import show_toast
 
 
@@ -43,10 +44,10 @@ class PromptImagePage(ft.Column):
         # 先构建各动态区域，后续事件回调直接访问
         self._search_field = ft.TextField(
             hint_text="搜索模板（名称 / 标签）",
-            hint_style=ft.TextStyle(color="#94a3b8", size=13),
+            hint_style=ft.TextStyle(color=c("#94a3b8", "fg"), size=13),
             prefix_icon=ft.Icons.SEARCH,
             border_radius=12,
-            bgcolor="#f8fafc",
+            bgcolor=c("#f8fafc"),
             border_color="transparent",
             content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
             on_change=self._on_search_change,
@@ -62,10 +63,10 @@ class PromptImagePage(ft.Column):
             min_lines=4,
             max_lines=8,
             text_style=ft.TextStyle(
-                font_family="JetBrains Mono", size=13, color="#162f50",
+                font_family="JetBrains Mono", size=13, color=c("#162f50", "fg"),
             ),
             border_radius=12,
-            bgcolor="#f8fafc",
+            bgcolor=c("#f8fafc"),
             border_color="transparent",
         )
         self._size_dropdown = ft.Dropdown(
@@ -94,8 +95,8 @@ class PromptImagePage(ft.Column):
         self._generate_btn = self._build_generate_button()
         self._loading_row = ft.Row(
             controls=[
-                ft.ProgressRing(width=20, height=20, stroke_width=2, color="#005f98"),
-                ft.Text("AI 正在创作中...", size=13, color="#455c7f",
+                ft.ProgressRing(width=20, height=20, stroke_width=2, color=c("#005f98", "fg")),
+                ft.Text("AI 正在创作中...", size=13, color=c("#455c7f", "fg"),
                         font_family="42dot Sans"),
             ],
             spacing=10,
@@ -112,7 +113,7 @@ class PromptImagePage(ft.Column):
             border_radius=12,
             visible=False,
         )
-        self._result_meta = ft.Text("", size=12, color="#455c7f",
+        self._result_meta = ft.Text("", size=12, color=c("#455c7f", "fg"),
                                     font_family="42dot Sans")
         self._result_actions = ft.Row(spacing=10, visible=False)
         self._result_area = ft.Container(
@@ -130,9 +131,9 @@ class PromptImagePage(ft.Column):
         self._result_empty = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Icon(ft.Icons.AUTO_FIX_HIGH_OUTLINED, size=36, color="#94a3b8"),
+                    ft.Icon(ft.Icons.AUTO_FIX_HIGH_OUTLINED, size=36, color=c("#94a3b8", "fg")),
                     ft.Text("尚未生成，点击上方按钮开始创作",
-                            size=13, color="#94a3b8", font_family="42dot Sans"),
+                            size=13, color=c("#94a3b8", "fg"), font_family="42dot Sans"),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=8,
@@ -145,14 +146,14 @@ class PromptImagePage(ft.Column):
             SubPageHeader(
                 title="提示词出图",
                 icon=ft.Icons.AUTO_FIX_HIGH,
-                icon_color="#e11d48",
-                icon_bg="#fff1f2",
+                icon_color=c("#e11d48", "fg"),
+                icon_bg=c("#fff1f2"),
                 on_back=lambda: self._page.go("/"),
             ),
             ft.Container(
                 content=ft.Text(
                     "选择模板，填写关键信息，AI 自动生成精美图片",
-                    size=14, color="#455c7f", font_family="42dot Sans",
+                    size=14, color=c("#455c7f", "fg"), font_family="42dot Sans",
                 ),
                 padding=ft.padding.only(left=32, right=32, bottom=16),
             ),
@@ -182,11 +183,11 @@ class PromptImagePage(ft.Column):
             ),
             width=380,
             padding=ft.padding.all(16),
-            bgcolor="#ffffff",
+            bgcolor=c("#ffffff"),
             border_radius=16,
             shadow=ft.BoxShadow(
                 blur_radius=8,
-                color=ft.Colors.with_opacity(0.05, "#000000"),
+                color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
                 offset=ft.Offset(0, 2),
             ),
         )
@@ -228,11 +229,11 @@ class PromptImagePage(ft.Column):
             ),
             expand=True,
             padding=ft.padding.all(24),
-            bgcolor="#ffffff",
+            bgcolor=c("#ffffff"),
             border_radius=16,
             shadow=ft.BoxShadow(
                 blur_radius=8,
-                color=ft.Colors.with_opacity(0.05, "#000000"),
+                color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
                 offset=ft.Offset(0, 2),
             ),
         )
@@ -253,7 +254,7 @@ class PromptImagePage(ft.Column):
             controls=[
                 ft.Text(
                     title, size=14, weight=ft.FontWeight.W_600,
-                    color="#162f50", font_family="42dot Sans",
+                    color=c("#162f50", "fg"), font_family="42dot Sans",
                 ),
                 body,
             ],
@@ -263,7 +264,7 @@ class PromptImagePage(ft.Column):
     def _labeled(self, label: str, body: ft.Control) -> ft.Control:
         return ft.Column(
             controls=[
-                ft.Text(label, size=12, color="#455c7f", font_family="42dot Sans"),
+                ft.Text(label, size=12, color=c("#455c7f", "fg"), font_family="42dot Sans"),
                 body,
             ],
             spacing=4,
@@ -278,11 +279,11 @@ class PromptImagePage(ft.Column):
             chip = ft.Container(
                 content=ft.Text(
                     cat, size=12,
-                    color="#ffffff" if is_active else "#455c7f",
+                    color=c("#ffffff", "fg") if is_active else c("#455c7f", "fg"),
                     font_family="42dot Sans",
                     weight=ft.FontWeight.W_500,
                 ),
-                bgcolor="#005f98" if is_active else "#f1f5f9",
+                bgcolor=c("#005f98") if is_active else c("#f1f5f9"),
                 border_radius=9999,
                 padding=ft.padding.symmetric(horizontal=12, vertical=6),
                 on_click=lambda e, c=cat: self._on_category_change(c),
@@ -309,7 +310,7 @@ class PromptImagePage(ft.Column):
             self._template_grid.controls.append(
                 ft.Container(
                     content=ft.Text(
-                        "没有匹配的模板", size=12, color="#94a3b8",
+                        "没有匹配的模板", size=12, color=c("#94a3b8", "fg"),
                         font_family="42dot Sans",
                     ),
                     padding=ft.padding.symmetric(vertical=16),
@@ -341,10 +342,10 @@ class PromptImagePage(ft.Column):
             controls=[
                 ft.Container(
                     content=ft.Text(
-                        tag, size=9, color="#005f98",
+                        tag, size=9, color=c("#005f98", "fg"),
                         font_family="42dot Sans", weight=ft.FontWeight.W_500,
                     ),
-                    bgcolor="#dee9ff",
+                    bgcolor=c("#dee9ff"),
                     border_radius=9999,
                     padding=ft.padding.symmetric(horizontal=6, vertical=2),
                 )
@@ -357,20 +358,20 @@ class PromptImagePage(ft.Column):
             content=ft.Column(
                 controls=[
                     ft.Container(
-                        content=ft.Icon(icon_name, color="#e11d48", size=22),
+                        content=ft.Icon(icon_name, color=c("#e11d48", "fg"), size=22),
                         width=36, height=36,
-                        bgcolor="#fff1f2",
+                        bgcolor=c("#fff1f2"),
                         border_radius=10,
                         alignment=ft.Alignment(0, 0),
                     ),
                     ft.Text(
                         template["name"], size=13,
                         weight=ft.FontWeight.W_600,
-                        color="#162f50", font_family="42dot Sans",
+                        color=c("#162f50", "fg"), font_family="42dot Sans",
                         max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                     ),
                     ft.Text(
-                        template["description"], size=11, color="#455c7f",
+                        template["description"], size=11, color=c("#455c7f", "fg"),
                         font_family="42dot Sans",
                         max_lines=2, overflow=ft.TextOverflow.ELLIPSIS,
                     ),
@@ -379,10 +380,10 @@ class PromptImagePage(ft.Column):
                 spacing=6,
                 tight=True,
             ),
-            bgcolor="#f0f7ff" if is_selected else "#ffffff",
+            bgcolor=c("#f0f7ff") if is_selected else c("#ffffff"),
             border=ft.border.all(
                 2 if is_selected else 1,
-                "#005f98" if is_selected else "#e2e8f0",
+                c("#005f98") if is_selected else c("#e2e8f0"),
             ),
             border_radius=12,
             padding=ft.padding.all(12),
@@ -434,7 +435,7 @@ class PromptImagePage(ft.Column):
                     multiline=True,
                     min_lines=3, max_lines=6,
                     border_radius=12,
-                    bgcolor="#f8fafc",
+                    bgcolor=c("#f8fafc"),
                     border_color="transparent",
                     on_change=lambda _e: self._update_prompt_preview(),
                 )
@@ -443,7 +444,7 @@ class PromptImagePage(ft.Column):
                     value=default,
                     hint_text=placeholder,
                     border_radius=12,
-                    bgcolor="#f8fafc",
+                    bgcolor=c("#f8fafc"),
                     border_color="transparent",
                     on_change=lambda _e: self._update_prompt_preview(),
                 )
@@ -454,7 +455,7 @@ class PromptImagePage(ft.Column):
             self._form_area.controls.append(
                 ft.Column(
                     controls=[
-                        ft.Text(label_text, size=12, color="#455c7f",
+                        ft.Text(label_text, size=12, color=c("#455c7f", "fg"),
                                 font_family="42dot Sans"),
                         ctrl,
                     ],
@@ -484,9 +485,9 @@ class PromptImagePage(ft.Column):
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.AUTO_FIX_HIGH, color="#ffffff", size=18),
+                    ft.Icon(ft.Icons.AUTO_FIX_HIGH, color=c("#ffffff", "fg"), size=18),
                     ft.Text(
-                        "生成图片", size=15, color="#ffffff",
+                        "生成图片", size=15, color=c("#ffffff", "fg"),
                         font_family="42dot Sans", weight=ft.FontWeight.W_600,
                     ),
                 ],
@@ -495,13 +496,13 @@ class PromptImagePage(ft.Column):
             ),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
-                colors=["#005f98", "#6b1ef3"],
+                colors=[c("#005f98"), c("#6b1ef3")],
             ),
             border_radius=12,
             padding=ft.padding.symmetric(vertical=12, horizontal=40),
             shadow=ft.BoxShadow(
                 blur_radius=15, spread_radius=-3,
-                color=ft.Colors.with_opacity(0.25, "#005f98"),
+                color=ft.Colors.with_opacity(0.25, c("#005f98", "fg")),
                 offset=ft.Offset(0, 6),
             ),
             on_click=self._on_generate,
@@ -513,23 +514,23 @@ class PromptImagePage(ft.Column):
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.INFO_OUTLINE, color="#b45309", size=16),
+                    ft.Icon(ft.Icons.INFO_OUTLINE, color=c("#b45309", "fg"), size=16),
                     ft.Text(
                         "尚未配置 AI 生图 API Key，点击右侧按钮前往设置",
-                        size=12, color="#92400e", font_family="42dot Sans",
+                        size=12, color=c("#92400e", "fg"), font_family="42dot Sans",
                     ),
                     ft.Container(expand=True),
                     ft.TextButton(
                         "去设置",
                         on_click=lambda _e: self._page.go("/settings"),
-                        style=ft.ButtonStyle(color="#b45309"),
+                        style=ft.ButtonStyle(color=c("#b45309", "fg")),
                     ),
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=8,
             ),
-            bgcolor="#fffbeb",
-            border=ft.border.all(1, "#fcd34d"),
+            bgcolor=c("#fffbeb"),
+            border=ft.border.all(1, c("#fcd34d")),
             border_radius=10,
             padding=ft.padding.symmetric(horizontal=12, vertical=8),
             visible=not prompt_image_service.is_configured(),
@@ -581,7 +582,7 @@ class PromptImagePage(ft.Column):
             show_toast(
                 self._page,
                 f"生成失败：{result.get('error', '未知错误')}",
-                color="#b91c1c", duration=4000,
+                color=c("#b91c1c", "fg"), duration=4000,
             )
             return
 
@@ -639,15 +640,15 @@ class PromptImagePage(ft.Column):
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(icon, color="#005f98", size=14),
-                    ft.Text(label, size=12, color="#005f98",
+                    ft.Icon(icon, color=c("#005f98", "fg"), size=14),
+                    ft.Text(label, size=12, color=c("#005f98", "fg"),
                             font_family="42dot Sans"),
                 ],
                 spacing=6,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor="#ffffff",
-            border=ft.border.all(1, "#d5e3ff"),
+            bgcolor=c("#ffffff"),
+            border=ft.border.all(1, c("#d5e3ff")),
             border_radius=10,
             padding=ft.padding.symmetric(horizontal=12, vertical=8),
             on_click=on_click,

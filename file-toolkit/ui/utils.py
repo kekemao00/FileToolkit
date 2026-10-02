@@ -9,12 +9,14 @@ import threading
 
 import flet as ft
 
+from ui.palette import c
+
 
 def show_toast(
     page: ft.Page,
     message: str,
     duration: int = 2000,
-    color: str = "#005f98",
+    color: str | None = None,
 ) -> None:
     """显示一条 toast 提示。
 
@@ -25,8 +27,8 @@ def show_toast(
         color: 背景色，默认主题蓝 #005f98。
     """
     snack = ft.SnackBar(
-        content=ft.Text(message, color="#ffffff"),
-        bgcolor=color,
+        content=ft.Text(message, color=c("#ffffff", "fg")),
+        bgcolor=color or c("#005f98"),
         duration=duration,
     )
     try:

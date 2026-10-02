@@ -56,6 +56,8 @@ from ui.pages.pdf_page import PdfPage
 from ui.pages.pdf_split_page import PdfSplitPage
 from ui.pages.prompt_image_page import PromptImagePage
 from ui.pages.settings_page import SettingsPage
+from ui.palette import c
+from ui.theme import set_rebuild_hook
 
 
 def _parse_route(route: str) -> tuple[str, dict[str, str]]:
@@ -130,20 +132,20 @@ def _unknown_route_page(page: ft.Page, route: str) -> ft.Column:
     """未知路由提示页面：显示路由信息 + 返回首页按钮。"""
     return ft.Column(
         controls=[
-            ft.Icon(ft.Icons.SEARCH_OFF, color="#94a3b8", size=48),
+            ft.Icon(ft.Icons.SEARCH_OFF, color=c("#94a3b8", "fg"), size=48),
             ft.Text(
-                f"页面不存在: {route}", size=20, color="#162f50",
+                f"页面不存在: {route}", size=20, color=c("#162f50", "fg"),
                 font_family="42dot Sans", weight=ft.FontWeight.W_500,
             ),
             ft.Text(
                 "请检查入口链接或返回首页重新选择功能。",
-                size=13, color="#455c7f", font_family="42dot Sans",
+                size=13, color=c("#455c7f", "fg"), font_family="42dot Sans",
             ),
             ft.ElevatedButton(
                 "返回首页",
                 on_click=lambda _: page.go("/"),
                 style=ft.ButtonStyle(
-                    bgcolor="#005f98", color="#ffffff",
+                    bgcolor=c("#005f98"), color=c("#ffffff", "fg"),
                     shape=ft.RoundedRectangleBorder(radius=12),
                     padding=ft.padding.symmetric(horizontal=24, vertical=12),
                 ),
@@ -176,13 +178,23 @@ def setup_router(page: ft.Page) -> None:
 
     # 内容区域用 Column，通过 controls 列表切换
     content_area = ft.Column(expand=True)
+    current_route = "/"
 
     def navigate(route: str) -> None:
         """手动导航：切换内容区 + 同步 NavRail 高亮。"""
+        nonlocal current_route
+        current_route = route
         path, _ = _parse_route(route)
         nav.sync_selected(path)
         content_area.controls = [_resolve_page(route, page)]
         page.update()
+
+    def rebuild() -> None:
+        """主题切换后重建侧栏和当前页（颜色在构建时求值）。"""
+        nonlocal nav
+        nav = NavRail(on_navigate=navigate)
+        shell.controls = [nav, content_area]
+        navigate(current_route)
 
     # 将 navigate 挂到 page 上，供子页面调用 page.go() 的替代
     page.go = navigate  # type: ignore[assignment]
@@ -199,4 +211,5 @@ def setup_router(page: ft.Page) -> None:
     )
 
     page.add(shell)
+    set_rebuild_hook(page, rebuild)
     navigate("/")

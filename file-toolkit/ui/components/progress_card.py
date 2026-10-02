@@ -9,6 +9,8 @@ from collections.abc import Callable
 
 import flet as ft
 
+from ui.palette import c
+
 
 class ProgressCard(ft.Container):
     """
@@ -26,14 +28,14 @@ class ProgressCard(ft.Container):
     def __init__(self, on_cancel: Callable[[], None] | None = None) -> None:
         self._on_cancel = on_cancel
 
-        self._filename_text = ft.Text("", size=14, weight=ft.FontWeight.W_600, color="#162f50")
-        self._desc_text = ft.Text("准备中...", size=12, color="#455c7f")
-        self._percent_text = ft.Text("", size=12, color="#005f98", weight=ft.FontWeight.W_600)
+        self._filename_text = ft.Text("", size=14, weight=ft.FontWeight.W_600, color=c("#162f50", "fg"))
+        self._desc_text = ft.Text("准备中...", size=12, color=c("#455c7f", "fg"))
+        self._percent_text = ft.Text("", size=12, color=c("#005f98", "fg"), weight=ft.FontWeight.W_600)
 
         self._progress_bar = ft.ProgressBar(
             value=None,           # None = 不确定（循环）
-            bgcolor="#d5e3ff",
-            color="#005f98",
+            bgcolor=c("#d5e3ff"),
+            color=c("#005f98", "fg"),
             border_radius=ft.border_radius.all(999),
             height=8,
         )
@@ -70,11 +72,11 @@ class ProgressCard(ft.Container):
                 ],
                 spacing=10,
             ),
-            bgcolor="#ffffff",
+            bgcolor=c("#ffffff"),
             border_radius=ft.border_radius.all(12),
             padding=ft.padding.all(20),
             shadow=ft.BoxShadow(
-                blur_radius=2, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1),
+                blur_radius=2, color=ft.Colors.with_opacity(0.05, c("#000000", "fg")), offset=ft.Offset(0, 1),
             ),
         )
 

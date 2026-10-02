@@ -12,6 +12,8 @@
 """
 import flet as ft
 
+from ui.palette import c
+
 # 导航项配置：(label, route, icon_outline, icon_filled)
 _NAV_ITEMS = [
     ("首页",      "/",        ft.Icons.HOME_OUTLINED,          ft.Icons.HOME),
@@ -40,12 +42,12 @@ class NavRail(ft.Container):
         super().__init__(
             width=256,
             expand_loose=True,
-            bgcolor="#FFFFFF",
-            border=ft.border.only(right=ft.BorderSide(1, "#E2E8F0")),
+            bgcolor=c("#ffffff"),
+            border=ft.border.only(right=ft.BorderSide(1, c("#e2e8f0"))),
             shadow=ft.BoxShadow(
                 spread_radius=-5,
                 blur_radius=25,
-                color=ft.Colors.with_opacity(0.05, "#1E3A8A"),
+                color=ft.Colors.with_opacity(0.05, c("#1e3a8a", "fg")),
                 offset=ft.Offset(0, 20),
             ),
             content=ft.Column(
@@ -68,16 +70,16 @@ class NavRail(ft.Container):
                     ft.Container(
                         content=ft.Icon(
                             ft.Icons.FOLDER_SPECIAL,
-                            color="#005F98",
+                            color=c("#005f98", "fg"),
                             size=28,
                         ),
                         width=48,
                         height=48,
                         border_radius=8,
-                        bgcolor="#FFFFFF",
+                        bgcolor=c("#ffffff"),
                         shadow=ft.BoxShadow(
                             blur_radius=2,
-                            color=ft.Colors.with_opacity(0.05, "#000000"),
+                            color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
                         ),
                         alignment=ft.Alignment(0, 0),
                     ),
@@ -87,13 +89,13 @@ class NavRail(ft.Container):
                                 "文件全能王",
                                 size=18,
                                 weight=ft.FontWeight.W_600,
-                                color="#001D33",
+                                color=c("#001d33", "fg"),
                                 font_family="42dot Sans",
                             ),
                             ft.Text(
                                 "一个软件，搞定所有文件",
                                 size=11,
-                                color="#001D33",
+                                color=c("#001d33", "fg"),
                                 font_family="42dot Sans",
                                 opacity=0.7,
                             ),
@@ -136,13 +138,13 @@ class NavRail(ft.Container):
                 controls=[
                     ft.Icon(
                         selected_icon if is_selected else icon,
-                        color="#FFFFFF" if is_selected else "#475569",
+                        color=c("#ffffff", "fg") if is_selected else c("#475569", "fg"),
                         size=18,
                     ),
                     ft.Text(
                         label,
                         size=14,
-                        color="#FFFFFF" if is_selected else "#475569",
+                        color=c("#ffffff", "fg") if is_selected else c("#475569", "fg"),
                         font_family="42dot Sans",
                         weight=ft.FontWeight.W_500,
                     ),
@@ -150,7 +152,7 @@ class NavRail(ft.Container):
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor="#00A3FF" if is_selected else None,
+            bgcolor=c("#00a3ff") if is_selected else None,
             border_radius=12,
             padding=ft.padding.symmetric(horizontal=16, vertical=12),
             on_click=lambda e, r=route: self._on_navigate(r),
@@ -164,25 +166,25 @@ class NavRail(ft.Container):
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Divider(height=1, color="#E2E8F0"),
+                    ft.Divider(height=1, color=c("#e2e8f0", "fg")),
                     ft.Container(
                         content=ft.Row(
                             controls=[
                                 ft.Container(
                                     content=ft.Icon(
                                         ft.Icons.PERSON,
-                                        color="#FFFFFF",
+                                        color=c("#ffffff", "fg"),
                                         size=20,
                                     ),
                                     width=40,
                                     height=40,
                                     border_radius=20,
-                                    bgcolor="#005F98",
+                                    bgcolor=c("#005f98"),
                                     alignment=ft.Alignment(0, 0),
-                                    border=ft.border.all(2, "#FFFFFF"),
+                                    border=ft.border.all(2, c("#ffffff")),
                                     shadow=ft.BoxShadow(
                                         blur_radius=2,
-                                        color=ft.Colors.with_opacity(0.05, "#000000"),
+                                        color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
                                     ),
                                 ),
                                 ft.Column(
@@ -191,13 +193,13 @@ class NavRail(ft.Container):
                                             "本地用户",
                                             size=14,
                                             weight=ft.FontWeight.BOLD,
-                                            color="#0F172A",
+                                            color=c("#0f172a", "fg"),
                                             font_family="42dot Sans",
                                         ),
                                         ft.Text(
                                             "免费版",
                                             size=11,
-                                            color="#64748B",
+                                            color=c("#64748b", "fg"),
                                             font_family="42dot Sans",
                                         ),
                                     ],
@@ -207,7 +209,7 @@ class NavRail(ft.Container):
                                 ),
                                 ft.Icon(
                                     ft.Icons.CHEVRON_RIGHT,
-                                    color="#64748B",
+                                    color=c("#64748b", "fg"),
                                     size=16,
                                 ),
                             ],
@@ -249,6 +251,6 @@ class NavRail(ft.Container):
         _, _, icon, sel_icon = _NAV_ITEMS[index]
         row: ft.Row = item.content
         row.controls[0].icon = sel_icon if selected else icon
-        row.controls[0].color = "#FFFFFF" if selected else "#475569"
-        row.controls[1].color = "#FFFFFF" if selected else "#475569"
-        item.bgcolor = "#00A3FF" if selected else None
+        row.controls[0].color = c("#ffffff", "fg") if selected else c("#475569", "fg")
+        row.controls[1].color = c("#ffffff", "fg") if selected else c("#475569", "fg")
+        item.bgcolor = c("#00a3ff") if selected else None

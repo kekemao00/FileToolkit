@@ -11,6 +11,7 @@ import flet as ft
 
 from services import history_service
 from ui.components.top_bar import TopBar
+from ui.palette import c
 from ui.utils import show_toast
 
 # 工具卡片配置：(title, subtitle, icon, icon_color, icon_bg, badge1, badge2, badge1_bg, badge2_bg, route)
@@ -132,12 +133,12 @@ class HomePage(ft.Column):
             ),
             expand=True,
             height=320,
-            bgcolor=ft.Colors.with_opacity(0.4, "#ffffff"),
-            border=ft.border.all(1, ft.Colors.with_opacity(0.2, "#ffffff")),
+            bgcolor=ft.Colors.with_opacity(0.4, c("#ffffff")),
+            border=ft.border.all(1, ft.Colors.with_opacity(0.2, c("#ffffff"))),
             border_radius=16,
             shadow=ft.BoxShadow(
                 blur_radius=50,
-                color=ft.Colors.with_opacity(0.25, "#000000"),
+                color=ft.Colors.with_opacity(0.25, c("#000000", "fg")),
                 offset=ft.Offset(0, 25),
             ),
             blur=ft.Blur(2, 2),
@@ -156,13 +157,13 @@ class HomePage(ft.Column):
                                     "一个软件，搞定所有文件",
                                     size=48,
                                     weight=ft.FontWeight.W_500,
-                                    color="#162F50",
+                                    color=c("#162f50", "fg"),
                                     font_family="42dot Sans",
                                 ),
                                 ft.Text(
                                     "简单高效的工具集，一站式解决您的 PDF 转换、图像优化及媒体处理需求。",
                                     size=18,
-                                    color="#455C7F",
+                                    color=c("#455c7f", "fg"),
                                     font_family="42dot Sans",
                                     max_lines=2,
                                 ),
@@ -171,11 +172,11 @@ class HomePage(ft.Column):
                                         ft.ElevatedButton(
                                             "快速开始",
                                             style=ft.ButtonStyle(
-                                                bgcolor="#005F98",
-                                                color="#ECF3FF",
+                                                bgcolor=c("#005f98"),
+                                                color=c("#ecf3ff", "fg"),
                                                 shape=ft.RoundedRectangleBorder(radius=12),
                                                 padding=ft.padding.symmetric(horizontal=32, vertical=14),
-                                                shadow_color=ft.Colors.with_opacity(0.2, "#005F98"),
+                                                shadow_color=ft.Colors.with_opacity(0.2, c("#005f98", "fg")),
                                                 elevation={"": 4, "hovered": 8},
                                             ),
                                             on_click=lambda e: self._page.go("/pdf"),
@@ -183,8 +184,8 @@ class HomePage(ft.Column):
                                         ft.ElevatedButton(
                                             "了解更多",
                                             style=ft.ButtonStyle(
-                                                bgcolor="#CBDEFF",
-                                                color="#005F98",
+                                                bgcolor=c("#cbdeff"),
+                                                color=c("#005f98", "fg"),
                                                 shape=ft.RoundedRectangleBorder(radius=12),
                                                 padding=ft.padding.symmetric(horizontal=32, vertical=14),
                                                 elevation={"": 0, "hovered": 2},
@@ -205,7 +206,7 @@ class HomePage(ft.Column):
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor="#ebf1ff",
+            bgcolor=c("#ebf1ff"),
             border_radius=24,
             padding=ft.padding.all(48),
         )
@@ -214,11 +215,11 @@ class HomePage(ft.Column):
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Icon(icon, color="#455c7f", size=28),
+                    ft.Icon(icon, color=c("#455c7f", "fg"), size=28),
                     ft.Text(
                         label,
                         size=10,
-                        color="#455c7f",
+                        color=c("#455c7f", "fg"),
                         font_family="42dot Sans",
                     ),
                 ],
@@ -226,12 +227,12 @@ class HomePage(ft.Column):
                 spacing=4,
                 tight=True,
             ),
-            bgcolor="#ffffff",
+            bgcolor=c("#ffffff"),
             border_radius=12,
             padding=ft.padding.all(16),
             shadow=ft.BoxShadow(
                 blur_radius=1,
-                color=ft.Colors.with_opacity(0.05, "#000000"),
+                color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
                 offset=ft.Offset(0, 1),
             ),
             expand=True,
@@ -256,7 +257,7 @@ class HomePage(ft.Column):
                             "常用工具",
                             size=20,
                             weight=ft.FontWeight.W_500,
-                            color="#162f50",
+                            color=c("#162f50", "fg"),
                             font_family="42dot Sans",
                         ),
                         ft.Container(expand=True),
@@ -266,12 +267,12 @@ class HomePage(ft.Column):
                                     ft.Text(
                                         "查看 PDF 工具",
                                         size=14,
-                                        color="#005f98",
+                                        color=c("#005f98", "fg"),
                                         font_family="42dot Sans",
                                     ),
                                     ft.Icon(
                                         ft.Icons.CHEVRON_RIGHT,
-                                        color="#005f98",
+                                        color=c("#005f98", "fg"),
                                         size=16,
                                     ),
                                 ],
@@ -305,10 +306,10 @@ class HomePage(ft.Column):
                 controls=[
                     # 图标块
                     ft.Container(
-                        content=ft.Icon(icon, color=icon_color, size=25),
+                        content=ft.Icon(icon, color=c(icon_color, "fg"), size=25),
                         width=56,
                         height=56,
-                        bgcolor=icon_bg,
+                        bgcolor=c(icon_bg),
                         border_radius=12,
                         alignment=ft.Alignment(0, 0),
                     ),
@@ -317,14 +318,14 @@ class HomePage(ft.Column):
                         title,
                         size=14,
                         weight=ft.FontWeight.W_600,
-                        color="#162F50",
+                        color=c("#162f50", "fg"),
                         font_family="42dot Sans",
                     ),
                     # 描述
                     ft.Text(
                         subtitle,
                         size=12,
-                        color="#455C7F",
+                        color=c("#455c7f", "fg"),
                         font_family="42dot Sans",
                         max_lines=2,
                         expand=True,
@@ -336,12 +337,12 @@ class HomePage(ft.Column):
                                 content=ft.Text(
                                     badge1,
                                     size=9,
-                                    color=icon_color,
+                                    color=c(icon_color, "fg"),
                                     text_align=ft.TextAlign.CENTER,
                                     font_family="42dot Sans",
                                     weight=ft.FontWeight.W_500,
                                 ),
-                                bgcolor=badge1_bg,
+                                bgcolor=c(badge1_bg),
                                 border_radius=9999,
                                 width=24,
                                 height=24,
@@ -351,12 +352,12 @@ class HomePage(ft.Column):
                                 content=ft.Text(
                                     badge2,
                                     size=9,
-                                    color="#455C7F",
+                                    color=c("#455c7f", "fg"),
                                     text_align=ft.TextAlign.CENTER,
                                     font_family="42dot Sans",
                                     weight=ft.FontWeight.W_500,
                                 ),
-                                bgcolor=badge2_bg,
+                                bgcolor=c(badge2_bg),
                                 border_radius=9999,
                                 width=24,
                                 height=24,
@@ -369,11 +370,11 @@ class HomePage(ft.Column):
                 spacing=8,
                 expand=True,
             ),
-            bgcolor="#FFFFFF",
+            bgcolor=c("#ffffff"),
             border_radius=16,
             shadow=ft.BoxShadow(
                 blur_radius=8,
-                color=ft.Colors.with_opacity(0.06, "#000000"),
+                color=ft.Colors.with_opacity(0.06, c("#000000", "fg")),
                 offset=ft.Offset(0, 2),
             ),
             width=200,
@@ -388,16 +389,16 @@ class HomePage(ft.Column):
         self._empty_hint = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Icon(ft.Icons.HISTORY, size=48, color="#94a3b8"),
+                    ft.Icon(ft.Icons.HISTORY, size=48, color=c("#94a3b8", "fg")),
                     ft.Text(
                         "暂无历史记录",
-                        color="#455c7f",
+                        color=c("#455c7f", "fg"),
                         size=14,
                         font_family="42dot Sans",
                     ),
                     ft.Text(
                         "完成第一次文件处理后，这里会显示记录",
-                        color="#94a3b8",
+                        color=c("#94a3b8", "fg"),
                         size=12,
                         font_family="42dot Sans",
                     ),
@@ -420,7 +421,7 @@ class HomePage(ft.Column):
                 ],
                 spacing=0,
             ),
-            bgcolor="#F8FAFC",
+            bgcolor=c("#f8fafc"),
             border_radius=ft.border_radius.only(top_left=8, top_right=8),
             padding=ft.padding.symmetric(horizontal=16, vertical=12),
         )
@@ -433,9 +434,9 @@ class HomePage(ft.Column):
                             "查看所有历史记录",
                             on_click=lambda e: self._page.go("/history"),
                             style=ft.ButtonStyle(
-                                color="#455c7f",
+                                color=c("#455c7f", "fg"),
                                 shape=ft.RoundedRectangleBorder(radius=12),
-                                side=ft.BorderSide(1, "#dee9ff"),
+                                side=ft.BorderSide(1, c("#dee9ff")),
                                 padding=ft.padding.symmetric(horizontal=17, vertical=9),
                             ),
                         ),
@@ -454,7 +455,7 @@ class HomePage(ft.Column):
                                 "最近操作",
                                 size=20,
                                 weight=ft.FontWeight.W_500,
-                                color="#162f50",
+                                color=c("#162f50", "fg"),
                                 font_family="42dot Sans",
                                 expand=True,
                             ),
@@ -464,12 +465,12 @@ class HomePage(ft.Column):
                                         ft.Text(
                                             "查看全部",
                                             size=12,
-                                            color="#005f98",
+                                            color=c("#005f98", "fg"),
                                             font_family="42dot Sans",
                                         ),
                                         ft.Icon(
                                             ft.Icons.CHEVRON_RIGHT,
-                                            color="#005f98",
+                                            color=c("#005f98", "fg"),
                                             size=14,
                                         ),
                                     ],
@@ -487,12 +488,12 @@ class HomePage(ft.Column):
                 ],
                 spacing=24,
             ),
-            bgcolor="#ffffff",
+            bgcolor=c("#ffffff"),
             border_radius=24,
             padding=ft.padding.all(24),
             shadow=ft.BoxShadow(
                 blur_radius=1,
-                color=ft.Colors.with_opacity(0.05, "#000000"),
+                color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
                 offset=ft.Offset(0, 1),
             ),
         )
@@ -507,7 +508,7 @@ class HomePage(ft.Column):
         ctrl = ft.Text(
             text.upper(),
             size=12,
-            color="#455c7f",
+            color=c("#455c7f", "fg"),
             font_family="42dot Sans",
             text_align=align,
         )
@@ -569,16 +570,16 @@ class HomePage(ft.Column):
                 controls=[
                     ft.Container(
                         content=ft.Container(
-                            bgcolor="#005F98",
+                            bgcolor=c("#005f98"),
                             width=42,
                         ),
                         width=64,
                         height=4,
-                        bgcolor="#dee9ff",
+                        bgcolor=c("#dee9ff"),
                         border_radius=2,
                         clip_behavior=ft.ClipBehavior.HARD_EDGE,
                     ),
-                    ft.Text("68%", size=10, color="#005F98", font_family="42dot Sans"),
+                    ft.Text("68%", size=10, color=c("#005f98", "fg"), font_family="42dot Sans"),
                 ],
                 spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -589,11 +590,11 @@ class HomePage(ft.Column):
                 content=ft.Text(
                     status_label,
                     size=10,
-                    color=status_pill_color,
+                    color=c(status_pill_color, "fg"),
                     font_family="42dot Sans",
                     weight=ft.FontWeight.W_500,
                 ),
-                bgcolor=status_pill_bg,
+                bgcolor=c(status_pill_bg),
                 border_radius=9999,
                 padding=ft.padding.symmetric(horizontal=10, vertical=4),
             )
@@ -606,10 +607,10 @@ class HomePage(ft.Column):
                         content=ft.Row(
                             controls=[
                                 ft.Container(
-                                    content=ft.Icon(icon_name, color="#162f50", size=13),
+                                    content=ft.Icon(icon_name, color=c("#162f50", "fg"), size=13),
                                     width=32,
                                     height=32,
-                                    bgcolor=icon_bg,
+                                    bgcolor=c(icon_bg),
                                     border_radius=8,
                                     alignment=ft.Alignment(0, 0),
                                 ),
@@ -619,7 +620,7 @@ class HomePage(ft.Column):
                                             input_desc or f"{module} · {action}",
                                             size=14,
                                             weight=ft.FontWeight.BOLD,
-                                            color="#162f50",
+                                            color=c("#162f50", "fg"),
                                             font_family="Plus Jakarta Sans",
                                             max_lines=1,
                                             overflow=ft.TextOverflow.ELLIPSIS,
@@ -627,7 +628,7 @@ class HomePage(ft.Column):
                                         ft.Text(
                                             f"{module} · {action}",
                                             size=10,
-                                            color="#455c7f",
+                                            color=c("#455c7f", "fg"),
                                             font_family="Plus Jakarta Sans",
                                             max_lines=1,
                                             overflow=ft.TextOverflow.ELLIPSIS,
@@ -648,7 +649,7 @@ class HomePage(ft.Column):
                         content=ft.Text(
                             action,
                             size=12,
-                            color="#455c7f",
+                            color=c("#455c7f", "fg"),
                             font_family="42dot Sans",
                         ),
                         width=96,
@@ -663,7 +664,7 @@ class HomePage(ft.Column):
                         content=ft.Text(
                             created_at,
                             size=12,
-                            color="#455c7f",
+                            color=c("#455c7f", "fg"),
                             font_family="42dot Sans",
                         ),
                         width=97,
@@ -674,7 +675,7 @@ class HomePage(ft.Column):
                             controls=[
                                 ft.IconButton(
                                     icon=ft.Icons.FOLDER_OPEN_OUTLINED,
-                                    icon_color="#455c7f",
+                                    icon_color=c("#455c7f", "fg"),
                                     icon_size=18,
                                     tooltip="打开目录",
                                     on_click=_open_dir,
@@ -690,6 +691,6 @@ class HomePage(ft.Column):
                 spacing=0,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            border=ft.border.only(top=ft.BorderSide(1, ft.Colors.with_opacity(0.5, "#dee9ff"))),
+            border=ft.border.only(top=ft.BorderSide(1, ft.Colors.with_opacity(0.5, c("#dee9ff")))),
             padding=ft.padding.symmetric(vertical=14),
         )

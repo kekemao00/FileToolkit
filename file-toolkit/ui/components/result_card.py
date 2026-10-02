@@ -12,6 +12,7 @@ from pathlib import Path
 import flet as ft
 
 from core.models import TaskResult, TaskStatus
+from ui.palette import c
 
 
 class ResultCard(ft.Container):
@@ -64,11 +65,11 @@ class ResultCard(ft.Container):
                 ],
                 spacing=16,
             ),
-            bgcolor="#ffffff",
+            bgcolor=c("#ffffff"),
             border_radius=ft.border_radius.all(12),
             padding=ft.padding.all(20),
             shadow=ft.BoxShadow(
-                blur_radius=2, color=ft.Colors.with_opacity(0.05, "#000000"), offset=ft.Offset(0, 1),
+                blur_radius=2, color=ft.Colors.with_opacity(0.05, c("#000000", "fg")), offset=ft.Offset(0, 1),
             ),
         )
 
@@ -80,15 +81,15 @@ class ResultCard(ft.Container):
 
         if result.status == TaskStatus.SUCCESS:
             self._status_icon.name = ft.Icons.CHECK_CIRCLE
-            self._status_icon.color = "#16a34a"
+            self._status_icon.color = c("#16a34a", "fg")
             file_count = len(result.output_files)
             dir_str = str(result.output_dir) if result.output_dir else ""
             self._title_text.value = title or f"处理完成！共生成 {file_count} 个文件"
             self._subtitle_text.value = f"保存至：{dir_str}"
             self._open_btn.visible = result.output_dir is not None
             self._build_file_list(result.output_files[:8])  # 最多展示 8 条
-            self.bgcolor = "#f0fdf4"
-            self.border = ft.border.all(1, "#bbf7d0")
+            self.bgcolor = c("#f0fdf4")
+            self.border = ft.border.all(1, c("#bbf7d0"))
         else:
             self._status_icon.name = ft.Icons.ERROR
             self._status_icon.color = ft.Colors.ERROR
@@ -96,8 +97,8 @@ class ResultCard(ft.Container):
             self._subtitle_text.value = result.error_message or "未知错误"
             self._open_btn.visible = False
             self._file_list.controls.clear()
-            self.bgcolor = "#fff1f2"
-            self.border = ft.border.all(1, "#fecdd3")
+            self.bgcolor = c("#fff1f2")
+            self.border = ft.border.all(1, c("#fecdd3"))
 
         self.visible = True
         self.update()

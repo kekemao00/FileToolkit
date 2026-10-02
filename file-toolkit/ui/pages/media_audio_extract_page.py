@@ -11,6 +11,7 @@ from ui.components.drop_zone import DropZone
 from ui.components.progress_card import ProgressCard
 from ui.components.result_card import ResultCard
 from ui.components.sub_page_header import SubPageHeader
+from ui.palette import c
 
 
 class AudioExtractPage(ft.Column):
@@ -51,8 +52,8 @@ class AudioExtractPage(ft.Column):
             SubPageHeader(
                 title="提取音频",
                 icon=ft.Icons.MUSIC_NOTE,
-                icon_color="#dc2626",
-                icon_bg="#fef2f2",
+                icon_color=c("#dc2626", "fg"),
+                icon_bg=c("#fef2f2"),
                 on_back=lambda: self._page.go("/media"),
             ),
             self._build_body(),
@@ -82,18 +83,18 @@ class AudioExtractPage(ft.Column):
                 controls=[
                     ft.Text(
                         title, size=14, weight=ft.FontWeight.W_600,
-                        color="#162f50", font_family="42dot Sans",
+                        color=c("#162f50", "fg"), font_family="42dot Sans",
                     ),
                     content,
                 ],
                 spacing=10,
             ),
-            bgcolor="#ffffff",
+            bgcolor=c("#ffffff"),
             border_radius=16,
             padding=ft.padding.all(20),
             shadow=ft.BoxShadow(
                 blur_radius=1,
-                color=ft.Colors.with_opacity(0.05, "#000000"),
+                color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
                 offset=ft.Offset(0, 1),
             ),
         )
@@ -102,25 +103,25 @@ class AudioExtractPage(ft.Column):
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(icon, color="#ffffff", size=18),
+                    ft.Icon(icon, color=c("#ffffff", "fg"), size=18),
                     ft.Text(
-                        label, size=16, color="#ffffff",
+                        label, size=16, color=c("#ffffff", "fg"),
                         font_family="42dot Sans", weight=ft.FontWeight.W_500,
                     ),
                 ],
                 spacing=8,
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
-            bgcolor="#005f98",
+            bgcolor=c("#005f98"),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
-                colors=["#005f98", "#2aa7ff"],
+                colors=[c("#005f98"), c("#2aa7ff")],
             ),
             border_radius=16,
             padding=ft.padding.symmetric(vertical=14),
             shadow=ft.BoxShadow(
                 blur_radius=20, spread_radius=-5,
-                color=ft.Colors.with_opacity(0.2, "#005f98"),
+                color=ft.Colors.with_opacity(0.2, c("#005f98", "fg")),
                 offset=ft.Offset(0, 10),
             ),
             on_click=self._start,
