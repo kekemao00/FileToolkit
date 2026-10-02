@@ -1,7 +1,8 @@
 # 三平台打包与发布
 #
 #   推送 vX.Y.Z tag      → 测试 → 三平台打包 → 创建 GitHub Release（含 SHA256SUMS）
-#   手动运行 / 改动打包相关文件的 PR → 只打包并上传 Actions 产物，不发布
+#   在 main 上手动运行并勾选「发布」→ 同上，并自动打 v<版本号> tag（手机上也能点）
+#   手动运行不勾选 / 改动打包相关文件的 PR → 只打包并上传 Actions 产物，不发布
 #
 # 版本号唯一来源是 file-toolkit/pyproject.toml 的 [project].version；
 # tag 必须与之一致，否则发布中止。带 "-" 的 tag（如 v1.2.0-beta.1）发布为预发布版。
@@ -17,6 +18,11 @@ on:
       - "file-toolkit/pyproject.toml"
       - "file-toolkit/uv.lock"
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "发布 GitHub Release（自动打 v<pyproject 版本号> tag，仅限 main）"
+        type: boolean
+        default: false
 
 concurrency:
   group: release-${{ github.ref }}
@@ -178,13 +184,24 @@ jobs:
   release:
     name: Publish GitHub Release
     needs: [meta, build]
-    if: github.ref_type == 'tag'
+    if: >-
+      github.ref_type == 'tag' ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     env:
       VERSION: ${{ needs.meta.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
     steps:
+      - name: Refuse to re-release an existing version
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/v${VERSION}" >/dev/null 2>&1; then
+            echo "::error::v${VERSION} 已经存在，请先修改 pyproject.toml 的版本号再发布"
+            exit 1
+          fi
+
       - uses: actions/download-artifact@v4
         with:
           path: dist
@@ -213,6 +230,8 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
           name: File Toolkit v${{ env.VERSION }}
           body_path: notes.md
           generate_release_notes: true
