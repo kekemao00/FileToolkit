@@ -10,7 +10,7 @@ authors = [
 ]
 
 dependencies = [
-    "flet>=0.24,<1.0",
+    "flet==0.84.0",  # 与 flet-cli 版本保持一致；打包时按此版本安装进应用
     "pypdf>=4.0,<5.0",
     "pikepdf>=9.0,<10.0",
     "pdf2docx>=0.5.8,<0.6.0",
@@ -52,6 +52,32 @@ dev = [
     "pytest-asyncio>=0.23",
     "ruff>=0.4",
     "mypy>=1.10",
+]
+# 打包工具：`uv sync --group build` 后执行 `uv run flet build <平台>`
+build = [
+    "flet-cli==0.84.0",
+]
+
+# ── flet build 打包配置（本地与 CI 共用，命令行参数可覆盖）──────────
+# 版本号取自 [project].version，发布时 tag 必须与之一致（vX.Y.Z）
+[tool.flet]
+product = "File Toolkit"
+artifact = "FileToolkit"
+org = "com.kekemao00"
+bundle_id = "com.kekemao00.filetoolkit"
+company = "FileToolkit"
+copyright = "Copyright (c) 2026 kekemao00. MIT License."
+
+[tool.flet.app]
+# 不打进安装包的文件（build/ 由 flet 默认排除）
+exclude = [
+    ".venv",
+    ".data",
+    "tests",
+    "uv.lock",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".mypy_cache",
 ]
 
 [tool.pytest.ini_options]
