@@ -124,15 +124,17 @@ build\build_windows.bat            # Windows
 
 1. 修改 `file-toolkit/pyproject.toml` 里的 `version`，然后在 `file-toolkit/` 下执行 `uv lock` 同步锁文件。
 2. 提交并合入 `main`。
-3. 打 tag 并推送，tag 必须是 `v` + 同一个版本号：
-   ```bash
-   git tag v1.1.0
-   git push origin v1.1.0
-   ```
+3. 二选一：
+   - 在 GitHub 的 Actions 页面打开 Release 工作流，点「Run workflow」，分支选 `main` 并勾选「发布」。工作流会自动打 `v<版本号>` tag，手机网页上也能操作。
+   - 或者自己打 tag 并推送，tag 必须是 `v` + 同一个版本号：
+     ```bash
+     git tag v1.1.0
+     git push origin v1.1.0
+     ```
 
-tag 与 `pyproject.toml` 版本不一致时工作流会直接失败，不会发出错误版本号的安装包。带 `-` 的版本（如 `v1.1.0-beta.1`）发布为预发布版。Release 说明由 GitHub 根据合入的 PR 自动生成。
+tag 与 `pyproject.toml` 版本不一致、或该版本已经发过时，工作流会直接失败，不会发出错误版本号的安装包。带 `-` 的版本（如 `v1.1.0-beta.1`）发布为预发布版。Release 说明由 GitHub 根据合入的 PR 自动生成。
 
-只想试打包、不发布时，在 Actions 页面手动运行 Release 工作流，安装包会作为构建产物上传；改动打包相关文件的 PR 也会自动试打包一次。
+只想试打包、不发布时，手动运行时不勾选「发布」，安装包会作为构建产物上传；改动打包相关文件的 PR 也会自动试打包一次。
 
 ## 许可证
 
