@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "File Toolkit — Local file processing desktop application"
 readme = { text = "File Toolkit — Local file processing desktop application", content-type = "text/plain" }
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = { text = "Apache-2.0" }
 authors = [
     { name = "kekemao00" },
 ]
@@ -66,7 +66,7 @@ artifact = "FileToolkit"
 org = "com.kekemao00"
 bundle_id = "com.kekemao00.filetoolkit"
 company = "FileToolkit"
-copyright = "Copyright (c) 2026 kekemao00. MIT License."
+copyright = "Copyright (c) 2026 kekemao00. Apache License 2.0."
 
 [tool.flet.app]
 # 不打进安装包的文件（build/ 由 flet 默认排除）

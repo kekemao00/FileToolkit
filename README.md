@@ -9,7 +9,7 @@
 [![CI](https://github.com/kekemao00/FileToolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/kekemao00/FileToolkit/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/kekemao00/FileToolkit?include_prereleases&sort=semver)](https://github.com/kekemao00/FileToolkit/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-informational)](#下载安装)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 [下载](#下载安装) · [功能](#功能) · [从源码运行](#从源码运行) · [打包与发布](#打包与发布)
 
@@ -138,6 +138,6 @@ tag 与 `pyproject.toml` 版本不一致、或该版本已经发过时，工作�
 
 ## 许可证
 
-[MIT](LICENSE) © 2026 kekemao00
+本项目基于 [Apache License 2.0](LICENSE) 开源。Copyright © 2026 kekemao00
 
 Windows / Linux 安装包内置的 FFmpeg 来自 [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds)，以 GPL 授权单独分发。
