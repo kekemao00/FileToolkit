@@ -11,7 +11,7 @@
 """
 from __future__ import annotations
 
-import base64
+import asyncio
 import subprocess
 import sys
 import time
@@ -24,6 +24,8 @@ from services import prompt_image_service, settings_service
 from ui.components.sub_page_header import SubPageHeader
 from ui.palette import c
 from ui.utils import show_toast
+
+_RESULT_KEY = "prompt-image-result"
 
 
 class PromptImagePage(ft.Column):
@@ -106,13 +108,8 @@ class PromptImagePage(ft.Column):
         self._config_hint = self._build_config_hint()
 
         # 结果区
-        self._result_image = ft.Image(
-            src="",
-            width=800, height=600,
-            fit=ft.BoxFit.CONTAIN,
-            border_radius=12,
-            visible=False,
-        )
+        # 每次出图都换一个新的 Image 放进这个容器，避免空 src 初始态和旧图缓存
+        self._result_image = ft.Container(height=520, alignment=ft.Alignment(0, 0), visible=False)
         self._result_meta = ft.Text("", size=12, color=c("#455c7f", "fg"),
                                     font_family="42dot Sans")
         self._result_actions = ft.Row(spacing=10, visible=False)
@@ -124,7 +121,7 @@ class PromptImagePage(ft.Column):
                     self._result_actions,
                 ],
                 spacing=12,
-                horizontal_alignment=ft.CrossAxisAlignment.START,
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
             visible=False,
         )
@@ -218,11 +215,13 @@ class PromptImagePage(ft.Column):
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
                     ),
-                    self._section("生成结果",
-                                  ft.Stack(controls=[
-                                      self._result_empty,
-                                      self._result_area,
-                                  ])),
+                    ft.Container(
+                        key=ft.ScrollKey(_RESULT_KEY),
+                        content=self._section("生成结果", ft.Column(controls=[
+                            self._result_empty,
+                            self._result_area,
+                        ], horizontal_alignment=ft.CrossAxisAlignment.STRETCH)),
+                    ),
                 ],
                 spacing=24,
                 expand=True,
@@ -601,6 +600,12 @@ class PromptImagePage(ft.Column):
         self._last_image_bytes = image_bytes
         self._last_image_path = saved_path
         self._show_result(image_bytes, saved_path, size, elapsed)
+        # 结果区在生成按钮下方，窗口不够高时看不到，自动滚过去
+        try:
+            await asyncio.sleep(0.15)  # 等结果区先完成布局，否则滚动距离按旧高度计算
+            await self.scroll_to(scroll_key=_RESULT_KEY, duration=400)
+        except Exception:
+            pass
 
     def _set_generating(self, on: bool) -> None:
         self._generating = on
@@ -616,8 +621,14 @@ class PromptImagePage(ft.Column):
         size: str,
         elapsed: float,
     ) -> None:
-        b64 = base64.b64encode(image_bytes).decode("ascii")
-        self._result_image.src = f"data:image/png;base64,{b64}"
+        self._result_image.content = ft.Image(
+            src=image_bytes,
+            fit=ft.BoxFit.CONTAIN,
+            border_radius=12,
+            gapless_playback=True,
+            error_content=ft.Text("预览加载失败，图片已保存，可点“打开目录”查看",
+                                  size=12, color=c("#b91c1c", "fg")),
+        )
         self._result_image.visible = True
         self._result_empty.visible = False
         self._result_area.visible = True
