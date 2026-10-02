@@ -12,6 +12,7 @@ from ui.components.file_list import FileList
 from ui.components.progress_card import ProgressCard
 from ui.components.result_card import ResultCard
 from ui.components.sub_page_header import SubPageHeader
+from ui.palette import c
 
 
 class PdfMergePage(ft.Column):
@@ -39,17 +40,17 @@ class PdfMergePage(ft.Column):
         )
 
         self._file_count_text = ft.Text(
-            "已选 0 个文件", size=12, color="#455c7f",
+            "已选 0 个文件", size=12, color=c("#455c7f", "fg"),
         )
 
         self._output_name_field = ft.TextField(
             value="merged.pdf", label="输出文件名",
             width=240, border_radius=12,
-            bgcolor="#f8fafc", border_color="transparent",
+            bgcolor=c("#f8fafc"), border_color="transparent",
         )
         self._output_dir_text = ft.Text(
             "（与第一个输入文件同级目录）",
-            size=12, color="#455c7f", expand=True,
+            size=12, color=c("#455c7f", "fg"), expand=True,
         )
 
         self._progress_card = ProgressCard(on_cancel=self._cancel_task)
@@ -61,8 +62,8 @@ class PdfMergePage(ft.Column):
             SubPageHeader(
                 title="PDF 合并",
                 icon=ft.Icons.MERGE,
-                icon_color="#2563eb",
-                icon_bg="#eff6ff",
+                icon_color=c("#2563eb", "fg"),
+                icon_bg=c("#eff6ff"),
                 on_back=lambda: self._page.go("/pdf"),
             ),
             self._build_body(),
@@ -84,7 +85,7 @@ class PdfMergePage(ft.Column):
                                         ft.TextButton(
                                             "清空列表",
                                             on_click=self._clear_list,
-                                            style=ft.ButtonStyle(color="#dc2626"),
+                                            style=ft.ButtonStyle(color=c("#dc2626", "fg")),
                                         ),
                                     ],
                                 ),
@@ -102,7 +103,7 @@ class PdfMergePage(ft.Column):
                                     controls=[
                                         ft.Icon(
                                             ft.Icons.FOLDER_OUTLINED,
-                                            color="#455c7f", size=18,
+                                            color=c("#455c7f", "fg"), size=18,
                                         ),
                                         self._output_dir_text,
                                         ft.OutlinedButton(
@@ -110,8 +111,8 @@ class PdfMergePage(ft.Column):
                                             on_click=self._pick_output_dir,
                                             icon=ft.Icons.FOLDER_OPEN,
                                             style=ft.ButtonStyle(
-                                                color="#005f98",
-                                                side=ft.BorderSide(1, "#d5e3ff"),
+                                                color=c("#005f98", "fg"),
+                                                side=ft.BorderSide(1, c("#d5e3ff")),
                                                 shape=ft.RoundedRectangleBorder(radius=12),
                                             ),
                                         ),
@@ -141,18 +142,18 @@ class PdfMergePage(ft.Column):
                 controls=[
                     ft.Text(
                         title, size=14, weight=ft.FontWeight.W_600,
-                        color="#162f50", font_family="42dot Sans",
+                        color=c("#162f50", "fg"), font_family="42dot Sans",
                     ),
                     content,
                 ],
                 spacing=10,
             ),
-            bgcolor="#ffffff",
+            bgcolor=c("#ffffff"),
             border_radius=12,
             padding=ft.padding.all(20),
             shadow=ft.BoxShadow(
                 blur_radius=2,
-                color=ft.Colors.with_opacity(0.05, "#000000"),
+                color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
                 offset=ft.Offset(0, 1),
             ),
         )
@@ -161,25 +162,25 @@ class PdfMergePage(ft.Column):
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.MERGE, color="#ffffff", size=18),
+                    ft.Icon(ft.Icons.MERGE, color=c("#ffffff", "fg"), size=18),
                     ft.Text(
-                        "开始合并", size=16, color="#ffffff",
+                        "开始合并", size=16, color=c("#ffffff", "fg"),
                         font_family="42dot Sans", weight=ft.FontWeight.W_500,
                     ),
                 ],
                 spacing=8,
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
-            bgcolor="#005f98",
+            bgcolor=c("#005f98"),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
-                colors=["#005f98", "#00a3ff"],
+                colors=[c("#005f98"), c("#00a3ff")],
             ),
             border_radius=16,
             padding=ft.padding.symmetric(vertical=14),
             shadow=ft.BoxShadow(
                 blur_radius=20, spread_radius=-5,
-                color=ft.Colors.with_opacity(0.2, "#005f98"),
+                color=ft.Colors.with_opacity(0.2, c("#005f98", "fg")),
                 offset=ft.Offset(0, 10),
             ),
             on_click=self._start_task,

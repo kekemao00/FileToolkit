@@ -8,6 +8,7 @@ from pathlib import Path
 import flet as ft
 
 from services import settings_service
+from ui.palette import c
 from ui.utils import show_toast
 
 # Prompt 建议按钮数据
@@ -35,11 +36,11 @@ class AiTaskPage(ft.Column):
 
         self._input_field = ft.TextField(
             hint_text="描述您想完成的任务...",
-            hint_style=ft.TextStyle(color="#455c7f", size=16),
-            text_style=ft.TextStyle(color="#162f50", size=16),
+            hint_style=ft.TextStyle(color=c("#455c7f", "fg"), size=16),
+            text_style=ft.TextStyle(color=c("#162f50", "fg"), size=16),
             border=ft.InputBorder.NONE,
-            cursor_color="#005f98",
-            selection_color=ft.Colors.with_opacity(0.15, "#005f98"),
+            cursor_color=c("#005f98", "fg"),
+            selection_color=ft.Colors.with_opacity(0.15, c("#005f98")),
             expand=True,
             multiline=True,
             min_lines=1,
@@ -69,7 +70,7 @@ class AiTaskPage(ft.Column):
                     ft.Container(
                         width=384, height=384,
                         border_radius=9999,
-                        bgcolor=ft.Colors.with_opacity(0.05, "#005f98"),
+                        bgcolor=ft.Colors.with_opacity(0.05, c("#005f98")),
                         blur=32,
                         right=-96, top=-96,
                     ),
@@ -77,7 +78,7 @@ class AiTaskPage(ft.Column):
                     ft.Container(
                         width=384, height=384,
                         border_radius=9999,
-                        bgcolor=ft.Colors.with_opacity(0.05, "#6b1ef3"),
+                        bgcolor=ft.Colors.with_opacity(0.05, c("#6b1ef3")),
                         blur=32,
                         left=-96, bottom=-96,
                     ),
@@ -111,7 +112,7 @@ class AiTaskPage(ft.Column):
                             "你好，我是您的 文件全能王 AI 助手",
                             size=30,
                             weight=ft.FontWeight.W_500,
-                            color="#162f50",
+                            color=c("#162f50", "fg"),
                             text_align=ft.TextAlign.CENTER,
                         ),
                     ),
@@ -120,7 +121,7 @@ class AiTaskPage(ft.Column):
                         content=ft.Text(
                             "一个软件，搞定所有文件。请告诉我您的需求，\n我将为您自动编排并执行最复杂的文件处理流程。",
                             size=18,
-                            color="#455c7f",
+                            color=c("#455c7f", "fg"),
                             text_align=ft.TextAlign.CENTER,
                         ),
                     ),
@@ -136,7 +137,7 @@ class AiTaskPage(ft.Column):
             content=ft.Container(
                 width=172, height=172,
                 border_radius=32,
-                border=ft.border.all(2, ft.Colors.with_opacity(0.2, "#005f98")),
+                border=ft.border.all(2, ft.Colors.with_opacity(0.2, c("#005f98"))),
                 rotate=ft.Rotate(angle=0.21),
             ),
         )
@@ -146,7 +147,7 @@ class AiTaskPage(ft.Column):
             content=ft.Container(
                 width=164, height=164,
                 border_radius=32,
-                border=ft.border.all(2, ft.Colors.with_opacity(0.2, "#6b1ef3")),
+                border=ft.border.all(2, ft.Colors.with_opacity(0.2, c("#6b1ef3"))),
                 rotate=ft.Rotate(angle=-0.105),
             ),
         )
@@ -156,21 +157,21 @@ class AiTaskPage(ft.Column):
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, -1),
                 end=ft.Alignment(1, 1),
-                colors=["#005f98", "#6b1ef3"],
+                colors=[c("#005f98"), c("#6b1ef3")],
             ),
             shadow=ft.BoxShadow(
                 blur_radius=50,
                 spread_radius=-12,
-                color=ft.Colors.with_opacity(0.2, "#005f98"),
+                color=ft.Colors.with_opacity(0.2, c("#005f98", "fg")),
                 offset=ft.Offset(0, 25),
             ),
             alignment=ft.Alignment(0, 0),
-            content=ft.Icon(ft.Icons.AUTO_AWESOME, color="#ffffff", size=55),
+            content=ft.Icon(ft.Icons.AUTO_AWESOME, color=c("#ffffff", "fg"), size=55),
         )
         aura = ft.Container(
             width=192, height=192,
             border_radius=9999,
-            bgcolor=ft.Colors.with_opacity(0.20, "#2aa7ff"),
+            bgcolor=ft.Colors.with_opacity(0.20, c("#2aa7ff")),
             blur=32,
         )
 
@@ -218,13 +219,13 @@ class AiTaskPage(ft.Column):
         buttons = []
         for item in _PROMPT_SUGGESTIONS:
             btn = ft.Container(
-                bgcolor="#ffffff",
-                border=ft.border.all(1, ft.Colors.with_opacity(0.1, "#97aed5")),
+                bgcolor=c("#ffffff"),
+                border=ft.border.all(1, ft.Colors.with_opacity(0.1, c("#97aed5"))),
                 border_radius=12,
                 padding=ft.padding.symmetric(horizontal=21, vertical=11),
                 shadow=ft.BoxShadow(
                     blur_radius=1,
-                    color=ft.Colors.with_opacity(0.05, "#000000"),
+                    color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
                     offset=ft.Offset(0, 1),
                 ),
                 ink=True,
@@ -235,9 +236,9 @@ class AiTaskPage(ft.Column):
                     spacing=8,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        ft.Icon(item["icon"], color="#455c7f", size=15),
+                        ft.Icon(item["icon"], color=c("#455c7f", "fg"), size=15),
                         ft.Text(
-                            item["label"], size=14, color="#162f50",
+                            item["label"], size=14, color=c("#162f50", "fg"),
                             text_align=ft.TextAlign.CENTER,
                         ),
                     ],
@@ -261,7 +262,7 @@ class AiTaskPage(ft.Column):
             tooltip="附加文件",
             ink=True,
             on_click=self._on_attach,
-            content=ft.Icon(ft.Icons.ATTACH_FILE, color="#455c7f", size=20),
+            content=ft.Icon(ft.Icons.ATTACH_FILE, color=c("#455c7f", "fg"), size=20),
         )
         # 麦克风（本地无语音识别后端，点击提示功能配置）
         mic_btn = ft.Container(
@@ -270,21 +271,21 @@ class AiTaskPage(ft.Column):
             tooltip="语音输入",
             ink=True,
             on_click=self._on_mic,
-            content=ft.Icon(ft.Icons.MIC_NONE, color="#455c7f", size=19),
+            content=ft.Icon(ft.Icons.MIC_NONE, color=c("#455c7f", "fg"), size=19),
         )
         send_btn = ft.Container(
             padding=12,
             border_radius=12,
-            bgcolor="#005f98",
+            bgcolor=c("#005f98"),
             ink=True,
             on_click=self._on_submit,
             shadow=ft.BoxShadow(
                 blur_radius=15,
                 spread_radius=-3,
-                color=ft.Colors.with_opacity(0.2, "#005f98"),
+                color=ft.Colors.with_opacity(0.2, c("#005f98", "fg")),
                 offset=ft.Offset(0, 10),
             ),
-            content=ft.Icon(ft.Icons.SEND_ROUNDED, color="#ffffff", size=16),
+            content=ft.Icon(ft.Icons.SEND_ROUNDED, color=c("#ffffff", "fg"), size=16),
         )
 
         inner_row = ft.Container(
@@ -309,12 +310,12 @@ class AiTaskPage(ft.Column):
 
         return ft.Container(
             border_radius=16,
-            border=ft.border.all(1, "#d5e3ff"),
-            bgcolor="#f8fafc",
+            border=ft.border.all(1, c("#d5e3ff")),
+            bgcolor=c("#f8fafc"),
             shadow=ft.BoxShadow(
                 blur_radius=50,
                 spread_radius=-12,
-                color=ft.Colors.with_opacity(0.08, "#005f98"),
+                color=ft.Colors.with_opacity(0.08, c("#005f98", "fg")),
                 offset=ft.Offset(0, 25),
             ),
             padding=9,
@@ -331,10 +332,10 @@ class AiTaskPage(ft.Column):
                     ft.Container(
                         width=6, height=6,
                         border_radius=9999,
-                        bgcolor=ind["color"],
+                        bgcolor=c(ind["color"]),
                     ),
                     ft.Text(
-                        ind["label"], size=11, color="#61789c",
+                        ind["label"], size=11, color=c("#61789c", "fg"),
                         weight=ft.FontWeight.BOLD,
                     ),
                 ],
@@ -368,7 +369,7 @@ class AiTaskPage(ft.Column):
         if not api_key:
             self._show_snack(
                 "AI 服务配置中，请在「设置」中配置 API Key 后使用",
-                color="#005f98",
+                color=c("#005f98", "fg"),
                 duration=3000,
             )
             return
@@ -406,28 +407,28 @@ class AiTaskPage(ft.Column):
         self._attach_list.visible = has_files
         for f in self._attached_files:
             chip = ft.Container(
-                bgcolor="#ffffff",
-                border=ft.border.all(1, "#d5e3ff"),
+                bgcolor=c("#ffffff"),
+                border=ft.border.all(1, c("#d5e3ff")),
                 border_radius=9999,
                 padding=ft.padding.symmetric(horizontal=12, vertical=6),
                 content=ft.Row(
                     spacing=8,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        ft.Icon(ft.Icons.ATTACHMENT, color="#005f98", size=14),
+                        ft.Icon(ft.Icons.ATTACHMENT, color=c("#005f98", "fg"), size=14),
                         ft.Text(
-                            f.name, size=12, color="#162f50",
+                            f.name, size=12, color=c("#162f50", "fg"),
                             max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                         ),
                         ft.IconButton(
                             icon=ft.Icons.CLOSE,
-                            icon_color="#94a3b8",
+                            icon_color=c("#94a3b8", "fg"),
                             icon_size=12,
                             tooltip="移除",
                             on_click=lambda _, path=f: self._remove_attach(path),
                             style=ft.ButtonStyle(
                                 padding=ft.padding.all(2),
-                                overlay_color=ft.Colors.with_opacity(0.08, "#dc2626"),
+                                overlay_color=ft.Colors.with_opacity(0.08, c("#dc2626")),
                             ),
                         ),
                     ],
@@ -444,16 +445,16 @@ class AiTaskPage(ft.Column):
     def _on_mic(self, _) -> None:
         self._show_snack("语音输入需要系统麦克风权限，请在系统设置中授权后重试")
 
-    def _show_snack(self, msg: str, color: str = "#005f98", duration: int = 2200) -> None:
+    def _show_snack(self, msg: str, color: str | None = None, duration: int = 2200) -> None:
         show_toast(self._page, msg, duration=duration, color=color)
 
     @staticmethod
     def _on_btn_hover(e: ft.ControlEvent) -> None:
-        c = e.control
+        btn = e.control
         if e.data == "true":
-            c.bgcolor = "#f8fafc"
-            c.border = ft.border.all(1, ft.Colors.with_opacity(0.3, "#005f98"))
+            btn.bgcolor = c("#f8fafc")
+            btn.border = ft.border.all(1, ft.Colors.with_opacity(0.3, c("#005f98")))
         else:
-            c.bgcolor = "#ffffff"
-            c.border = ft.border.all(1, ft.Colors.with_opacity(0.1, "#97aed5"))
-        c.update()
+            btn.bgcolor = c("#ffffff")
+            btn.border = ft.border.all(1, ft.Colors.with_opacity(0.1, c("#97aed5")))
+        btn.update()

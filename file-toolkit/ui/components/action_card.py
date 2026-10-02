@@ -8,6 +8,8 @@
 """
 import flet as ft
 
+from ui.palette import c
+
 
 class ActionCard(ft.Container):
     """
@@ -92,7 +94,7 @@ class ActionCard(ft.Container):
                 spread_radius=0,
                 blur_radius=40,
                 offset=ft.Offset(0, 12),
-                color=ft.Colors.with_opacity(0.08, "#004d64"),
+                color=ft.Colors.with_opacity(0.08, c("#004d64", "fg")),
             )
         else:
             self.bgcolor = ft.Colors.SURFACE_CONTAINER_LOW

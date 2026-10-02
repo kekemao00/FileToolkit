@@ -6,6 +6,8 @@
 """
 import flet as ft
 
+from ui.palette import c
+
 
 class SubPageHeader(ft.Container):
     """
@@ -34,7 +36,7 @@ class SubPageHeader(ft.Container):
                     ft.IconButton(
                         ft.Icons.ARROW_BACK,
                         on_click=lambda _: on_back(),
-                        icon_color="#455c7f",
+                        icon_color=c("#455c7f", "fg"),
                     ),
                     ft.Container(
                         content=ft.Icon(icon, color=icon_color, size=20),
@@ -48,7 +50,7 @@ class SubPageHeader(ft.Container):
                         title,
                         size=20,
                         weight=ft.FontWeight.W_600,
-                        color="#162f50",
+                        color=c("#162f50", "fg"),
                         font_family="42dot Sans",
                     ),
                 ],

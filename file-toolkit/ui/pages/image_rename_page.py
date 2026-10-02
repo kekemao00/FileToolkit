@@ -11,6 +11,7 @@ from ui.components.drop_zone import DropZone
 from ui.components.progress_card import ProgressCard
 from ui.components.result_card import ResultCard
 from ui.components.sub_page_header import SubPageHeader
+from ui.palette import c
 
 
 class ImageRenamePage(ft.Column):
@@ -37,12 +38,12 @@ class ImageRenamePage(ft.Column):
             label="命名模板",
             hint_text="{name} 原名  {n} 序号  {date} 日期  {ext} 扩展名",
             expand=True, border_radius=12,
-            bgcolor="#f8fafc", border_color="transparent",
+            bgcolor=c("#f8fafc"), border_color="transparent",
         )
         self._start_num = ft.TextField(
             value="1", label="起始序号", width=100,
             keyboard_type=ft.KeyboardType.NUMBER,
-            border_radius=12, bgcolor="#f8fafc", border_color="transparent",
+            border_radius=12, bgcolor=c("#f8fafc"), border_color="transparent",
         )
 
         self._preview_list = ft.Column(spacing=4, visible=False)
@@ -53,8 +54,8 @@ class ImageRenamePage(ft.Column):
         self._preview_btn = ft.OutlinedButton(
             "预览", icon=ft.Icons.PREVIEW, on_click=self._preview,
             style=ft.ButtonStyle(
-                color="#005f98",
-                side=ft.BorderSide(1, "#d5e3ff"),
+                color=c("#005f98", "fg"),
+                side=ft.BorderSide(1, c("#d5e3ff")),
                 shape=ft.RoundedRectangleBorder(radius=12),
             ),
         )
@@ -63,8 +64,8 @@ class ImageRenamePage(ft.Column):
             SubPageHeader(
                 title="批量重命名",
                 icon=ft.Icons.DRIVE_FILE_RENAME_OUTLINE,
-                icon_color="#ea580c",
-                icon_bg="#fff7ed",
+                icon_color=c("#ea580c", "fg"),
+                icon_bg=c("#fff7ed"),
                 on_back=lambda: self._page.go("/image"),
             ),
             self._build_body(),
@@ -79,7 +80,7 @@ class ImageRenamePage(ft.Column):
                         ft.Row(controls=[self._template, self._start_num], spacing=12),
                         ft.Text(
                             "可用变量：{name} 原文件名  {n} 序号  {n:03d} 补零序号  {date} 日期  {ext} 扩展名",
-                            size=11, color="#94a3b8", font_family="42dot Sans",
+                            size=11, color=c("#94a3b8", "fg"), font_family="42dot Sans",
                         ),
                         self._preview_btn,
                     ], spacing=10)),
@@ -102,18 +103,18 @@ class ImageRenamePage(ft.Column):
                 controls=[
                     ft.Text(
                         title, size=14, weight=ft.FontWeight.W_600,
-                        color="#162f50", font_family="42dot Sans",
+                        color=c("#162f50", "fg"), font_family="42dot Sans",
                     ),
                     content,
                 ],
                 spacing=10,
             ),
-            bgcolor="#ffffff",
+            bgcolor=c("#ffffff"),
             border_radius=16,
             padding=ft.padding.all(20),
             shadow=ft.BoxShadow(
                 blur_radius=1,
-                color=ft.Colors.with_opacity(0.05, "#000000"),
+                color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
                 offset=ft.Offset(0, 1),
             ),
         )
@@ -122,25 +123,25 @@ class ImageRenamePage(ft.Column):
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(icon, color="#ffffff", size=18),
+                    ft.Icon(icon, color=c("#ffffff", "fg"), size=18),
                     ft.Text(
-                        label, size=16, color="#ffffff",
+                        label, size=16, color=c("#ffffff", "fg"),
                         font_family="42dot Sans", weight=ft.FontWeight.W_500,
                     ),
                 ],
                 spacing=8,
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
-            bgcolor="#005f98",
+            bgcolor=c("#005f98"),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
-                colors=["#005f98", "#2aa7ff"],
+                colors=[c("#005f98"), c("#2aa7ff")],
             ),
             border_radius=16,
             padding=ft.padding.symmetric(vertical=14),
             shadow=ft.BoxShadow(
                 blur_radius=20, spread_radius=-5,
-                color=ft.Colors.with_opacity(0.2, "#005f98"),
+                color=ft.Colors.with_opacity(0.2, c("#005f98", "fg")),
                 offset=ft.Offset(0, 10),
             ),
             on_click=self._start,
@@ -177,15 +178,15 @@ class ImageRenamePage(ft.Column):
 
             self._preview_list.controls.append(
                 ft.Row(controls=[
-                    ft.Text(f.name, size=12, color="#455c7f", width=200, no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS),
-                    ft.Icon(ft.Icons.ARROW_FORWARD, size=14, color="#94a3b8"),
-                    ft.Text(new_name, size=12, color="#162f50", weight=ft.FontWeight.W_500),
+                    ft.Text(f.name, size=12, color=c("#455c7f", "fg"), width=200, no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS),
+                    ft.Icon(ft.Icons.ARROW_FORWARD, size=14, color=c("#94a3b8", "fg")),
+                    ft.Text(new_name, size=12, color=c("#162f50", "fg"), weight=ft.FontWeight.W_500),
                 ], spacing=8)
             )
 
         if len(self._input_files) > 10:
             self._preview_list.controls.append(
-                ft.Text(f"... 共 {len(self._input_files)} 个文件", size=11, color="#94a3b8"),
+                ft.Text(f"... 共 {len(self._input_files)} 个文件", size=11, color=c("#94a3b8", "fg")),
             )
 
         self._preview_list.visible = True

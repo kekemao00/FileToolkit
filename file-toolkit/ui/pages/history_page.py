@@ -12,6 +12,7 @@ from pathlib import Path
 import flet as ft
 
 from services import history_service
+from ui.palette import c
 from ui.utils import show_toast
 
 # ── 模块元数据：(icon_bg, icon_color, icon, label) ────────────────────
@@ -51,27 +52,27 @@ class HistoryPage(ft.Column):
         self._search_keyword = ""
 
         # ── 统计卡片数据文本 ──
-        self._stat_today_value = self._make_stat_value("0", "#00253f")
-        self._stat_today_unit = self._make_stat_unit("个文件", "#00253f")
-        self._stat_saved_value = self._make_stat_value("—", "#5500cd")
-        self._stat_saved_unit = self._make_stat_unit("", "#5500cd")
-        self._stat_rate_value = self._make_stat_value("0", "#004d57")
-        self._stat_rate_unit = self._make_stat_unit("%", "#004d57")
-        self._stat_cloud_value = self._make_stat_value("—", "#162f50")
-        self._stat_cloud_unit = self._make_stat_unit("", "#162f50")
+        self._stat_today_value = self._make_stat_value("0", c("#00253f"))
+        self._stat_today_unit = self._make_stat_unit("个文件", c("#00253f"))
+        self._stat_saved_value = self._make_stat_value("—", c("#5500cd"))
+        self._stat_saved_unit = self._make_stat_unit("", c("#5500cd"))
+        self._stat_rate_value = self._make_stat_value("0", c("#004d57"))
+        self._stat_rate_unit = self._make_stat_unit("%", c("#004d57"))
+        self._stat_cloud_value = self._make_stat_value("—", c("#162f50", "fg"))
+        self._stat_cloud_unit = self._make_stat_unit("", c("#162f50", "fg"))
 
         # ── 搜索框 ──
         self._search_field = ft.TextField(
             hint_text="搜索功能或指令...",
             hint_style=ft.TextStyle(
-                size=13, color="#94a3b8",
+                size=13, color=c("#94a3b8", "fg"),
                 font_family="42dot Sans", weight=ft.FontWeight.W_500,
             ),
             text_size=13,
-            text_style=ft.TextStyle(color="#162f50", font_family="42dot Sans"),
+            text_style=ft.TextStyle(color=c("#162f50", "fg"), font_family="42dot Sans"),
             border=ft.InputBorder.NONE,
             content_padding=ft.padding.symmetric(horizontal=0, vertical=0),
-            cursor_color="#005f98",
+            cursor_color=c("#005f98", "fg"),
             on_change=self._on_search_change,
             expand=True,
         )
@@ -79,18 +80,18 @@ class HistoryPage(ft.Column):
         # ── 表格主体与分页信息 ──
         self._rows_column = ft.Column(spacing=0)
         self._pagination_info = ft.Text(
-            "", size=12, color="#455c7f",
+            "", size=12, color=c("#455c7f", "fg"),
             font_family="Plus Jakarta Sans", weight=ft.FontWeight.W_500,
         )
         self._pagination_buttons = ft.Row(spacing=4)
         self._empty_hint = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Icon(ft.Icons.HISTORY, size=48, color="#94a3b8"),
-                    ft.Text("暂无匹配的操作记录", color="#455c7f", size=14,
+                    ft.Icon(ft.Icons.HISTORY, size=48, color=c("#94a3b8", "fg")),
+                    ft.Text("暂无匹配的操作记录", color=c("#455c7f", "fg"), size=14,
                             font_family="42dot Sans"),
                     ft.Text("调整搜索关键字或完成一次文件处理后再来查看",
-                            color="#94a3b8", size=12, font_family="42dot Sans"),
+                            color=c("#94a3b8", "fg"), size=12, font_family="42dot Sans"),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=8,
@@ -126,24 +127,24 @@ class HistoryPage(ft.Column):
         search_box = ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.SEARCH, color="#94a3b8", size=15),
+                    ft.Icon(ft.Icons.SEARCH, color=c("#94a3b8", "fg"), size=15),
                     self._search_field,
                 ],
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             width=360, height=42,
-            bgcolor=ft.Colors.with_opacity(0.5, "#f8fafc"),
-            border=ft.border.all(1, ft.Colors.with_opacity(0.6, "#e2e8f0")),
+            bgcolor=ft.Colors.with_opacity(0.5, c("#f8fafc")),
+            border=ft.border.all(1, ft.Colors.with_opacity(0.6, c("#e2e8f0"))),
             border_radius=9999,
             padding=ft.padding.symmetric(horizontal=16),
         )
         circle_btn = lambda icon, tooltip, on_click=None, disabled=False: ft.Container(  # noqa: E731
-            content=ft.Icon(icon, color="#61789c", size=18),
+            content=ft.Icon(icon, color=c("#61789c", "fg"), size=18),
             width=40, height=40,
             border_radius=9999,
-            bgcolor=ft.Colors.with_opacity(0.5, "#f8fafc"),
-            border=ft.border.all(1, ft.Colors.with_opacity(0.6, "#e2e8f0")),
+            bgcolor=ft.Colors.with_opacity(0.5, c("#f8fafc")),
+            border=ft.border.all(1, ft.Colors.with_opacity(0.6, c("#e2e8f0"))),
             alignment=ft.Alignment(0, 0),
             tooltip=tooltip,
             on_click=None if disabled else on_click,
@@ -165,9 +166,9 @@ class HistoryPage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             height=80,
-            bgcolor=ft.Colors.with_opacity(0.8, "#ffffff"),
+            bgcolor=ft.Colors.with_opacity(0.8, c("#ffffff")),
             border=ft.border.only(
-                bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.5, "#e2e8f0")),
+                bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.5, c("#e2e8f0"))),
             ),
             padding=ft.padding.symmetric(horizontal=32),
         )
@@ -176,7 +177,7 @@ class HistoryPage(ft.Column):
     def _build_body(self) -> ft.Control:
         return ft.Container(
             expand=True,
-            bgcolor="#f4f6ff",
+            bgcolor=c("#f4f6ff"),
             content=ft.Column(
                 controls=[
                     ft.Container(
@@ -210,13 +211,13 @@ class HistoryPage(ft.Column):
                         ft.Text(
                             "最近操作", size=30,
                             weight=ft.FontWeight.W_800,
-                            color="#162f50",
+                            color=c("#162f50", "fg"),
                             font_family="42dot Sans",
                         ),
                         ft.Text(
                             "管理并回顾您在过去 30 天内的所有文件处理记录。",
                             size=16, weight=ft.FontWeight.W_400,
-                            color="#455c7f",
+                            color=c("#455c7f", "fg"),
                             font_family="42dot Sans",
                         ),
                     ],
@@ -228,10 +229,10 @@ class HistoryPage(ft.Column):
                 ft.Container(
                     content=ft.Row(
                         controls=[
-                            ft.Icon(ft.Icons.FILE_DOWNLOAD_OUTLINED, color="#455c7f", size=16),
+                            ft.Icon(ft.Icons.FILE_DOWNLOAD_OUTLINED, color=c("#455c7f", "fg"), size=16),
                             ft.Text(
                                 "导出记录", size=14,
-                                weight=ft.FontWeight.W_700, color="#455c7f",
+                                weight=ft.FontWeight.W_700, color=c("#455c7f", "fg"),
                                 font_family="42dot Sans",
                             ),
                         ],
@@ -239,7 +240,7 @@ class HistoryPage(ft.Column):
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         tight=True,
                     ),
-                    bgcolor="#cbdeff",
+                    bgcolor=c("#cbdeff"),
                     border_radius=12,
                     padding=ft.padding.symmetric(horizontal=20, vertical=10),
                     on_click=self._export_history,
@@ -251,10 +252,10 @@ class HistoryPage(ft.Column):
                 ft.Container(
                     content=ft.Row(
                         controls=[
-                            ft.Icon(ft.Icons.DELETE_OUTLINE, color="#ffffff", size=16),
+                            ft.Icon(ft.Icons.DELETE_OUTLINE, color=c("#ffffff", "fg"), size=16),
                             ft.Text(
                                 "清空历史", size=14,
-                                weight=ft.FontWeight.W_700, color="#ffffff",
+                                weight=ft.FontWeight.W_700, color=c("#ffffff", "fg"),
                                 font_family="42dot Sans",
                             ),
                         ],
@@ -262,12 +263,12 @@ class HistoryPage(ft.Column):
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         tight=True,
                     ),
-                    bgcolor="#005f98",
+                    bgcolor=c("#005f98"),
                     border_radius=12,
                     padding=ft.padding.symmetric(horizontal=20, vertical=10),
                     shadow=ft.BoxShadow(
                         blur_radius=10, spread_radius=-2,
-                        color=ft.Colors.with_opacity(0.25, "#005f98"),
+                        color=ft.Colors.with_opacity(0.25, c("#005f98", "fg")),
                         offset=ft.Offset(0, 4),
                     ),
                     on_click=self._clear_history,
@@ -282,24 +283,24 @@ class HistoryPage(ft.Column):
     def _build_stats(self) -> ft.Control:
         cards = [
             self._build_stat_card(
-                "今日处理", "#005f98",
+                "今日处理", c("#005f98", "fg"),
                 self._stat_today_value, self._stat_today_unit,
-                bg=ft.Colors.with_opacity(0.1, "#2aa7ff"), border="#005f98",
+                bg=ft.Colors.with_opacity(0.1, c("#2aa7ff")), border=c("#005f98"),
             ),
             self._build_stat_card(
-                "累计处理", "#6b1ef3",
+                "累计处理", c("#6b1ef3", "fg"),
                 self._stat_saved_value, self._stat_saved_unit,
-                bg=ft.Colors.with_opacity(0.2, "#d9caff"), border="#6b1ef3",
+                bg=ft.Colors.with_opacity(0.2, c("#d9caff")), border=c("#6b1ef3"),
             ),
             self._build_stat_card(
-                "成功率", "#006571",
+                "成功率", c("#006571", "fg"),
                 self._stat_rate_value, self._stat_rate_unit,
-                bg=ft.Colors.with_opacity(0.1, "#00e3fd"), border="#006571",
+                bg=ft.Colors.with_opacity(0.1, c("#00e3fd")), border=c("#006571"),
             ),
             self._build_stat_card(
-                "失败任务", "#455c7f",
+                "失败任务", c("#455c7f", "fg"),
                 self._stat_cloud_value, self._stat_cloud_unit,
-                bg="#d5e3ff", border="#61789c",
+                bg=c("#d5e3ff"), border=c("#61789c"),
             ),
         ]
         return ft.Row(controls=cards, spacing=16)
@@ -347,11 +348,11 @@ class HistoryPage(ft.Column):
                 ],
                 spacing=0,
             ),
-            bgcolor="#ffffff",
+            bgcolor=c("#ffffff"),
             border_radius=24,
             shadow=ft.BoxShadow(
                 blur_radius=4, spread_radius=0,
-                color=ft.Colors.with_opacity(0.04, "#000000"),
+                color=ft.Colors.with_opacity(0.04, c("#000000", "fg")),
                 offset=ft.Offset(0, 2),
             ),
             clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
@@ -362,7 +363,7 @@ class HistoryPage(ft.Column):
             return ft.Container(
                 content=ft.Text(
                     text, size=11, weight=ft.FontWeight.W_900,
-                    color="#455c7f", font_family="42dot Sans",
+                    color=c("#455c7f", "fg"), font_family="42dot Sans",
                 ),
                 width=width, expand=expand,
                 padding=ft.padding.only(left=24, top=20, right=24, bottom=22),
@@ -381,7 +382,7 @@ class HistoryPage(ft.Column):
                 ],
                 spacing=0,
             ),
-            bgcolor=ft.Colors.with_opacity(0.5, "#ebf1ff"),
+            bgcolor=ft.Colors.with_opacity(0.5, c("#ebf1ff")),
             height=55,
         )
 
@@ -396,7 +397,7 @@ class HistoryPage(ft.Column):
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor=ft.Colors.with_opacity(0.3, "#ebf1ff"),
+            bgcolor=ft.Colors.with_opacity(0.3, c("#ebf1ff")),
             height=64,
             padding=ft.padding.symmetric(horizontal=24, vertical=16),
         )
@@ -408,24 +409,24 @@ class HistoryPage(ft.Column):
                 controls=[
                     ft.Container(
                         content=ft.Icon(
-                            ft.Icons.LIGHTBULB_OUTLINE, color="#005f98", size=22,
+                            ft.Icons.LIGHTBULB_OUTLINE, color=c("#005f98", "fg"), size=22,
                         ),
                         width=48, height=48,
                         border_radius=9999,
-                        bgcolor=ft.Colors.with_opacity(0.2, "#005f98"),
+                        bgcolor=ft.Colors.with_opacity(0.2, c("#005f98")),
                         alignment=ft.Alignment(0, 0),
                     ),
                     ft.Column(
                         controls=[
                             ft.Text(
                                 "效率提示", size=16,
-                                weight=ft.FontWeight.W_700, color="#00253f",
+                                weight=ft.FontWeight.W_700, color=c("#00253f", "fg"),
                                 font_family="42dot Sans",
                             ),
                             ft.Text(
                                 "所有处理均在本地完成，不上传任何文件。处理大文件时请确保磁盘有足够剩余空间，失败时可重新选择文件重试。",
                                 size=14, weight=ft.FontWeight.W_500,
-                                color="#455c7f", font_family="42dot Sans",
+                                color=c("#455c7f", "fg"), font_family="42dot Sans",
                             ),
                         ],
                         spacing=4,
@@ -436,8 +437,8 @@ class HistoryPage(ft.Column):
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor=ft.Colors.with_opacity(0.1, "#2aa7ff"),
-            border=ft.border.all(1, ft.Colors.with_opacity(0.2, "#2aa7ff")),
+            bgcolor=ft.Colors.with_opacity(0.1, c("#2aa7ff")),
+            border=ft.border.all(1, ft.Colors.with_opacity(0.2, c("#2aa7ff"))),
             border_radius=16,
             padding=ft.padding.all(24),
         )
@@ -500,7 +501,7 @@ class HistoryPage(ft.Column):
                 self._pagination_buttons.controls.append(
                     ft.Container(
                         content=ft.Text(
-                            "...", size=12, color="#455c7f",
+                            "...", size=12, color=c("#455c7f", "fg"),
                             font_family="Plus Jakarta Sans",
                             weight=ft.FontWeight.W_500,
                         ),
@@ -546,13 +547,13 @@ class HistoryPage(ft.Column):
         if icon is not None:
             content = ft.Icon(
                 icon,
-                color="#94a3b8" if disabled else "#455c7f",
+                color=c("#94a3b8", "fg") if disabled else c("#455c7f", "fg"),
                 size=14,
             )
         else:
             content = ft.Text(
                 label or "", size=12,
-                color="#ffffff" if active else "#455c7f",
+                color=c("#ffffff", "fg") if active else c("#455c7f", "fg"),
                 font_family="Plus Jakarta Sans",
                 weight=ft.FontWeight.W_700 if active else ft.FontWeight.W_500,
                 text_align=ft.TextAlign.CENTER,
@@ -560,8 +561,8 @@ class HistoryPage(ft.Column):
         return ft.Container(
             content=content,
             width=32, height=32,
-            bgcolor="#005f98" if active else "transparent",
-            border=None if active else ft.border.all(1, ft.Colors.with_opacity(0.5, "#e2e8f0")),
+            bgcolor=c("#005f98") if active else "transparent",
+            border=None if active else ft.border.all(1, ft.Colors.with_opacity(0.5, c("#e2e8f0"))),
             border_radius=8,
             alignment=ft.Alignment(0, 0),
             on_click=None if (disabled or active) else on_click,
@@ -601,16 +602,16 @@ class HistoryPage(ft.Column):
             content=ft.Row(
                 controls=[
                     ft.Container(
-                        content=ft.Icon(icon_name, color=icon_color, size=18),
+                        content=ft.Icon(icon_name, color=c(icon_color, "fg"), size=18),
                         width=40, height=40,
-                        bgcolor=icon_bg,
+                        bgcolor=c(icon_bg),
                         border_radius=8,
                         alignment=ft.Alignment(0, 0),
                     ),
                     ft.Container(
                         content=ft.Text(
                             input_desc, size=14,
-                            weight=ft.FontWeight.W_700, color="#162f50",
+                            weight=ft.FontWeight.W_700, color=c("#162f50", "fg"),
                             font_family="Plus Jakarta Sans",
                             max_lines=1,
                             overflow=ft.TextOverflow.ELLIPSIS,
@@ -630,10 +631,10 @@ class HistoryPage(ft.Column):
             content=ft.Container(
                 content=ft.Text(
                     action_label, size=12,
-                    weight=ft.FontWeight.W_700, color="#455c7f",
+                    weight=ft.FontWeight.W_700, color=c("#455c7f", "fg"),
                     font_family="42dot Sans",
                 ),
-                bgcolor="#dee9ff",
+                bgcolor=c("#dee9ff"),
                 border_radius=9999,
                 padding=ft.padding.symmetric(horizontal=12, vertical=4),
                 alignment=ft.Alignment(-1, 0),
@@ -643,13 +644,13 @@ class HistoryPage(ft.Column):
 
         # 状态列：圆点 + 文字
         if status == "success":
-            dot_color, status_text_color, status_label = "#10b981", "#059669", "成功"
+            dot_color, status_text_color, status_label = c("#10b981"), c("#059669"), "成功"
         elif status == "failed":
-            dot_color, status_text_color, status_label = "#b31b25", "#b31b25", "失败"
+            dot_color, status_text_color, status_label = c("#b31b25"), c("#b31b25"), "失败"
         elif status == "cancelled":
-            dot_color, status_text_color, status_label = "#f59e0b", "#b45309", "已取消"
+            dot_color, status_text_color, status_label = c("#f59e0b"), c("#b45309"), "已取消"
         else:  # running
-            dot_color, status_text_color, status_label = "#005f98", "#005f98", "处理中"
+            dot_color, status_text_color, status_label = c("#005f98"), c("#005f98"), "处理中"
 
         status_col = ft.Container(
             width=92,
@@ -679,7 +680,7 @@ class HistoryPage(ft.Column):
             padding=ft.padding.only(left=24, right=12, top=14, bottom=14),
             content=ft.Text(
                 date_str, size=12,
-                weight=ft.FontWeight.W_400, color="#455c7f",
+                weight=ft.FontWeight.W_400, color=c("#455c7f", "fg"),
                 font_family="Plus Jakarta Sans",
             ),
         )
@@ -689,7 +690,7 @@ class HistoryPage(ft.Column):
             padding=ft.padding.only(left=24, right=12, top=14, bottom=14),
             content=ft.Text(
                 "—", size=12,
-                weight=ft.FontWeight.W_500, color="#455c7f",
+                weight=ft.FontWeight.W_500, color=c("#455c7f", "fg"),
                 font_family="Plus Jakarta Sans",
             ),
         )
@@ -699,7 +700,7 @@ class HistoryPage(ft.Column):
             padding=ft.padding.only(left=24, right=12, top=14, bottom=14),
             content=ft.Text(
                 duration_str, size=12,
-                weight=ft.FontWeight.W_400, color="#455c7f",
+                weight=ft.FontWeight.W_400, color=c("#455c7f", "fg"),
                 font_family="Plus Jakarta Sans",
             ),
         )
@@ -708,9 +709,9 @@ class HistoryPage(ft.Column):
         if status == "success" and output_dir:
             action_buttons.append(
                 ft.Container(
-                    content=ft.Icon(ft.Icons.FOLDER_OPEN_OUTLINED, color="#00a3ff", size=16),
+                    content=ft.Icon(ft.Icons.FOLDER_OPEN_OUTLINED, color=c("#00a3ff", "fg"), size=16),
                     width=34, height=28,
-                    bgcolor=ft.Colors.with_opacity(0.1, "#00a3ff"),
+                    bgcolor=ft.Colors.with_opacity(0.1, c("#00a3ff")),
                     border_radius=8,
                     alignment=ft.Alignment(0, 0),
                     on_click=lambda _, d=output_dir: self._open_dir(d),
@@ -722,9 +723,9 @@ class HistoryPage(ft.Column):
         task_id = task.get("id")
         action_buttons.append(
             ft.Container(
-                content=ft.Icon(ft.Icons.DELETE_OUTLINE, color="#00a3ff", size=16),
+                content=ft.Icon(ft.Icons.DELETE_OUTLINE, color=c("#00a3ff", "fg"), size=16),
                 width=29, height=29,
-                bgcolor=ft.Colors.with_opacity(0.1, "#00a3ff"),
+                bgcolor=ft.Colors.with_opacity(0.1, c("#00a3ff")),
                 border_radius=8,
                 alignment=ft.Alignment(0, 0),
                 on_click=lambda _, tid=task_id: self._delete_row(tid),
@@ -752,7 +753,7 @@ class HistoryPage(ft.Column):
             ),
             border=(
                 None if is_last
-                else ft.border.only(bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.5, "#e2e8f0")))
+                else ft.border.only(bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.5, c("#e2e8f0"))))
             ),
         )
         return row

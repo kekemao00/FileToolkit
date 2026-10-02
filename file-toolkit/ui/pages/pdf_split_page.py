@@ -11,6 +11,7 @@ from ui.components.drop_zone import DropZone
 from ui.components.progress_card import ProgressCard
 from ui.components.result_card import ResultCard
 from ui.components.sub_page_header import SubPageHeader
+from ui.palette import c
 
 
 class PdfSplitPage(ft.Column):
@@ -48,13 +49,13 @@ class PdfSplitPage(ft.Column):
         self._pages_field = ft.TextField(
             value="5", label="每份页数", width=120,
             keyboard_type=ft.KeyboardType.NUMBER, border_radius=12,
-            bgcolor="#f8fafc", border_color="transparent",
+            bgcolor=c("#f8fafc"), border_color="transparent",
         )
         self._range_field = ft.TextField(
             label="页码范围（如 1-5, 6-10）",
             hint_text="1-5, 6-10, 11-20",
             expand=True, border_radius=12,
-            bgcolor="#f8fafc", border_color="transparent",
+            bgcolor=c("#f8fafc"), border_color="transparent",
             visible=False,
         )
         self._mode_extra = ft.Row(
@@ -63,14 +64,14 @@ class PdfSplitPage(ft.Column):
 
         self._output_dir_text = ft.Text(
             "（与输入文件同级 output/ 目录）",
-            size=12, color="#455c7f", expand=True,
+            size=12, color=c("#455c7f", "fg"), expand=True,
         )
         self._template_field = ft.TextField(
             value="{stem}_第{n}部分",
             label="文件命名模板",
             hint_text="{stem} {n} {start} {end}",
             expand=True, border_radius=12,
-            bgcolor="#f8fafc", border_color="transparent",
+            bgcolor=c("#f8fafc"), border_color="transparent",
         )
 
         self._progress_card = ProgressCard(on_cancel=self._cancel_task)
@@ -82,8 +83,8 @@ class PdfSplitPage(ft.Column):
             SubPageHeader(
                 title="PDF 分割",
                 icon=ft.Icons.CONTENT_CUT,
-                icon_color="#dc2626",
-                icon_bg="#fef2f2",
+                icon_color=c("#dc2626", "fg"),
+                icon_bg=c("#fef2f2"),
                 on_back=lambda: self._page.go("/pdf"),
             ),
             self._build_body(),
@@ -109,7 +110,7 @@ class PdfSplitPage(ft.Column):
                                     controls=[
                                         ft.Icon(
                                             ft.Icons.FOLDER_OUTLINED,
-                                            color="#455c7f", size=18,
+                                            color=c("#455c7f", "fg"), size=18,
                                         ),
                                         self._output_dir_text,
                                         ft.OutlinedButton(
@@ -117,8 +118,8 @@ class PdfSplitPage(ft.Column):
                                             on_click=self._pick_output_dir,
                                             icon=ft.Icons.FOLDER_OPEN,
                                             style=ft.ButtonStyle(
-                                                color="#005f98",
-                                                side=ft.BorderSide(1, "#d5e3ff"),
+                                                color=c("#005f98", "fg"),
+                                                side=ft.BorderSide(1, c("#d5e3ff")),
                                                 shape=ft.RoundedRectangleBorder(radius=12),
                                             ),
                                         ),
@@ -149,18 +150,18 @@ class PdfSplitPage(ft.Column):
                 controls=[
                     ft.Text(
                         title, size=14, weight=ft.FontWeight.W_600,
-                        color="#162f50", font_family="42dot Sans",
+                        color=c("#162f50", "fg"), font_family="42dot Sans",
                     ),
                     content,
                 ],
                 spacing=10,
             ),
-            bgcolor="#ffffff",
+            bgcolor=c("#ffffff"),
             border_radius=12,
             padding=ft.padding.all(20),
             shadow=ft.BoxShadow(
                 blur_radius=2,
-                color=ft.Colors.with_opacity(0.05, "#000000"),
+                color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
                 offset=ft.Offset(0, 1),
             ),
         )
@@ -169,25 +170,25 @@ class PdfSplitPage(ft.Column):
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(icon, color="#ffffff", size=18),
+                    ft.Icon(icon, color=c("#ffffff", "fg"), size=18),
                     ft.Text(
-                        label, size=16, color="#ffffff",
+                        label, size=16, color=c("#ffffff", "fg"),
                         font_family="42dot Sans", weight=ft.FontWeight.W_500,
                     ),
                 ],
                 spacing=8,
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
-            bgcolor="#005f98",
+            bgcolor=c("#005f98"),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
-                colors=["#005f98", "#00a3ff"],
+                colors=[c("#005f98"), c("#00a3ff")],
             ),
             border_radius=16,
             padding=ft.padding.symmetric(vertical=14),
             shadow=ft.BoxShadow(
                 blur_radius=20, spread_radius=-5,
-                color=ft.Colors.with_opacity(0.2, "#005f98"),
+                color=ft.Colors.with_opacity(0.2, c("#005f98", "fg")),
                 offset=ft.Offset(0, 10),
             ),
             on_click=self._start_task,
