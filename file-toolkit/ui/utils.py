@@ -52,3 +52,31 @@ def show_toast(
             pass
 
     threading.Timer(duration / 1000 + 1, _cleanup).start()
+
+
+def open_folder(path) -> None:
+    """用系统文件管理器打开目录。"""
+    import subprocess
+    import sys
+
+    target = str(path)
+    try:
+        if sys.platform == "win32":
+            subprocess.Popen(["explorer", target])
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", target])
+        else:
+            subprocess.Popen(["xdg-open", target])
+    except OSError:
+        pass
+
+
+def notify_task_done(page: ft.Page, output_dir) -> None:
+    """按设置「处理完成后」的选项：打开输出目录 / 仅提示 / 静默。"""
+    from services import settings_service
+
+    after = settings_service.get("after_complete", "open_dir")
+    if after == "open_dir" and output_dir:
+        open_folder(output_dir)
+    elif after == "notify":
+        show_toast(page, "处理完成", color="#047857")

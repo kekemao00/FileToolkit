@@ -17,7 +17,7 @@ from services import history_service, settings_service
 from services.task_service import run_task
 from ui.components.top_bar import TopBar
 from ui.palette import c
-from ui.utils import show_toast
+from ui.utils import notify_task_done, show_toast
 
 _FUNCTIONS = [
     {"label": "ZIP 压缩", "desc": "通用兼容格式", "icon": ft.Icons.FOLDER_ZIP,
@@ -308,13 +308,13 @@ class ArchivePage(ft.Column):
                         alignment=ft.Alignment(0, 0),
                     ),
                     ft.Text(
-                        "拖拽文件到此处",
+                        "点击选择文件",
                         size=18, color=c("#005f98", "fg"),
                         font_family="42dot Sans",
                         text_align=ft.TextAlign.CENTER,
                     ),
                     ft.Text(
-                        "或点击选择文件 / 文件夹",
+                        "可多选，压缩时打包为一个文件",
                         size=14, color=c("#455c7f", "fg"),
                         font_family="42dot Sans",
                         text_align=ft.TextAlign.CENTER,
@@ -793,6 +793,8 @@ class ArchivePage(ft.Column):
             result.output_files[0].parent if result.output_files else None
         )
         self._show_complete(result)
+        if result.status == TaskStatus.SUCCESS:
+            notify_task_done(self._page, self._output_dir)
 
     def _cancel(self) -> None:
         if self._task and not self._task.done():

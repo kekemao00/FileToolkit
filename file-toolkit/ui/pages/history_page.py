@@ -12,6 +12,7 @@ from pathlib import Path
 import flet as ft
 
 from services import history_service
+from ui.features import ACTION_LABELS
 from ui.palette import c
 from ui.utils import show_toast
 
@@ -26,15 +27,7 @@ _MODULE_META: dict[str, tuple[str, str, str, str]] = {
 }
 
 # 操作类型 -> 中文标签
-_ACTION_LABELS: dict[str, str] = {
-    "merge": "合并", "split": "拆分", "compress": "压缩",
-    "convert": "格式转换", "watermark": "加水印", "rename": "批量重命名",
-    "extract": "提取", "audio_convert": "音频转换", "audio_extract": "音频提取",
-    "video_convert": "视频转换", "video_compress": "视频压缩", "video_cut": "视频剪辑",
-    "archive": "打包", "extract_archive": "解压",
-    "ocr": "OCR 识别",
-    "ai_task": "AI 处理",
-}
+_ACTION_LABELS = ACTION_LABELS
 
 # 每页记录数
 _PAGE_SIZE = 10
