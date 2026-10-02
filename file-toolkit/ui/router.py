@@ -58,12 +58,25 @@ from ui.pages.prompt_image_page import PromptImagePage
 from ui.pages.settings_page import SettingsPage
 
 
+def _parse_route(route: str) -> tuple[str, dict[str, str]]:
+    """拆分 `/pdf?func=split` 为 ("/pdf", {"func": "split"})。"""
+    path, _, query = route.partition("?")
+    params: dict[str, str] = {}
+    for pair in query.split("&"):
+        if "=" in pair:
+            k, v = pair.split("=", 1)
+            params[k] = v
+    return path, params
+
+
 def _resolve_page(route: str, page: ft.Page) -> ft.Control:
     """根据路由字符串返回对应页面控件。"""
+    route, params = _parse_route(route)
+    func = params.get("func")
     if route == "/":
         return HomePage(page)
     if route == "/pdf":
-        return PdfPage(page)
+        return PdfPage(page, initial_func=func)
     if route == "/pdf/split":
         return PdfSplitPage(page)
     if route == "/pdf/merge":
@@ -79,7 +92,7 @@ def _resolve_page(route: str, page: ft.Page) -> ft.Control:
     if route == "/ocr":
         return OcrPage(page)
     if route == "/image":
-        return ImagePage(page)
+        return ImagePage(page, initial_func=func)
     if route == "/image/convert":
         return ImageConvertPage(page)
     if route == "/image/compress":
@@ -89,7 +102,7 @@ def _resolve_page(route: str, page: ft.Page) -> ft.Control:
     if route == "/image/rename":
         return ImageRenamePage(page)
     if route == "/media":
-        return MediaPage(page)
+        return MediaPage(page, initial_func=func)
     if route == "/media/video-convert":
         return VideoConvertPage(page)
     if route == "/media/video-compress":
@@ -101,7 +114,7 @@ def _resolve_page(route: str, page: ft.Page) -> ft.Control:
     if route == "/media/video-cut":
         return VideoCutPage(page)
     if route == "/archive":
-        return ArchivePage(page)
+        return ArchivePage(page, initial_func=func)
     if route == "/ai":
         return AiTaskPage(page)
     if route == "/prompt-image":
@@ -166,7 +179,8 @@ def setup_router(page: ft.Page) -> None:
 
     def navigate(route: str) -> None:
         """手动导航：切换内容区 + 同步 NavRail 高亮。"""
-        nav.sync_selected(route)
+        path, _ = _parse_route(route)
+        nav.sync_selected(path)
         content_area.controls = [_resolve_page(route, page)]
         page.update()
 

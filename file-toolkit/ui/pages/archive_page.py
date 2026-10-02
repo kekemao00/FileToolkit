@@ -15,6 +15,7 @@ from core.archive.handler import compress, extract
 from core.models import TaskResult, TaskStatus
 from services import history_service, settings_service
 from services.task_service import run_task
+from ui.components.top_bar import TopBar
 from ui.utils import show_toast
 
 _FUNCTIONS = [
@@ -34,11 +35,11 @@ _ARCHIVE_EXTS = {"zip", "7z", "rar", "tar", "gz", "bz2", "xz", "tgz"}
 class ArchivePage(ft.Column):
     """压缩解压中心 — 工作台布局"""
 
-    def __init__(self, page: ft.Page) -> None:
+    def __init__(self, page: ft.Page, initial_func: str | None = None) -> None:
         super().__init__(expand=True, spacing=0)
         self._page = page
         self._files: list[Path] = []
-        self._selected_func = "compress_zip"
+        self._selected_func = initial_func if initial_func in ("compress_zip", "compress_7z", "compress_targz", "extract") else "compress_zip"
         self._task: asyncio.Task | None = None
         self._output_dir: Path | None = None
 
@@ -220,61 +221,7 @@ class ArchivePage(ft.Column):
             self._page.on_resize = self._prev_on_resize
 
     def _build_topbar(self) -> ft.Control:
-        return ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Container(expand=True),
-                    ft.Container(
-                        content=ft.Row(
-                            controls=[
-                                ft.Container(
-                                    content=ft.Row(
-                                        controls=[
-                                            ft.Icon(ft.Icons.SEARCH, color="#94a3b8", size=15),
-                                            ft.Container(
-                                                content=ft.Text("搜索功能或指令...", size=13, color="#94a3b8"),
-                                                padding=ft.padding.only(left=8),
-                                                expand=True,
-                                            ),
-                                        ],
-                                        spacing=0,
-                                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                                    ),
-                                    width=288, height=54,
-                                    bgcolor=ft.Colors.with_opacity(0.5, "#f8fafc"),
-                                    border=ft.border.all(1, ft.Colors.with_opacity(0.6, "#e2e8f0")),
-                                    border_radius=9999,
-                                    padding=ft.padding.symmetric(horizontal=15),
-                                    opacity=0.45,
-                                    tooltip="搜索",
-                                ),
-                                ft.IconButton(
-                                    icon=ft.Icons.NOTIFICATIONS_OUTLINED,
-                                    icon_color="#475569", icon_size=20,
-                                    disabled=True, opacity=0.45,
-                                    tooltip="通知",
-                                ),
-                                ft.IconButton(
-                                    icon=ft.Icons.SETTINGS_OUTLINED,
-                                    icon_color="#475569", icon_size=20,
-                                    on_click=lambda _: self._page.go("/settings"),
-                                ),
-                            ],
-                            spacing=12,
-                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        ),
-                    ),
-                ],
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            height=80,
-            bgcolor="#ffffff",
-            shadow=ft.BoxShadow(
-                blur_radius=2, color=ft.Colors.with_opacity(0.05, "#000000"),
-                offset=ft.Offset(0, 1),
-            ),
-            padding=ft.padding.symmetric(horizontal=32),
-        )
+        return TopBar(self._page)
 
     def _build_main_content(self) -> ft.Control:
         self._workspace_view = self._build_workspace_view()

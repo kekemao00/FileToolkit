@@ -10,6 +10,7 @@ import sys
 import flet as ft
 
 from services import history_service
+from ui.components.top_bar import TopBar
 from ui.utils import show_toast
 
 # 工具卡片配置：(title, subtitle, icon, icon_color, icon_bg, badge1, badge2, badge1_bg, badge2_bg, route)
@@ -80,77 +81,8 @@ class HomePage(ft.Column):
         ]
         self._load_history()
 
-    # ── 顶部栏 ────────────────────────────────────────────────────────────
     def _build_topbar(self) -> ft.Control:
-        return ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Container(expand=True),  # 占位，让右侧内容靠右
-                    ft.Container(
-                        content=ft.Row(
-                            controls=[
-                                ft.Container(
-                                    content=ft.Row(
-                                        controls=[
-                                            ft.Icon(
-                                                ft.Icons.SEARCH,
-                                                color="#94A3B8",
-                                                size=15,
-                                            ),
-                                            ft.Container(
-                                                content=ft.Text(
-                                                    "搜索功能或指令...",
-                                                    size=13,
-                                                    color="#94A3B8",
-                                                    font_family="42dot Sans",
-                                                    weight=ft.FontWeight.W_500,
-                                                ),
-                                                expand=True,
-                                            ),
-                                        ],
-                                        spacing=8,
-                                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                                    ),
-                                    width=288,
-                                    height=54,
-                                    bgcolor="#F8FAFC",
-                                    border_radius=9999,
-                                    padding=ft.padding.symmetric(horizontal=14, vertical=6),
-                                    tooltip="搜索功能或指令",
-                                ),
-                                # 通知按钮
-                                ft.IconButton(
-                                    icon=ft.Icons.NOTIFICATIONS_OUTLINED,
-                                    icon_color=ft.Colors.with_opacity(0.35, "#475569"),
-                                    icon_size=20,
-                                    tooltip="暂无新通知",
-                                    disabled=True,
-                                ),
-                                # 设置按钮
-                                ft.IconButton(
-                                    icon=ft.Icons.SETTINGS_OUTLINED,
-                                    icon_color="#475569",
-                                    icon_size=20,
-                                    tooltip="设置",
-                                    on_click=lambda e: self._page.go("/settings"),
-                                ),
-                            ],
-                            spacing=12,
-                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        ),
-                    ),
-                ],
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            height=80,
-            bgcolor="#FFFFFF",
-            shadow=ft.BoxShadow(
-                blur_radius=2,
-                color=ft.Colors.with_opacity(0.05, "#000000"),
-                offset=ft.Offset(0, 1),
-            ),
-            padding=ft.padding.only(left=40, right=24),
-        )
+        return TopBar(self._page)
 
     # ── 主体内容 ──────────────────────────────────────────────────────────
     def _build_body(self) -> ft.Control:
@@ -226,7 +158,6 @@ class HomePage(ft.Column):
                                     weight=ft.FontWeight.W_500,
                                     color="#162F50",
                                     font_family="42dot Sans",
-                                    height=1.1,
                                 ),
                                 ft.Text(
                                     "简单高效的工具集，一站式解决您的 PDF 转换、图像优化及媒体处理需求。",
@@ -258,7 +189,7 @@ class HomePage(ft.Column):
                                                 padding=ft.padding.symmetric(horizontal=32, vertical=14),
                                                 elevation={"": 0, "hovered": 2},
                                             ),
-                                            on_click=lambda e: self._page.go("/pdf"),
+                                            on_click=lambda e: self._page.go("/ai"),
                                         ),
                                     ],
                                     spacing=16,
@@ -445,8 +376,7 @@ class HomePage(ft.Column):
                 color=ft.Colors.with_opacity(0.06, "#000000"),
                 offset=ft.Offset(0, 2),
             ),
-            expand=True,
-            width=170,
+            width=200,
             height=235,
             padding=ft.padding.all(16),
             ink=True,
