@@ -763,8 +763,15 @@ class OcrPage(ft.Column):
 
     def _copy_result(self, _) -> None:
         if self._result_text.value:
-            self._page.set_clipboard(self._result_text.value)
+            self._page.run_task(self._copy_async, self._result_text.value)
+
+    async def _copy_async(self, text: str) -> None:
+        # Flet 0.84 已移除 page.set_clipboard，改用 Clipboard 服务
+        try:
+            await ft.Clipboard().set(text)
             self._show_snack("已复制到剪贴板")
+        except Exception as e:
+            self._show_snack(f"复制失败：{e}")
 
     def _save_result(self, _) -> None:
         if not self._result_text.value or not self._input_file:
