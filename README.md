@@ -49,7 +49,9 @@
 | | 解压 RAR | 🔧 unrar |
 | **文字识别** | 从图片识别文字 | 🔧 Tesseract |
 | | 提取 PDF 内嵌文字 | ✅ |
-| **AI** | 提示词出图（OpenAI Images 兼容接口）：31 个内置模板、风格增强、我的模板，可订阅 GitHub 开源提示词库或导入 JSON / CSV / Markdown | 🔧 API Key |
+| **AI** | 提示词出图（OpenAI Images 兼容接口），生成结果在页面内直接预览，保留最近生成记录 | 🔧 API Key |
+| | 12 类 31 个内置模板；风格增强词与反向提示词；「我的模板」支持 `{变量}`、收藏与导出 | 🔧 API Key |
+| | 一键导入开源提示词库（Awesome GPT-4o Images、Awesome GPT Image 2 Prompts，注明出处），或从网址 / JSON / CSV / Markdown 导入 | 🔧 API Key |
 | | 用自然语言描述任务、自动执行 | 🚧 |
 | **应用** | 全局功能搜索、最近操作记录、偏好设置 | ✅ |
 
