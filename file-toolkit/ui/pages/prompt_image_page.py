@@ -23,6 +23,7 @@ import flet as ft
 from core.prompt_image import modifiers as mods
 from core.prompt_image import sources as src
 from core.prompt_image import templates as tpl
+from core.prompt_image.option_labels import option_label
 from services import prompt_image_service, settings_service
 from services import prompt_library_service as lib
 from ui.palette import c
@@ -627,7 +628,7 @@ class PromptImagePage(ft.Column):
             if var_type == "select" and var.get("options"):
                 ctrl: ft.Control = _dropdown(
                     value=default or var["options"][0], dense=True, text_size=13,
-                    options=[ft.dropdown.Option(o) for o in var["options"]],
+                    options=[ft.dropdown.Option(o, option_label(o)) for o in var["options"]],
                     border_radius=10, expand=True,
                     on_select=lambda _e: self._refresh_prompt(),
                 )

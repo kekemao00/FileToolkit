@@ -110,3 +110,11 @@ def test_export_round_trip():
     _meta, items = src.parse_source(src.to_export_json("导出", [t]), "rt")
     assert items[0]["prompt_template"] == t["prompt_template"]
     assert items[0]["variables"] == t["variables"]
+
+
+def test_select_options_have_chinese_labels():
+    from core.prompt_image.option_labels import OPTION_LABELS
+    missing = [o for t in tpl.TEMPLATES for v in t["variables"] if v["type"] == "select"
+               for o in v["options"] if o not in OPTION_LABELS
+               and not o.isdigit() and not o.startswith(("Kodak", "Fujifilm", "CineStill"))]
+    assert missing == []
