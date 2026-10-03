@@ -49,7 +49,7 @@
 | | 解压 RAR | 🔧 unrar |
 | **文字识别** | 从图片识别文字 | 🔧 Tesseract |
 | | 提取 PDF 内嵌文字 | ✅ |
-| **AI** | 提示词出图（OpenAI Images 兼容接口） | 🔧 API Key |
+| **AI** | 提示词出图（OpenAI Images 兼容接口）：31 个内置模板、风格增强、我的模板，可订阅 GitHub 开源提示词库或导入 JSON / CSV / Markdown | 🔧 API Key |
 | | 用自然语言描述任务、自动执行 | 🚧 |
 | **应用** | 全局功能搜索、最近操作记录、偏好设置 | ✅ |
 
