@@ -34,9 +34,9 @@ class SubPageHeader(ft.Container):
             content=ft.Row(
                 controls=[
                     ft.IconButton(
-                        ft.Icons.ARROW_BACK,
+                        ft.Icons.ARROW_BACK_OUTLINED,
                         on_click=lambda _: on_back(),
-                        icon_color=c("#455c7f", "fg"),
+                        icon_color=c("ink-2", "fg"),
                     ),
                     ft.Container(
                         content=ft.Icon(icon, color=icon_color, size=20),
@@ -50,8 +50,8 @@ class SubPageHeader(ft.Container):
                         title,
                         size=20,
                         weight=ft.FontWeight.W_600,
-                        color=c("#162f50", "fg"),
-                        font_family="42dot Sans",
+                        color=c("ink", "fg"),
+                        font_family="Geist",
                     ),
                 ],
                 spacing=12,

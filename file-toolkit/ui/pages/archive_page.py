@@ -1,7 +1,7 @@
-"""压缩解压中心 — 基于 Figma 设计稿 1:1 还原
+"""压缩解压中心
 
-布局：左侧主内容区（标题+拖拽区+文件缩略卡片网格） + 右侧参数面板
-遵循核心模式：三视图互斥切换、功能卡片、参数面板、文件列表、拖拽区
+布局：左侧主内容区（标题 + 选择文件区 + 文件卡片网格） + 右侧参数面板（白色卡片）
+三视图互斥切换（工作区 / 处理中 / 完成），外观与 ui/components/workbench.py 一致。
 """
 import asyncio
 import subprocess
@@ -15,19 +15,20 @@ from core.archive.handler import compress, extract
 from core.models import TaskResult, TaskStatus
 from services import history_service, settings_service
 from services.task_service import run_task
+from ui import style as s
 from ui.components.top_bar import TopBar
 from ui.palette import c
 from ui.utils import notify_task_done, show_toast
 
 _FUNCTIONS = [
-    {"label": "ZIP 压缩", "desc": "通用兼容格式", "icon": ft.Icons.FOLDER_ZIP,
-     "key": "compress_zip", "color": "#005f98", "bg": "#d5e3ff"},
-    {"label": "7Z 压缩", "desc": "高压缩比", "icon": ft.Icons.INVENTORY_2,
-     "key": "compress_7z", "color": "#d97706", "bg": "#fef3c7"},
-    {"label": "TAR.GZ", "desc": "Linux 常用", "icon": ft.Icons.ARCHIVE,
-     "key": "compress_targz", "color": "#059669", "bg": "#d1fae5"},
-    {"label": "解压", "desc": "ZIP/7Z/RAR/TAR", "icon": ft.Icons.UNARCHIVE,
-     "key": "extract", "color": "#7c3aed", "bg": "#ede9fe"},
+    {"label": "ZIP 压缩", "desc": "通用兼容格式", "icon": ft.Icons.FOLDER_ZIP_OUTLINED,
+     "key": "compress_zip"},
+    {"label": "7Z 压缩", "desc": "高压缩比", "icon": ft.Icons.INVENTORY_2_OUTLINED,
+     "key": "compress_7z"},
+    {"label": "TAR.GZ", "desc": "Linux 常用", "icon": ft.Icons.ARCHIVE_OUTLINED,
+     "key": "compress_targz"},
+    {"label": "解压", "desc": "ZIP/7Z/RAR/TAR", "icon": ft.Icons.UNARCHIVE_OUTLINED,
+     "key": "extract"},
 ]
 
 _ARCHIVE_EXTS = {"zip", "7z", "rar", "tar", "gz", "bz2", "xz", "tgz"}
@@ -45,160 +46,70 @@ class ArchivePage(ft.Column):
         self._output_dir: Path | None = None
 
         # 处理中状态组件
-        self._progress_title = ft.Text(
-            "", size=30, weight=ft.FontWeight.W_600, color=c("#162f50", "fg"),
-            font_family="42dot Sans",
-        )
-        self._progress_pct = ft.Text(
-            "0%", size=30, weight=ft.FontWeight.BOLD, color=c("#005f98", "fg"),
-            font_family="42dot Sans",
-        )
+        self._progress_title = s.text(kind="title")
+        self._progress_pct = s.text("0%", "mono", color="ink")
         self._progress_bar = ft.ProgressBar(
-            value=0, color=c("#005f98", "fg"), bgcolor=c("#d5e3ff"), bar_height=10,
-            border_radius=5,
+            value=0, color=c("ink"), bgcolor=c("surface-3"), bar_height=4, border_radius=2,
         )
-        self._progress_file_rows = ft.Column(spacing=8)
-        self._progress_cancel_btn = ft.FilledButton(
-            "全部取消",
-            style=ft.ButtonStyle(bgcolor=c("#be123c"), color=c("#ffffff", "fg")),
-            on_click=lambda _: self._cancel(),
-        )
+        self._progress_file_rows = ft.Column(spacing=6)
+        self._progress_cancel_btn = s.button("全部取消", lambda _: self._cancel(), kind="secondary")
 
         # 完成状态组件
-        self._result_title = ft.Text(
-            "", size=30, weight=ft.FontWeight.W_600, color=c("#162f50", "fg"),
-            font_family="42dot Sans",
-        )
-        self._result_file_rows = ft.Column(spacing=8)
-        self._result_open_btn = ft.FilledButton(
-            "打开文件夹",
-            style=ft.ButtonStyle(bgcolor=c("#005f98"), color=c("#ffffff", "fg")),
-            on_click=self._open_output_folder,
-        )
-        self._result_reset_btn = ft.TextButton(
-            "继续处理",
-            style=ft.ButtonStyle(color=c("#455c7f", "fg")),
-            on_click=lambda _: self._reset(),
-        )
+        self._result_title = s.text(kind="title", expand=True)
+        self._result_file_rows = ft.Column(spacing=6)
+        self._result_open_btn = s.button("打开文件夹", self._open_output_folder,
+                                         icon=ft.Icons.FOLDER_OPEN_OUTLINED)
+        self._result_reset_btn = s.button("继续处理", lambda _: self._reset(), kind="secondary")
 
         # 密码输入（加密可选）
-        self._password_field = ft.TextField(
-            hint_text="访问密码（可选）",
-            border_radius=12, bgcolor=c("#d5e3ff"), border_color="transparent",
-            text_size=14, expand=True, password=True, can_reveal_password=True,
+        self._password_field = s.text_field(
+            hint="访问密码（可选）", expand=True, password=True, can_reveal_password=True,
         )
 
         # 分卷大小（MB，可选）
-        self._volume_field = ft.TextField(
-            hint_text="分卷大小 MB（留空不分卷）",
-            border_radius=12, bgcolor=c("#d5e3ff"), border_color="transparent",
-            text_size=14, expand=True, keyboard_type=ft.KeyboardType.NUMBER,
+        self._volume_field = s.text_field(
+            hint="分卷大小 MB（留空不分卷）", expand=True, keyboard_type=ft.KeyboardType.NUMBER,
         )
 
         # 固实压缩开关（仅视觉占位，当前后端未实现）
-        self._solid_enabled = ft.Switch(
-            value=False, active_color=c("#005f98", "fg"),
-            inactive_thumb_color=c("#ffffff", "fg"), inactive_track_color=c("#cbdeff"),
-            tooltip="固实压缩暂未开启",
-        )
+        self._solid_enabled = ft.Switch(value=False, tooltip="固实压缩暂未开启")
 
-        # 文件列表（缩略图卡片网格）
+        # 文件列表（卡片网格）
         self._file_list = ft.Row(
             controls=[],
             wrap=True,
-            spacing=12,
-            run_spacing=12,
+            spacing=10,
+            run_spacing=10,
         )
-        self._file_count = ft.Text("待处理文件 (0)", size=18, color=c("#162f50", "fg"),
-                                   font_family="42dot Sans")
+        self._file_count = s.text("待处理文件 (0)", "title")
 
-        # 运行按钮
-        self._run_btn = ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Icon(ft.Icons.PLAY_ARROW, color=c("#ffffff", "fg"), size=20),
-                    ft.Text("立即处理 (0个文件)", size=18, color=c("#ffffff", "fg"),
-                            font_family="42dot Sans"),
-                ],
-                spacing=8,
-                alignment=ft.MainAxisAlignment.CENTER,
-            ),
-            bgcolor=c("#005f98"),
-            gradient=ft.LinearGradient(
-                begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
-                colors=[c("#005f98"), c("#00a3ff")],
-            ),
-            border_radius=16,
-            padding=ft.padding.symmetric(vertical=16),
-            shadow=ft.BoxShadow(
-                blur_radius=25, spread_radius=-5,
-                color=ft.Colors.with_opacity(0.2, c("#005f98", "fg")),
-                offset=ft.Offset(0, 20),
-            ),
-            on_click=self._start_task,
-            ink=True,
-            opacity=0.4,
-        )
+        # 运行按钮（会变形：按钮 → 加载圆 → 对勾 / 错误）
+        self._run_btn = s.MorphButton(self._start_task, label="立即处理 (0个文件)")
+        self._run_btn.set_label("立即处理 (0个文件)", enabled=False)
 
-        # 功能卡片（2×2 网格）
+        # 功能卡片（2×2 网格）：选中态是强调色描边 + 浅底
         self._func_btns = []
-        for idx, f in enumerate(_FUNCTIONS):
-            active = f["key"] == self._selected_func
-            icon_block = ft.Container(
-                content=ft.Icon(f["icon"],
-                                color=c("#ffffff", "fg") if active else c(f["color"], "fg"), size=28),
-                width=56, height=56,
-                bgcolor=c("#005f98") if active else c(f["bg"]),
-                border_radius=14,
-                alignment=ft.Alignment(0, 0),
-            )
-            badge = ft.Container(
-                content=ft.Text(
-                    str(idx + 1), size=10,
-                    color=c("#005f98", "fg") if active else c("#ffffff", "fg"),
-                    weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER,
-                ),
-                width=20, height=20,
-                bgcolor=c("#ffffff") if active else c("#005f98"),
-                border_radius=9999,
-                alignment=ft.Alignment(0, 0),
-                right=0, top=0,
-            )
-            icon_stack = ft.Stack(controls=[icon_block, badge], width=60, height=60)
+        for f in _FUNCTIONS:
             btn = ft.Container(
                 content=ft.Column(
                     controls=[
-                        icon_stack,
-                        ft.Text(
-                            f["label"], size=13, weight=ft.FontWeight.W_600,
-                            color=c("#ffffff", "fg") if active else c("#162f50", "fg"),
-                            font_family="42dot Sans",
-                        ),
-                        ft.Text(
-                            f["desc"], size=11,
-                            color=ft.Colors.with_opacity(0.7, c("#ffffff", "fg")) if active else c("#455c7f", "fg"),
-                            font_family="Plus Jakarta Sans",
-                            max_lines=2, overflow=ft.TextOverflow.ELLIPSIS,
-                        ),
+                        ft.Icon(f["icon"], size=16),
+                        s.text(f["label"], "label"),
+                        s.text(f["desc"], "caption", max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                     ],
-                    spacing=6,
+                    spacing=4,
                     horizontal_alignment=ft.CrossAxisAlignment.START,
                 ),
-                bgcolor=c("#005f98") if active else c("#ffffff"),
-                border=ft.border.all(2, c("#005f98") if active else c("#e2e8f0")),
-                border_radius=14,
-                padding=ft.padding.all(14),
+                border_radius=s.R_BUTTON + 1,
+                padding=ft.padding.all(12),
                 on_click=lambda _, k=f["key"]: self._select_func(k),
-                ink=True,
                 data=f["key"],
                 expand=True,
-                shadow=ft.BoxShadow(
-                    blur_radius=4 if active else 2,
-                    color=ft.Colors.with_opacity(0.08 if active else 0.04, c("#000000", "fg")),
-                    offset=ft.Offset(0, 2),
-                ),
+                animate=s.snappy(),
             )
+            btn.on_hover = lambda e, b=btn: self._func_hover(b, e)
             self._func_btns.append(btn)
+        self._style_func_btns()
 
         self._main_content = self._build_main_content()
         self._build_param_panel()
@@ -249,133 +160,59 @@ class ArchivePage(ft.Column):
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Container(
-                        content=ft.Column(
-                            controls=[
-                                ft.Text(
-                                    "压缩解压中心", size=30,
-                                    weight=ft.FontWeight.W_500,
-                                    color=c("#005f98", "fg"),
-                                    font_family="42dot Sans",
-                                ),
-                                ft.Text(
-                                    "极速无损压缩，主流格式一键互转",
-                                    size=16, color=c("#455c7f", "fg"),
-                                    font_family="42dot Sans",
-                                ),
-                            ],
-                            spacing=4,
-                        ),
-                        padding=ft.padding.only(left=32, right=32, top=32),
+                    ft.Column(
+                        controls=[
+                            s.text("压缩解压中心", "headline"),
+                            s.text("极速无损压缩，主流格式一键互转", "small"),
+                        ],
+                        spacing=4,
                     ),
                     self._build_drop_zone(),
                     self._build_file_list(),
                 ],
-                spacing=24,
+                spacing=16,
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
+            padding=ft.padding.only(left=s.PAGE_X, right=16, top=4, bottom=20),
         )
 
     def _build_drop_zone(self) -> ft.Control:
-        dash_color = ft.Colors.with_opacity(0.3, c("#005f98"))
-
-        def dash_segment() -> ft.Container:
-            return ft.Container(
-                width=16, height=2, bgcolor=dash_color, border_radius=9999,
-            )
-
-        def dash_column() -> ft.Container:
-            return ft.Container(
-                width=2, height=16, bgcolor=dash_color, border_radius=9999,
-            )
-        top_dash = ft.Row(
-            controls=[dash_segment() for _ in range(30)],
-            spacing=8,
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        self._drop_icon = ft.Container(
+            content=ft.Icon(ft.Icons.FOLDER_ZIP_OUTLINED, color=c("ink-2", "fg"), size=20),
+            width=44, height=44, bgcolor=c("surface-2"), border_radius=22,
+            alignment=ft.Alignment(0, 0), animate=s.snappy(),
         )
-        side_dash = ft.Column(
-            controls=[dash_column() for _ in range(10)],
-            spacing=8,
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-        )
-        body = ft.Container(
+        self._drop_zone_body = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.FOLDER_ZIP, color=c("#005f98", "fg"), size=40),
-                        width=72, height=72,
-                        bgcolor=ft.Colors.with_opacity(0.12, c("#005f98")),
-                        border_radius=9999,
-                        alignment=ft.Alignment(0, 0),
-                    ),
-                    ft.Text(
-                        "点击选择文件",
-                        size=18, color=c("#005f98", "fg"),
-                        font_family="42dot Sans",
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Text(
-                        "可多选，压缩时打包为一个文件",
-                        size=14, color=c("#455c7f", "fg"),
-                        font_family="42dot Sans",
-                        text_align=ft.TextAlign.CENTER,
-                    ),
+                    self._drop_icon,
+                    s.text("点击选择文件", "title", text_align=ft.TextAlign.CENTER),
+                    s.text("可多选，压缩时打包为一个文件", "small", text_align=ft.TextAlign.CENTER),
                 ],
-                spacing=10,
+                spacing=8,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=36, horizontal=24),
-            expand=True,
+            bgcolor=c("surface"),
+            border=ft.border.all(1, c("line")),
+            border_radius=s.R_PANEL,
             on_click=self._pick_files,
-            ink=True,
-        )
-        self._drop_zone_body = ft.Container(
-            content=ft.Stack(
-                controls=[
-                    ft.Container(content=body, expand=True, padding=ft.padding.all(0)),
-                    ft.Container(
-                        content=ft.Column(
-                            controls=[
-                                top_dash,
-                                ft.Row(
-                                    controls=[
-                                        side_dash,
-                                        ft.Container(expand=True),
-                                        side_dash,
-                                    ],
-                                    expand=True,
-                                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                                ),
-                                top_dash,
-                            ],
-                            spacing=10,
-                            expand=True,
-                        ),
-                        padding=ft.padding.all(12),
-                        ignore_interactions=True,
-                        expand=True,
-                    ),
-                ],
-            ),
-            border_radius=20,
-            bgcolor=c("#f4f6ff"),
             on_hover=self._on_drop_zone_hover,
-            ink=False,
             expand=True,
-            clip_behavior=ft.ClipBehavior.HARD_EDGE,
+            animate=s.snappy(),
         )
         self._drop_zone_wrapper = ft.Container(
             content=self._drop_zone_body,
-            padding=ft.padding.symmetric(horizontal=32),
-            height=260,
-            animate=ft.Animation(200, ft.AnimationCurve.EASE_IN_OUT),
+            height=168,
+            animate_size=s.default(),
         )
         return self._drop_zone_wrapper
 
     def _on_drop_zone_hover(self, e: ft.ControlEvent) -> None:
-        self._drop_zone_body.bgcolor = (
-            ft.Colors.with_opacity(0.06, c("#005f98")) if e.data == "true" else c("#f4f6ff")
-        )
+        on = e.data in (True, "true")
+        self._drop_zone_body.bgcolor = c("surface-2" if on else "surface")
+        self._drop_zone_body.border = ft.border.all(1, c("line-strong" if on else "line"))
+        self._drop_icon.bgcolor = c("surface-3" if on else "surface-2")
         self._drop_zone_body.update()
 
     def _build_file_list(self) -> ft.Control:
@@ -386,18 +223,14 @@ class ArchivePage(ft.Column):
                         controls=[
                             self._file_count,
                             ft.Container(expand=True),
-                            ft.TextButton(
-                                "清空全部",
-                                style=ft.ButtonStyle(color=c("#005f98", "fg")),
-                                on_click=self._clear_files,
-                            ),
+                            s.button("清空全部", self._clear_files, kind="ghost", height=30),
                         ],
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
                     self._file_list,
                 ],
-                spacing=12,
+                spacing=10,
             ),
-            padding=ft.padding.symmetric(horizontal=32),
             visible=False,
         )
         return self._file_list_container
@@ -407,57 +240,64 @@ class ArchivePage(ft.Column):
         self._volume_section = self._section("分卷大小", self._volume_field)
         self._solid_section = self._section("固实压缩", ft.Row(
             controls=[
-                ft.Icon(ft.Icons.LAYERS, color=c("#162f50", "fg"), size=16),
-                ft.Text("启用固实", size=14, color=c("#162f50", "fg"),
-                        font_family="42dot Sans"),
-                ft.Container(expand=True),
+                ft.Icon(ft.Icons.LAYERS_OUTLINED, color=c("ink-2", "fg"), size=16),
+                s.text("启用固实", "body", expand=True),
                 self._solid_enabled,
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ))
 
-        self._param_panel = ft.Container(
-            content=ft.Column(
+        self._param_panel = s.card(
+            ft.Column(
                 controls=[
-                    ft.Text(
-                        "参数设置", size=20, weight=ft.FontWeight.W_500,
-                        color=c("#005f98", "fg"), font_family="42dot Sans",
-                    ),
-                    self._section("选择功能", ft.Column(
+                    ft.Column(
                         controls=[
-                            ft.Row(controls=[self._func_btns[0], self._func_btns[1]],
-                                   spacing=8),
-                            ft.Row(controls=[self._func_btns[2], self._func_btns[3]],
-                                   spacing=8),
+                            s.text("参数设置", "title"),
+                            self._section("选择功能", ft.Column(
+                                controls=[
+                                    ft.Row(controls=[self._func_btns[0], self._func_btns[1]], spacing=6),
+                                    ft.Row(controls=[self._func_btns[2], self._func_btns[3]], spacing=6),
+                                ],
+                                spacing=6,
+                            )),
+                            self._password_section,
+                            self._volume_section,
+                            self._solid_section,
                         ],
-                        spacing=8,
-                    )),
-                    self._password_section,
-                    self._volume_section,
-                    self._solid_section,
-                    self._run_btn,
-                    ft.Text("本地处理 • 隐私保护已开启", size=10, color=c("#455c7f", "fg"),
-                            font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
+                        spacing=20,
+                        scroll=ft.ScrollMode.AUTO,
+                        expand=True,
+                    ),
+                    ft.Row(controls=[self._run_btn], alignment=ft.MainAxisAlignment.CENTER),
+                    s.text("本地处理 · 隐私保护已开启", "caption", text_align=ft.TextAlign.CENTER),
                 ],
-                spacing=24,
-                scroll=ft.ScrollMode.AUTO,
+                spacing=10,
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
                 expand=True,
             ),
             width=320,
-            bgcolor=c("#f4f6ff"),
-            border_radius=16,
-            border=ft.border.only(left=ft.BorderSide(1, c("#d5e3ff"))),
-            padding=ft.padding.all(24),
+            margin=ft.margin.only(right=s.PAGE_X, bottom=20, top=4),
         )
         self._update_param_sections()
         return self._param_panel
 
     def _section(self, label: str, content: ft.Control) -> ft.Control:
-        return ft.Column(controls=[
-            ft.Text(label.upper(), size=12, color=c("#455c7f", "fg"),
-                    font_family="42dot Sans"),
-            content,
-        ], spacing=12)
+        return ft.Column(controls=[s.text(label, "caption"), content], spacing=8)
+
+    def _style_func_btns(self) -> None:
+        for btn in self._func_btns:
+            active = btn.data == self._selected_func
+            btn.bgcolor = c("accent-soft") if active else c("surface")
+            btn.border = ft.border.all(1, c("accent") if active else c("line"))
+            btn.content.controls[0].color = c("accent-fg" if active else "ink-2", "fg")
+
+    def _func_hover(self, btn: ft.Container, e: ft.ControlEvent) -> None:
+        if btn.data == self._selected_func:
+            return
+        on = e.data in (True, "true")
+        btn.bgcolor = c("surface-2" if on else "surface")
+        btn.border = ft.border.all(1, c("line-strong" if on else "line"))
+        btn.update()
 
     def _update_param_sections(self) -> None:
         """按功能控制参数子区显示：解压时隐藏密码/分卷/固实。"""
@@ -488,18 +328,18 @@ class ArchivePage(ft.Column):
                 ],
                 spacing=12,
             ),
-            bgcolor=c("#ffffff"),
-            border=ft.border.all(1, c("#e2e8f0")),
-            border_radius=16,
+            bgcolor=c("surface"),
+            border=ft.border.all(1, c("line")),
+            border_radius=s.R_PANEL,
             padding=ft.padding.all(24),
-            margin=ft.margin.symmetric(horizontal=32),
+            margin=ft.margin.only(left=s.PAGE_X, right=16, top=4),
         )
 
     def _build_complete_view(self) -> ft.Container:
-        self._result_icon = ft.Icon(ft.Icons.CHECK_CIRCLE, color=c("#16a34a", "fg"), size=28)
+        self._result_icon = ft.Icon(ft.Icons.CHECK_ROUNDED, color="#FFFFFF", size=16)
         self._result_icon_box = ft.Container(
-            content=self._result_icon, width=44, height=44,
-            bgcolor=c("#d1fae5"), border_radius=9999, alignment=ft.Alignment(0, 0),
+            content=self._result_icon, width=32, height=32,
+            bgcolor=c("accent"), border_radius=16, alignment=ft.Alignment(0, 0),
         )
         return ft.Container(
             content=ft.Column(
@@ -521,44 +361,21 @@ class ArchivePage(ft.Column):
                         ],
                     ),
                 ],
-                spacing=16,
+                spacing=14,
             ),
-            bgcolor=c("#ffffff"),
-            border=ft.border.all(1, c("#d1fae5")),
-            border_radius=16,
+            bgcolor=c("surface"),
+            border=ft.border.all(1, c("line")),
+            border_radius=s.R_PANEL,
             padding=ft.padding.all(24),
-            margin=ft.margin.symmetric(horizontal=32),
+            margin=ft.margin.only(left=s.PAGE_X, right=16, top=4),
         )
 
     def _select_func(self, key: str) -> None:
         self._selected_func = key
-        for i, btn in enumerate(self._func_btns):
-            f = _FUNCTIONS[i]
-            active = btn.data == key
-            btn.bgcolor = c("#005f98") if active else c("#ffffff")
-            btn.border = ft.border.all(2, c("#005f98") if active else c("#e2e8f0"))
-            btn.shadow = ft.BoxShadow(
-                blur_radius=4 if active else 2,
-                color=ft.Colors.with_opacity(0.08 if active else 0.04, c("#000000", "fg")),
-                offset=ft.Offset(0, 2),
-            )
-            col = btn.content
-            icon_stack = col.controls[0]
-            icon_block = icon_stack.controls[0]
-            badge = icon_stack.controls[1]
-            icon_block.bgcolor = c("#005f98") if active else c(f["bg"])
-            icon_block.content.color = c("#ffffff", "fg") if active else c(f["color"], "fg")
-            badge.bgcolor = c("#ffffff") if active else c("#005f98")
-            badge.content.color = c("#005f98", "fg") if active else c("#ffffff", "fg")
-            col.controls[1].color = c("#ffffff", "fg") if active else c("#162f50", "fg")
-            col.controls[2].color = (
-                ft.Colors.with_opacity(0.7, c("#ffffff", "fg")) if active else c("#455c7f", "fg")
-            )
+        self._style_func_btns()
         self._update_param_sections()
         if self._files:
-            self._run_btn.content.controls[1].value = (
-                f"立即处理 ({len(self._files)}个文件)"
-            )
+            self._run_btn.set_label(f"立即处理 ({len(self._files)}个文件)")
         self.update()
 
     def _pick_files(self, _) -> None:
@@ -604,7 +421,7 @@ class ArchivePage(ft.Column):
         self._file_count.value = f"待处理文件 ({len(self._files)})"
         has_files = bool(self._files)
         self._file_list_container.visible = has_files
-        self._drop_zone_wrapper.height = 140 if has_files else 260
+        self._drop_zone_wrapper.height = 120 if has_files else 168
         for f in self._files:
             try:
                 if f.is_dir():
@@ -621,82 +438,50 @@ class ArchivePage(ft.Column):
             is_archive = ext in _ARCHIVE_EXTS
             is_dir = f.is_dir() if f.exists() else False
             if is_dir:
-                thumb_icon = ft.Icons.FOLDER
-                tag_color = c("#d97706")
-                tag_bg = c("#fef3c7")
+                thumb_icon = ft.Icons.FOLDER_OUTLINED
                 tag_text = "文件夹"
             elif is_archive:
-                thumb_icon = ft.Icons.FOLDER_ZIP
-                tag_color = c("#7c3aed")
-                tag_bg = c("#ede9fe")
+                thumb_icon = ft.Icons.FOLDER_ZIP_OUTLINED
                 tag_text = ext.upper()
             else:
-                thumb_icon = ft.Icons.INSERT_DRIVE_FILE
-                tag_color = c("#005f98")
-                tag_bg = c("#d5e3ff")
+                thumb_icon = ft.Icons.INSERT_DRIVE_FILE_OUTLINED
                 tag_text = ext.upper() or "FILE"
-            thumb = ft.Container(
-                content=ft.Icon(thumb_icon, color=tag_color, size=24),
-                width=48, height=48, bgcolor=tag_bg, border_radius=8,
-                alignment=ft.Alignment(0, 0),
-            )
-            card = ft.Container(
-                content=ft.Column(
+            card = s.card(
+                ft.Column(
                     controls=[
                         ft.Row(
                             controls=[
-                                thumb,
                                 ft.Container(
-                                    content=ft.Text(
-                                        tag_text, size=10,
-                                        weight=ft.FontWeight.BOLD,
-                                        color=tag_color,
-                                        font_family="Plus Jakarta Sans",
-                                    ),
-                                    bgcolor=tag_bg,
-                                    border_radius=6,
-                                    padding=ft.padding.symmetric(
-                                        horizontal=6, vertical=2),
+                                    content=ft.Icon(thumb_icon, color=c("ink-2", "fg"), size=16),
+                                    width=32, height=32, bgcolor=c("surface-2"), border_radius=s.R_BUTTON,
+                                    alignment=ft.Alignment(0, 0),
+                                ),
+                                ft.Container(
+                                    content=s.text(tag_text, "caption", color="ink-2"),
+                                    height=22,
+                                    alignment=ft.Alignment(0, 0),
+                                    border=ft.border.all(1, c("line-strong")),
+                                    border_radius=11,
+                                    padding=ft.padding.symmetric(horizontal=8),
                                 ),
                                 ft.Container(expand=True),
-                                ft.IconButton(
-                                    icon=ft.Icons.CLOSE,
-                                    icon_color=c("#94a3b8", "fg"),
-                                    icon_size=14,
-                                    tooltip="移除",
-                                    on_click=lambda _, path=f: self._remove_file(path),
-                                    style=ft.ButtonStyle(
-                                        overlay_color=ft.Colors.with_opacity(
-                                            0.08, c("#dc2626")),
-                                        padding=ft.padding.all(4),
-                                    ),
-                                ),
+                                s.icon_button(ft.Icons.CLOSE_OUTLINED, lambda _, path=f: self._remove_file(path),
+                                              tooltip="移除", size=26, color="ink-3"),
                             ],
                             spacing=8,
-                            vertical_alignment=ft.CrossAxisAlignment.START,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
-                        ft.Text(
-                            f.name, size=13, color=c("#162f50", "fg"),
-                            font_family="42dot Sans",
-                            weight=ft.FontWeight.W_500,
-                            max_lines=2, overflow=ft.TextOverflow.ELLIPSIS,
-                        ),
-                        ft.Text(size_str, size=11, color=c("#455c7f", "fg"),
-                                font_family="Plus Jakarta Sans"),
+                        s.text(f.name, "body-medium", max_lines=2, overflow=ft.TextOverflow.ELLIPSIS),
+                        s.text(size_str, "mono"),
                     ],
                     spacing=6,
                 ),
-                bgcolor=c("#ffffff"),
-                border=ft.border.all(1, c("#e2e8f0")),
+                padding=12,
                 border_radius=12,
-                padding=ft.padding.all(12),
-                width=220,
+                width=210,
             )
             self._file_list.controls.append(card)
-        self._run_btn.content.controls[1].value = (
-            f"立即处理 ({len(self._files)}个文件)"
-        )
-        self._run_btn.opacity = 1.0 if has_files else 0.4
+        self._run_btn.set_label(f"立即处理 ({len(self._files)}个文件)", enabled=has_files)
         self.update()
 
     def _clear_files(self, _) -> None:
@@ -717,18 +502,16 @@ class ArchivePage(ft.Column):
         self._is_narrow = narrow
         if narrow:
             self._param_panel.width = None
-            self._param_panel.border_radius = 0
-            self._param_panel.border = ft.border.only(
-                top=ft.BorderSide(1, c("#d5e3ff")))
+            self._param_panel.margin = ft.margin.only(left=s.PAGE_X, right=s.PAGE_X, bottom=20)
+            self._run_btn.full_width = 320
             new_body = ft.Column(
                 controls=[self._main_content, self._param_panel],
                 expand=True, spacing=0, scroll=ft.ScrollMode.AUTO,
             )
         else:
             self._param_panel.width = 320
-            self._param_panel.border_radius = 16
-            self._param_panel.border = ft.border.only(
-                left=ft.BorderSide(1, c("#d5e3ff")))
+            self._param_panel.margin = ft.margin.only(right=s.PAGE_X, bottom=20, top=4)
+            self._run_btn.full_width = 278
             new_body = ft.Row(
                 controls=[self._main_content, self._param_panel],
                 expand=True, spacing=0,
@@ -781,8 +564,8 @@ class ArchivePage(ft.Column):
             await run_task(fn, kwargs, self._on_progress, self._on_complete)
         self._task = self._page.run_task(_run)
 
-    def _on_progress(self, c, t, d) -> None:
-        self._update_processing_progress(c, t, d)
+    def _on_progress(self, current, total, desc) -> None:
+        self._update_processing_progress(current, total, desc)
 
     def _on_complete(self, result: TaskResult) -> None:
         history_service.save_task(
@@ -811,6 +594,7 @@ class ArchivePage(ft.Column):
         self._processing_view.visible = False
         self._complete_view.visible = False
         self.update()
+        self._run_btn.morph_idle()
 
     def _show_processing(self, file_count_label: str) -> None:
         self._progress_title.value = "正在处理…"
@@ -821,6 +605,7 @@ class ArchivePage(ft.Column):
         self._processing_view.visible = True
         self._complete_view.visible = False
         self.update()
+        self._run_btn.morph_loading()
 
     def _update_processing_progress(self, current: int, total: int,
                                     desc: str) -> None:
@@ -830,14 +615,13 @@ class ArchivePage(ft.Column):
         row_idx = current - 1
         row = ft.Row(
             controls=[
-                ft.Icon(ft.Icons.FOLDER_ZIP, color=c("#005f98", "fg"), size=16),
-                ft.Text(desc, size=13, color=c("#162f50", "fg"), expand=True,
-                        max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                ft.Icon(ft.Icons.FOLDER_ZIP_OUTLINED, color=c("ink-3", "fg"), size=16),
+                s.text(desc, "body", expand=True, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                 ft.ProgressBar(
-                    value=1.0, color=c("#005f98", "fg"), bgcolor=c("#d5e3ff"),
+                    value=1.0, color=c("ink"), bgcolor=c("surface-3"),
                     height=4, border_radius=2, width=80,
                 ),
-                ft.Text(f"{current}/{total}", size=12, color=c("#455c7f", "fg"), width=40),
+                s.text(f"{current}/{total}", "mono", width=40),
             ],
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -849,23 +633,15 @@ class ArchivePage(ft.Column):
         self._processing_view.update()
 
     def _show_complete(self, result: TaskResult) -> None:
-        if result.status == TaskStatus.SUCCESS:
-            self._result_title.value = "处理完成！"
-            self._result_title.color = c("#16a34a", "fg")
+        ok = result.status == TaskStatus.SUCCESS
+        if ok:
+            self._result_title.value = "处理完成"
+            self._result_title.color = c("ink", "fg")
         else:
             self._result_title.value = f"处理失败：{result.error_message or '未知错误'}"
-            self._result_title.color = c("#dc2626", "fg")
-
-        if result.status == TaskStatus.SUCCESS:
-            self._result_icon.icon = ft.Icons.CHECK_CIRCLE
-            self._result_icon.color = c("#16a34a", "fg")
-            self._result_icon_box.bgcolor = c("#d1fae5")
-            self._complete_view.border = ft.border.all(1, c("#d1fae5"))
-        else:
-            self._result_icon.icon = ft.Icons.ERROR_OUTLINE
-            self._result_icon.color = c("#dc2626", "fg")
-            self._result_icon_box.bgcolor = c("#fee2e2")
-            self._complete_view.border = ft.border.all(1, c("#fecaca"))
+            self._result_title.color = c("danger", "fg")
+        self._result_icon.icon = ft.Icons.CHECK_ROUNDED if ok else ft.Icons.PRIORITY_HIGH_ROUNDED
+        self._result_icon_box.bgcolor = c("accent") if ok else c("danger")
 
         self._result_file_rows.controls.clear()
         # 对于压缩：output_files 是生成的归档；对于解压：output_dir 是解压目标
@@ -878,38 +654,27 @@ class ArchivePage(ft.Column):
                     ft.Container(
                         content=ft.Row(
                             controls=[
-                                ft.Icon(ft.Icons.FOLDER_OPEN, color=c("#005f98", "fg"),
+                                ft.Icon(ft.Icons.FOLDER_OPEN_OUTLINED, color=c("ink-3", "fg"),
                                         size=16),
-                                ft.Text(
-                                    str(result.output_dir), size=13,
-                                    color=c("#162f50", "fg"), expand=True, max_lines=1,
-                                    overflow=ft.TextOverflow.ELLIPSIS,
-                                ),
+                                s.text(str(result.output_dir), "body", expand=True, max_lines=1,
+                                       overflow=ft.TextOverflow.ELLIPSIS),
                                 ft.Container(
-                                    content=ft.Text(
-                                        "已解压", size=10, color=c("#16a34a", "fg"),
-                                        weight=ft.FontWeight.BOLD,
-                                    ),
-                                    bgcolor=c("#dcfce7"),
-                                    border_radius=6,
-                                    padding=ft.padding.symmetric(
-                                        horizontal=8, vertical=2),
+                                    content=s.text("已解压", "caption", color="accent-fg"),
+                                    height=22, alignment=ft.Alignment(0, 0),
+                                    bgcolor=c("accent-soft"),
+                                    border_radius=11,
+                                    padding=ft.padding.symmetric(horizontal=8),
                                 ),
-                                ft.IconButton(
-                                    icon=ft.Icons.FOLDER_OPEN,
-                                    icon_color=c("#005f98", "fg"),
-                                    icon_size=16,
-                                    tooltip="打开目录",
-                                    on_click=lambda _, p=result.output_dir:
-                                        self._open_dir(p),
-                                ),
+                                s.icon_button(ft.Icons.FOLDER_OPEN_OUTLINED,
+                                              lambda _, p=result.output_dir: self._open_dir(p),
+                                              tooltip="打开目录", size=28),
                             ],
                             spacing=8,
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
-                        bgcolor=c("#f8fafc"),
-                        border_radius=8,
-                        padding=ft.padding.symmetric(horizontal=12, vertical=8),
+                        bgcolor=c("surface-2"),
+                        border_radius=s.R_INPUT,
+                        padding=ft.padding.only(left=12, right=4, top=4, bottom=4),
                     )
                 )
             except (OSError, AttributeError):
@@ -920,49 +685,39 @@ class ArchivePage(ft.Column):
                     ft.Container(
                         content=ft.Row(
                             controls=[
-                                ft.Icon(ft.Icons.FOLDER_ZIP, color=c("#005f98", "fg"),
+                                ft.Icon(ft.Icons.FOLDER_ZIP_OUTLINED, color=c("ink-3", "fg"),
                                         size=16),
-                                ft.Text(
-                                    fp.name, size=13, color=c("#162f50", "fg"),
-                                    expand=True, max_lines=1,
-                                    overflow=ft.TextOverflow.ELLIPSIS,
-                                ),
+                                s.text(fp.name, "body", expand=True, max_lines=1,
+                                       overflow=ft.TextOverflow.ELLIPSIS),
                                 ft.Container(
-                                    content=ft.Text(
-                                        "已完成", size=10, color=c("#16a34a", "fg"),
-                                        weight=ft.FontWeight.BOLD,
-                                    ),
-                                    bgcolor=c("#dcfce7"),
-                                    border_radius=6,
-                                    padding=ft.padding.symmetric(
-                                        horizontal=8, vertical=2),
+                                    content=s.text("已完成", "caption", color="accent-fg"),
+                                    height=22, alignment=ft.Alignment(0, 0),
+                                    bgcolor=c("accent-soft"),
+                                    border_radius=11,
+                                    padding=ft.padding.symmetric(horizontal=8),
                                 ),
-                                ft.IconButton(
-                                    icon=ft.Icons.FOLDER_OPEN,
-                                    icon_color=c("#005f98", "fg"),
-                                    icon_size=16,
-                                    tooltip="打开所在文件夹",
-                                    on_click=lambda _, p=fp: self._open_file_location(p),
-                                ),
+                                s.icon_button(ft.Icons.FOLDER_OPEN_OUTLINED,
+                                              lambda _, p=fp: self._open_file_location(p),
+                                              tooltip="打开所在文件夹", size=28),
                             ],
                             spacing=8,
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
-                        bgcolor=c("#f8fafc"),
-                        border_radius=8,
-                        padding=ft.padding.symmetric(horizontal=12, vertical=8),
+                        bgcolor=c("surface-2"),
+                        border_radius=s.R_INPUT,
+                        padding=ft.padding.only(left=12, right=4, top=4, bottom=4),
                     )
                 )
             if len(display_files) > 8:
                 self._result_file_rows.controls.append(
-                    ft.Text(f"…共 {len(display_files)} 个文件",
-                            size=12, color=c("#455c7f", "fg"))
+                    s.text(f"…共 {len(display_files)} 个文件", "small")
                 )
 
         self._workspace_view.visible = False
         self._processing_view.visible = False
         self._complete_view.visible = True
         self.update()
+        self._run_btn.morph_result(ok)
 
     def _open_output_folder(self, _) -> None:
         if self._output_dir and self._output_dir.exists():

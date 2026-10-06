@@ -63,23 +63,21 @@ class PdfPage(Workbench):
     SUBTITLE = "合并、拆分、压缩、格式互转与加密水印"
     MODULE = "pdf"
     PICK_LABEL = "点击选择文件"
-    PICK_ICON = ft.Icons.UPLOAD_FILE
-    FILE_ICON = ft.Icons.PICTURE_AS_PDF
-    FILE_ICON_COLOR = "#dc2626"
-    FILE_ICON_BG = "#fee2e2"
+    PICK_ICON = ft.Icons.UPLOAD_FILE_OUTLINED
+    FILE_ICON = ft.Icons.PICTURE_AS_PDF_OUTLINED
     FUNCTIONS = [
-        WorkbenchFunction("merge", "合并", "多个 PDF 按顺序合成一个", ft.Icons.MERGE,
-                          "#005f98", "#d5e3ff", _PDF, min_files=2, orderable=True),
-        WorkbenchFunction("split", "拆分", "按页数、页码范围或逐页", ft.Icons.CONTENT_CUT,
-                          "#d97706", "#fef3c7", _PDF),
-        WorkbenchFunction("compress", "压缩", "减小文件体积", ft.Icons.COMPRESS,
-                          "#059669", "#d1fae5", _PDF),
+        WorkbenchFunction("merge", "合并", "多个 PDF 按顺序合成一个", ft.Icons.MERGE_OUTLINED,
+                          _PDF, min_files=2, orderable=True),
+        WorkbenchFunction("split", "拆分", "按页数、页码范围或逐页", ft.Icons.CONTENT_CUT_OUTLINED,
+                          _PDF),
+        WorkbenchFunction("compress", "压缩", "减小文件体积", ft.Icons.COMPRESS_OUTLINED,
+                          _PDF),
         WorkbenchFunction("to_office", "转 Office", "PDF 转 Word / Excel / PPT", ft.Icons.DESCRIPTION_OUTLINED,
-                          "#7c3aed", "#ede9fe", _PDF),
+                          _PDF),
         WorkbenchFunction("from_office", "Office 转 PDF", "Word / Excel / PPT 转 PDF", ft.Icons.PICTURE_AS_PDF_OUTLINED,
-                          "#0891b2", "#cffafe", _OFFICE),
+                          _OFFICE),
         WorkbenchFunction("protect", "加密水印", "添加文字水印或打开密码", ft.Icons.LOCK_OUTLINED,
-                          "#e11d48", "#ffe4e6", _PDF),
+                          _PDF),
     ]
 
     def __init__(self, page: ft.Page, initial_func: str | None = None) -> None:
@@ -100,13 +98,13 @@ class PdfPage(Workbench):
             [("high", "轻度"), ("medium", "推荐"), ("low", "强力")], "medium",
             on_change=lambda _: self._sync_compress_hint(),
         )
-        self._compress_hint = ft.Text(size=11, color=c("#455c7f", "fg"))
+        self._compress_hint = ft.Text(size=11, color=c("ink-2", "fg"))
         # 转 Office
         self._office_format = ChoiceGroup([("docx", "Word"), ("xlsx", "Excel"), ("pptx", "PPT")], "docx")
         # 加密水印
         self._wm_text = self.text_field("", "水印文字，留空则不加")
         self._wm_opacity = ft.Slider(min=10, max=80, value=30, divisions=7, label="{value}%",
-                                     active_color=c("#005f98", "fg"), inactive_color=c("#d5e3ff"), expand=True)
+                                     active_color=c("ink", "fg"), inactive_color=c("surface-3"), expand=True)
         self._password = self.text_field("", "打开密码，留空则不加密", password=True, can_reveal_password=True)
 
         self._sync_split_mode()
@@ -134,7 +132,7 @@ class PdfPage(Workbench):
         if key == "merge":
             return [
                 self.section("输出文件名", self._merge_name),
-                ft.Text("在左侧列表用上下箭头调整合并顺序", size=11, color=c("#94a3b8", "fg")),
+                ft.Text("在左侧列表用上下箭头调整合并顺序", size=11, color=c("ink-3", "fg")),
             ]
         if key == "split":
             return [
@@ -142,7 +140,7 @@ class PdfPage(Workbench):
                     controls=[self._split_mode, self._split_pages, self._split_ranges], spacing=12)),
                 self.section("命名模板", ft.Column(controls=[
                     self._split_template,
-                    ft.Text("{stem} 原文件名　{n} 序号　{start} {end} 起止页", size=11, color=c("#94a3b8", "fg")),
+                    ft.Text("{stem} 原文件名　{n} 序号　{start} {end} 起止页", size=11, color=c("ink-3", "fg")),
                 ], spacing=6)),
             ]
         if key == "compress":
@@ -150,15 +148,15 @@ class PdfPage(Workbench):
         if key == "to_office":
             return [
                 self.section("目标格式", self._office_format),
-                ft.Text("扫描件需先做 OCR，转换结果才可编辑", size=11, color=c("#94a3b8", "fg")),
+                ft.Text("扫描件需先做 OCR，转换结果才可编辑", size=11, color=c("ink-3", "fg")),
             ]
         if key == "from_office":
             return [ft.Text("需要本机安装 LibreOffice。支持 Word、Excel、PowerPoint 及 OpenDocument 文件。",
-                            size=12, color=c("#455c7f", "fg"))]
+                            size=12, color=c("ink-2", "fg"))]
         return [
             self.section("文字水印", ft.Column(controls=[
                 self._wm_text,
-                ft.Row(controls=[ft.Text("透明度", size=12, color=c("#455c7f", "fg")), self._wm_opacity],
+                ft.Row(controls=[ft.Text("透明度", size=12, color=c("ink-2", "fg")), self._wm_opacity],
                        spacing=4, vertical_alignment=ft.CrossAxisAlignment.CENTER),
             ], spacing=8)),
             self.section("打开密码", self._password),

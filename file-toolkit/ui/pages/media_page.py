@@ -21,7 +21,7 @@ def _seconds(t: str) -> float:
 
 
 def _hint(text: str) -> ft.Text:
-    return ft.Text(text, size=11, color=c("#94a3b8", "fg"))
+    return ft.Text(text, size=11, color=c("ink-3", "fg"))
 
 
 class MediaPage(Workbench):
@@ -31,19 +31,17 @@ class MediaPage(Workbench):
     PICK_LABEL = "点击选择音视频文件"
     PICK_ICON = ft.Icons.VIDEO_FILE_OUTLINED
     FILE_ICON = ft.Icons.MOVIE_OUTLINED
-    FILE_ICON_COLOR = "#7c3aed"
-    FILE_ICON_BG = "#ede9fe"
     FUNCTIONS = [
-        WorkbenchFunction("video_convert", "视频转换", "MP4 / MKV / MOV / AVI / WebM", ft.Icons.SWAP_HORIZ,
-                          "#005f98", "#d5e3ff", _VIDEO),
-        WorkbenchFunction("video_compress", "视频压缩", "降低码率或分辨率", ft.Icons.COMPRESS,
-                          "#d97706", "#fef3c7", _VIDEO),
-        WorkbenchFunction("video_cut", "视频剪辑", "截取一段时间", ft.Icons.CONTENT_CUT,
-                          "#e11d48", "#ffe4e6", _VIDEO),
-        WorkbenchFunction("audio_extract", "音频提取", "从视频导出音轨", ft.Icons.MUSIC_NOTE,
-                          "#059669", "#d1fae5", _VIDEO),
-        WorkbenchFunction("audio_convert", "音频转换", "MP3 / WAV / FLAC / AAC / OGG", ft.Icons.GRAPHIC_EQ,
-                          "#7c3aed", "#ede9fe", _AUDIO),
+        WorkbenchFunction("video_convert", "视频转换", "MP4 / MKV / MOV / AVI / WebM", ft.Icons.SWAP_HORIZ_OUTLINED,
+                          _VIDEO),
+        WorkbenchFunction("video_compress", "视频压缩", "降低码率或分辨率", ft.Icons.COMPRESS_OUTLINED,
+                          _VIDEO),
+        WorkbenchFunction("video_cut", "视频剪辑", "截取一段时间", ft.Icons.CONTENT_CUT_OUTLINED,
+                          _VIDEO),
+        WorkbenchFunction("audio_extract", "音频提取", "从视频导出音轨", ft.Icons.MUSIC_NOTE_OUTLINED,
+                          _VIDEO),
+        WorkbenchFunction("audio_convert", "音频转换", "MP3 / WAV / FLAC / AAC / OGG", ft.Icons.GRAPHIC_EQ_OUTLINED,
+                          _AUDIO),
     ]
 
     def __init__(self, page: ft.Page, initial_func: str | None = None) -> None:
@@ -73,7 +71,7 @@ class MediaPage(Workbench):
             ]
         if key == "video_cut":
             return [self.section("时间范围", ft.Column(controls=[
-                ft.Row(controls=[self._cut_start, ft.Text("至", color=c("#455c7f", "fg")), self._cut_end], spacing=8),
+                ft.Row(controls=[self._cut_start, ft.Text("至", color=c("ink-2", "fg")), self._cut_end], spacing=8),
                 _hint("格式 时:分:秒，如 00:01:30；选多个视频时每个都截取同一段"),
             ], spacing=8))]
         if key == "audio_extract":
