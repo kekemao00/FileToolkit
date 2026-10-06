@@ -11,9 +11,12 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-informational)](#下载安装)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-[下载](#下载安装) · [功能](#功能) · [从源码运行](#从源码运行) · [打包与发布](#打包与发布)
+[下载](#下载安装) · [功能](#功能) · [截图](#截图) · [从源码运行](#从源码运行) · [打包与发布](#打包与发布)
 
-<img src="docs/screenshots/home.png" alt="File Toolkit 首页" width="720">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/home-dark.png">
+  <img src="docs/screenshots/home-light.png" alt="File Toolkit 首页" width="720">
+</picture>
 
 </div>
 
@@ -67,6 +70,17 @@
 | Tesseract | 图片文字识别 | Windows：[UB-Mannheim 安装包](https://github.com/UB-Mannheim/tesseract/wiki)；macOS：`brew install tesseract tesseract-lang`；Linux：`sudo apt install tesseract-ocr tesseract-ocr-chi-sim` |
 | unrar | 解压 RAR | macOS：`brew install rar`；Linux：`sudo apt install unrar`；Windows：安装 [WinRAR](https://www.win-rar.com/) 或 7-Zip 并加入 PATH |
 | API Key | 提示词出图 | 在应用「设置」里填写 API Key，可改 Base URL 与模型以接入兼容服务 |
+
+## 截图
+
+| 浅色 | 深色 |
+|---|---|
+| <img src="docs/screenshots/home-light.png" alt="首页（浅色）"> | <img src="docs/screenshots/home-dark.png" alt="首页（深色）"> |
+| <img src="docs/screenshots/prompt-image-light.png" alt="提示词出图（浅色）"> | <img src="docs/screenshots/prompt-image-dark.png" alt="提示词出图（深色）"> |
+
+| PDF 工作台 | 操作记录 | 设置 |
+|---|---|---|
+| <img src="docs/screenshots/pdf.png" alt="PDF 工作台"> | <img src="docs/screenshots/history.png" alt="操作记录"> | <img src="docs/screenshots/settings.png" alt="设置"> |
 
 ## 从源码运行
 
@@ -131,11 +145,11 @@ build\build_windows.bat            # Windows
    - 在 GitHub 的 Actions 页面打开 Release 工作流，点「Run workflow」，分支选 `main` 并勾选「发布」。工作流会自动打 `v<版本号>` tag，手机网页上也能操作。
    - 或者自己打 tag 并推送，tag 必须是 `v` + 同一个版本号：
      ```bash
-     git tag v1.1.0
-     git push origin v1.1.0
+     git tag v1.4.0
+     git push origin v1.4.0
      ```
 
-tag 与 `pyproject.toml` 版本不一致、或该版本已经发过时，工作流会直接失败，不会发出错误版本号的安装包。带 `-` 的版本（如 `v1.1.0-beta.1`）发布为预发布版。Release 说明由 GitHub 根据合入的 PR 自动生成。
+tag 与 `pyproject.toml` 版本不一致、或该版本已经发过时，工作流会直接失败，不会发出错误版本号的安装包。带 `-` 的版本（如 `v1.4.0-beta.1`）发布为预发布版。Release 说明由 GitHub 根据合入的 PR 自动生成。
 
 只想试打包、不发布时，手动运行时不勾选「发布」，安装包会作为构建产物上传；改动打包相关文件的 PR 也会自动试打包一次。
 
