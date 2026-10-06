@@ -25,11 +25,11 @@ _POSITIONS = [
 
 def _slider(min_v: int, max_v: int, value: int, divisions: int) -> ft.Slider:
     return ft.Slider(min=min_v, max=max_v, value=value, divisions=divisions, label="{value}",
-                     active_color=c("#005f98", "fg"), inactive_color=c("#d5e3ff"), expand=True)
+                     active_color=c("ink", "fg"), inactive_color=c("surface-3"), expand=True)
 
 
 def _labeled(label: str, control: ft.Control) -> ft.Control:
-    return ft.Row(controls=[ft.Text(label, size=12, color=c("#455c7f", "fg"), width=56), control],
+    return ft.Row(controls=[ft.Text(label, size=12, color=c("ink-2", "fg"), width=56), control],
                   spacing=4, vertical_alignment=ft.CrossAxisAlignment.CENTER)
 
 
@@ -40,19 +40,17 @@ class ImagePage(Workbench):
     PICK_LABEL = "点击选择图片"
     PICK_ICON = ft.Icons.ADD_PHOTO_ALTERNATE_OUTLINED
     FILE_ICON = ft.Icons.IMAGE_OUTLINED
-    FILE_ICON_COLOR = "#059669"
-    FILE_ICON_BG = "#dcfce7"
     FILE_NOUN = "张图片"
     FUNCTIONS = [
-        WorkbenchFunction("compress", "压缩", "减小图片体积", ft.Icons.COMPRESS, "#005f98", "#d5e3ff", _IMAGES),
-        WorkbenchFunction("convert", "格式转换", "PNG / JPG / WebP / BMP / TIFF", ft.Icons.TRANSFORM,
-                          "#d97706", "#fef3c7", _IMAGES),
-        WorkbenchFunction("resize", "尺寸调整", "按宽高缩放", ft.Icons.PHOTO_SIZE_SELECT_LARGE,
-                          "#059669", "#d1fae5", _IMAGES),
+        WorkbenchFunction("compress", "压缩", "减小图片体积", ft.Icons.COMPRESS_OUTLINED, _IMAGES),
+        WorkbenchFunction("convert", "格式转换", "PNG / JPG / WebP / BMP / TIFF", ft.Icons.TRANSFORM_OUTLINED,
+                          _IMAGES),
+        WorkbenchFunction("resize", "尺寸调整", "按宽高缩放", ft.Icons.PHOTO_SIZE_SELECT_LARGE_OUTLINED,
+                          _IMAGES),
         WorkbenchFunction("watermark", "水印", "批量添加文字水印", ft.Icons.WATER_DROP_OUTLINED,
-                          "#7c3aed", "#ede9fe", _IMAGES),
+                          _IMAGES),
         WorkbenchFunction("rename", "批量重命名", "按模板原地改名", ft.Icons.DRIVE_FILE_RENAME_OUTLINE,
-                          "#0891b2", "#cffafe", _IMAGES, uses_output_dir=False),
+                          _IMAGES, uses_output_dir=False),
     ]
 
     def __init__(self, page: ft.Page, initial_func: str | None = None) -> None:
@@ -65,7 +63,7 @@ class ImagePage(Workbench):
         # 尺寸
         self._width = self.text_field("", "宽度 px", keyboard_type=ft.KeyboardType.NUMBER, expand=True)
         self._height = self.text_field("", "高度 px", keyboard_type=ft.KeyboardType.NUMBER, expand=True)
-        self._keep_ratio = ft.Checkbox(label="保持比例", value=True, active_color=c("#005f98", "fg"))
+        self._keep_ratio = ft.Checkbox(label="保持比例", value=True, active_color=c("ink", "fg"))
         # 水印
         self._wm_text = self.text_field("", "水印文字")
         self._wm_pos = ChoiceGroup(_POSITIONS, "bottom_right")
@@ -82,7 +80,7 @@ class ImagePage(Workbench):
         if key == "compress":
             return [self.section("压缩强度", ft.Column(controls=[
                 self._level,
-                ft.Text("轻度几乎看不出差别；极限体积最小，细节会有损失", size=11, color=c("#94a3b8", "fg")),
+                ft.Text("轻度几乎看不出差别；极限体积最小，细节会有损失", size=11, color=c("ink-3", "fg")),
             ], spacing=8))]
         if key == "convert":
             return [
@@ -91,9 +89,9 @@ class ImagePage(Workbench):
             ]
         if key == "resize":
             return [self.section("目标尺寸", ft.Column(controls=[
-                ft.Row(controls=[self._width, ft.Text("×", color=c("#455c7f", "fg")), self._height], spacing=8),
+                ft.Row(controls=[self._width, ft.Text("×", color=c("ink-2", "fg")), self._height], spacing=8),
                 self._keep_ratio,
-                ft.Text("保持比例时只填一项即可，另一项自动计算", size=11, color=c("#94a3b8", "fg")),
+                ft.Text("保持比例时只填一项即可，另一项自动计算", size=11, color=c("ink-3", "fg")),
             ], spacing=8))]
         if key == "watermark":
             return [
@@ -107,11 +105,11 @@ class ImagePage(Workbench):
         return [
             self.section("命名规则", ft.Column(controls=[
                 self._template,
-                ft.Text("{name} 原名　{n} 序号　{n:03d} 补零序号　{date} 日期", size=11, color=c("#94a3b8", "fg")),
+                ft.Text("{name} 原名　{n} 序号　{n:03d} 补零序号　{date} 日期", size=11, color=c("ink-3", "fg")),
                 _labeled("起始序号", self._start_num),
             ], spacing=8)),
             self.section("预览", self._preview),
-            ft.Text("重命名直接修改原文件，不会另存副本", size=11, color=c("#b45309", "fg")),
+            ft.Text("重命名直接修改原文件，不会另存副本", size=11, color=c("ink-2", "fg")),
         ]
 
     def on_files_changed(self) -> None:
@@ -126,11 +124,11 @@ class ImagePage(Workbench):
     def _refresh_preview(self, update: bool = True) -> None:
         files = self._applicable()[:4] if hasattr(self, "_files") else []
         if not files:
-            self._preview.controls = [ft.Text("选择图片后显示新文件名", size=12, color=c("#94a3b8", "fg"))]
+            self._preview.controls = [ft.Text("选择图片后显示新文件名", size=12, color=c("ink-3", "fg"))]
         else:
             rows = preview_rename(files, self._template.value or "{name}_{n:03d}", self._start_number())
             self._preview.controls = [
-                ft.Text(f"{old.name} → {new}", size=12, color=c("#162f50", "fg"),
+                ft.Text(f"{old.name} → {new}", size=12, color=c("ink", "fg"),
                         max_lines=1, overflow=ft.TextOverflow.ELLIPSIS)
                 for old, new in rows
             ]

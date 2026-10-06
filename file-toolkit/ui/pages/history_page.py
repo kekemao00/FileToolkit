@@ -1,7 +1,7 @@
-"""最近操作 — Figma 1:1 还原
+"""最近操作
 
-严格遵循 Figma 设计稿的色值、字体、间距、圆角、尺寸。
-布局顺序：顶部栏 → 标题区 → Dashboard 统计卡片 → 数据表格 → 分页器 → 效率提示卡片。
+布局顺序：顶部栏（本页搜索）→ 标题区 → 统计条 → 数据表格 → 分页器 → 提示。
+表格无竖线，只有行间 1px line；行高 46；悬停行变 surface-2。
 """
 import csv
 import subprocess
@@ -12,18 +12,19 @@ from pathlib import Path
 import flet as ft
 
 from services import history_service
+from ui import style as s
 from ui.features import ACTION_LABELS
 from ui.palette import c
 from ui.utils import show_toast
 
-# ── 模块元数据：(icon_bg, icon_color, icon, label) ────────────────────
-_MODULE_META: dict[str, tuple[str, str, str, str]] = {
-    "PDF":     (ft.Colors.with_opacity(0.1, "#fb5151"), "#b31b25", ft.Icons.PICTURE_AS_PDF, "PDF 转换"),
-    "IMAGE":   (ft.Colors.with_opacity(0.1, "#2aa7ff"), "#005f98", ft.Icons.IMAGE, "图片处理"),
-    "MEDIA":   (ft.Colors.with_opacity(0.1, "#d9caff"), "#6b1ef3", ft.Icons.MOVIE, "音视频"),
-    "ARCHIVE": ("#d5e3ff", "#162f50", ft.Icons.FOLDER_ZIP, "压缩打包"),
-    "OCR":     ("#cffafe", "#0891b2", ft.Icons.DOCUMENT_SCANNER, "OCR 识别"),
-    "AI":      ("#ede9fe", "#7c3aed", ft.Icons.AUTO_AWESOME, "AI 任务"),
+# ── 模块元数据：(icon, label) ─────────────────────────────────────────
+_MODULE_META: dict[str, tuple[str, str]] = {
+    "PDF":     (ft.Icons.PICTURE_AS_PDF_OUTLINED, "PDF 转换"),
+    "IMAGE":   (ft.Icons.IMAGE_OUTLINED, "图片处理"),
+    "MEDIA":   (ft.Icons.MOVIE_OUTLINED, "音视频"),
+    "ARCHIVE": (ft.Icons.FOLDER_ZIP_OUTLINED, "压缩打包"),
+    "OCR":     (ft.Icons.DOCUMENT_SCANNER_OUTLINED, "OCR 识别"),
+    "AI":      (ft.Icons.AUTO_AWESOME_OUTLINED, "AI 任务"),
 }
 
 # 操作类型 -> 中文标签
@@ -32,9 +33,12 @@ _ACTION_LABELS = ACTION_LABELS
 # 每页记录数
 _PAGE_SIZE = 10
 
+# 表格列宽（文件名列自适应）
+_COLS = {"action": 120, "status": 96, "date": 150, "size": 72, "duration": 76, "ops": 76}
+
 
 class HistoryPage(ft.Column):
-    """最近操作 — Figma 1:1 还原。"""
+    """最近操作。"""
 
     def __init__(self, page: ft.Page) -> None:
         super().__init__(expand=True, spacing=0)
@@ -44,52 +48,32 @@ class HistoryPage(ft.Column):
         self._current_page = 1
         self._search_keyword = ""
 
-        # ── 统计卡片数据文本 ──
-        self._stat_today_value = self._make_stat_value("0", c("#00253f"))
-        self._stat_today_unit = self._make_stat_unit("个文件", c("#00253f"))
-        self._stat_saved_value = self._make_stat_value("—", c("#5500cd"))
-        self._stat_saved_unit = self._make_stat_unit("", c("#5500cd"))
-        self._stat_rate_value = self._make_stat_value("0", c("#004d57"))
-        self._stat_rate_unit = self._make_stat_unit("%", c("#004d57"))
-        self._stat_cloud_value = self._make_stat_value("—", c("#162f50", "fg"))
-        self._stat_cloud_unit = self._make_stat_unit("", c("#162f50", "fg"))
+        # ── 统计数据文本 ──
+        self._stat_today_value = self._make_stat_value("0")
+        self._stat_today_unit = self._make_stat_unit("个文件")
+        self._stat_saved_value = self._make_stat_value("—")
+        self._stat_saved_unit = self._make_stat_unit("")
+        self._stat_rate_value = self._make_stat_value("0")
+        self._stat_rate_unit = self._make_stat_unit("%")
+        self._stat_cloud_value = self._make_stat_value("—")
+        self._stat_cloud_unit = self._make_stat_unit("")
 
         # ── 搜索框 ──
-        self._search_field = ft.TextField(
-            hint_text="搜索功能或指令...",
-            hint_style=ft.TextStyle(
-                size=13, color=c("#94a3b8", "fg"),
-                font_family="42dot Sans", weight=ft.FontWeight.W_500,
-            ),
-            text_size=13,
-            text_style=ft.TextStyle(color=c("#162f50", "fg"), font_family="42dot Sans"),
-            border=ft.InputBorder.NONE,
-            content_padding=ft.padding.symmetric(horizontal=0, vertical=0),
-            cursor_color=c("#005f98", "fg"),
+        self._search_field = s.text_field(
+            hint="搜索文件名、模块或操作",
+            prefix_icon=ft.Icons.SEARCH_OUTLINED,
             on_change=self._on_search_change,
-            expand=True,
+            width=300,
         )
 
         # ── 表格主体与分页信息 ──
         self._rows_column = ft.Column(spacing=0)
-        self._pagination_info = ft.Text(
-            "", size=12, color=c("#455c7f", "fg"),
-            font_family="Plus Jakarta Sans", weight=ft.FontWeight.W_500,
-        )
+        self._pagination_info = s.text(kind="small")
         self._pagination_buttons = ft.Row(spacing=4)
         self._empty_hint = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Icon(ft.Icons.HISTORY, size=48, color=c("#94a3b8", "fg")),
-                    ft.Text("暂无匹配的操作记录", color=c("#455c7f", "fg"), size=14,
-                            font_family="42dot Sans"),
-                    ft.Text("调整搜索关键字或完成一次文件处理后再来查看",
-                            color=c("#94a3b8", "fg"), size=12, font_family="42dot Sans"),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=8,
-            ),
-            padding=ft.padding.symmetric(vertical=64),
+            content=s.empty_state(ft.Icons.HISTORY_OUTLINED, "暂无匹配的操作记录",
+                                  "调整搜索关键字或完成一次文件处理后再来查看"),
+            padding=ft.padding.symmetric(vertical=48),
             alignment=ft.Alignment(0, 0),
             visible=False,
         )
@@ -103,91 +87,46 @@ class HistoryPage(ft.Column):
         self._reload_from_service()
 
     # ── 统计值文本工厂 ────────────────────────────────────────
-    def _make_stat_value(self, text: str, color: str) -> ft.Text:
-        return ft.Text(
-            text, size=24, weight=ft.FontWeight.W_900,
-            color=color, font_family="Plus Jakarta Sans",
-        )
+    def _make_stat_value(self, text: str) -> ft.Text:
+        return ft.Text(text, size=22, weight=ft.FontWeight.W_600, color=c("ink", "fg"), font_family=s.MONO)
 
-    def _make_stat_unit(self, text: str, color: str) -> ft.Text:
-        return ft.Text(
-            text, size=14, weight=ft.FontWeight.W_500,
-            color=color, font_family="42dot Sans",
-        )
+    def _make_stat_unit(self, text: str) -> ft.Text:
+        return s.text(text, "small")
 
-    # ── 顶部栏（高 80px）──────────────────────────────────────
+    # ── 顶部栏 ───────────────────────────────────────────────
     def _build_topbar(self) -> ft.Control:
-        search_box = ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Icon(ft.Icons.SEARCH, color=c("#94a3b8", "fg"), size=15),
-                    self._search_field,
-                ],
-                spacing=10,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            width=360, height=42,
-            bgcolor=ft.Colors.with_opacity(0.5, c("#f8fafc")),
-            border=ft.border.all(1, ft.Colors.with_opacity(0.6, c("#e2e8f0"))),
-            border_radius=9999,
-            padding=ft.padding.symmetric(horizontal=16),
-        )
-        circle_btn = lambda icon, tooltip, on_click=None, disabled=False: ft.Container(  # noqa: E731
-            content=ft.Icon(icon, color=c("#61789c", "fg"), size=18),
-            width=40, height=40,
-            border_radius=9999,
-            bgcolor=ft.Colors.with_opacity(0.5, c("#f8fafc")),
-            border=ft.border.all(1, ft.Colors.with_opacity(0.6, c("#e2e8f0"))),
-            alignment=ft.Alignment(0, 0),
-            tooltip=tooltip,
-            on_click=None if disabled else on_click,
-            ink=not disabled,
-            opacity=0.45 if disabled else 1.0,
-        )
         return ft.Container(
             content=ft.Row(
                 controls=[
                     ft.Container(expand=True),
-                    search_box,
-                    circle_btn(ft.Icons.NOTIFICATIONS_OUTLINED, "暂无新通知", disabled=True),
-                    circle_btn(
-                        ft.Icons.SETTINGS_OUTLINED, "设置",
-                        on_click=lambda _: self._page.go("/settings"),
-                    ),
+                    self._search_field,
+                    s.icon_button(ft.Icons.SETTINGS_OUTLINED, lambda _: self._page.go("/settings"),
+                                  tooltip="设置"),
                 ],
-                spacing=12,
+                spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            height=80,
-            bgcolor=ft.Colors.with_opacity(0.8, c("#ffffff")),
-            border=ft.border.only(
-                bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.5, c("#e2e8f0"))),
-            ),
-            padding=ft.padding.symmetric(horizontal=32),
+            height=64,
+            padding=ft.padding.only(left=s.PAGE_X, right=s.PAGE_X - 4),
         )
 
     # ── 主体 ──────────────────────────────────────────────────
     def _build_body(self) -> ft.Control:
         return ft.Container(
             expand=True,
-            bgcolor=c("#f4f6ff"),
             content=ft.Column(
                 controls=[
                     ft.Container(
                         content=ft.Column(
                             controls=[
                                 self._build_header(),
-                                ft.Container(height=24),
                                 self._build_stats(),
-                                ft.Container(height=24),
                                 self._build_table(),
-                                ft.Container(height=24),
                                 self._build_tip_card(),
-                                ft.Container(height=32),
                             ],
-                            spacing=0,
+                            spacing=16,
                         ),
-                        padding=ft.padding.all(32),
+                        padding=ft.padding.only(left=s.PAGE_X, right=s.PAGE_X, top=4, bottom=24),
                     ),
                 ],
                 spacing=0,
@@ -195,144 +134,58 @@ class HistoryPage(ft.Column):
             ),
         )
 
-    # ── 标题区（高 64px）──────────────────────────────────────
+    # ── 标题区 ───────────────────────────────────────────────
     def _build_header(self) -> ft.Control:
         return ft.Row(
             controls=[
                 ft.Column(
                     controls=[
-                        ft.Text(
-                            "最近操作", size=30,
-                            weight=ft.FontWeight.W_800,
-                            color=c("#162f50", "fg"),
-                            font_family="42dot Sans",
-                        ),
-                        ft.Text(
-                            "管理并回顾您在过去 30 天内的所有文件处理记录。",
-                            size=16, weight=ft.FontWeight.W_400,
-                            color=c("#455c7f", "fg"),
-                            font_family="42dot Sans",
-                        ),
+                        s.text("最近操作", "headline"),
+                        s.text("管理并回顾您在过去 30 天内的所有文件处理记录。", "small"),
                     ],
                     spacing=4,
                     tight=True,
+                    expand=True,
                 ),
-                ft.Container(expand=True),
-                # 导出记录按钮
-                ft.Container(
-                    content=ft.Row(
-                        controls=[
-                            ft.Icon(ft.Icons.FILE_DOWNLOAD_OUTLINED, color=c("#455c7f", "fg"), size=16),
-                            ft.Text(
-                                "导出记录", size=14,
-                                weight=ft.FontWeight.W_700, color=c("#455c7f", "fg"),
-                                font_family="42dot Sans",
-                            ),
-                        ],
-                        spacing=8,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        tight=True,
-                    ),
-                    bgcolor=c("#cbdeff"),
-                    border_radius=12,
-                    padding=ft.padding.symmetric(horizontal=20, vertical=10),
-                    on_click=self._export_history,
-                    ink=True,
-                    tooltip="导出为 CSV",
-                ),
-                ft.Container(width=12),
-                # 清空历史按钮
-                ft.Container(
-                    content=ft.Row(
-                        controls=[
-                            ft.Icon(ft.Icons.DELETE_OUTLINE, color=c("#ffffff", "fg"), size=16),
-                            ft.Text(
-                                "清空历史", size=14,
-                                weight=ft.FontWeight.W_700, color=c("#ffffff", "fg"),
-                                font_family="42dot Sans",
-                            ),
-                        ],
-                        spacing=8,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        tight=True,
-                    ),
-                    bgcolor=c("#005f98"),
-                    border_radius=12,
-                    padding=ft.padding.symmetric(horizontal=20, vertical=10),
-                    shadow=ft.BoxShadow(
-                        blur_radius=10, spread_radius=-2,
-                        color=ft.Colors.with_opacity(0.25, c("#005f98", "fg")),
-                        offset=ft.Offset(0, 4),
-                    ),
-                    on_click=self._clear_history,
-                    ink=True,
-                    tooltip="清空所有历史记录",
-                ),
+                s.button("导出记录", self._export_history, kind="secondary",
+                         icon=ft.Icons.FILE_DOWNLOAD_OUTLINED, tooltip="导出为 CSV"),
+                s.button("清空历史", self._confirm_clear, kind="ghost",
+                         icon=ft.Icons.DELETE_OUTLINE, tooltip="清空所有历史记录"),
             ],
+            spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.END,
         )
 
-    # ── Dashboard 4 张统计卡片（高 91px）────────────────────────
+    # ── 统计条：一张白卡片四等分 ───────────────────────────────
     def _build_stats(self) -> ft.Control:
-        cards = [
-            self._build_stat_card(
-                "今日处理", c("#005f98", "fg"),
-                self._stat_today_value, self._stat_today_unit,
-                bg=ft.Colors.with_opacity(0.1, c("#2aa7ff")), border=c("#005f98"),
-            ),
-            self._build_stat_card(
-                "累计处理", c("#6b1ef3", "fg"),
-                self._stat_saved_value, self._stat_saved_unit,
-                bg=ft.Colors.with_opacity(0.2, c("#d9caff")), border=c("#6b1ef3"),
-            ),
-            self._build_stat_card(
-                "成功率", c("#006571", "fg"),
-                self._stat_rate_value, self._stat_rate_unit,
-                bg=ft.Colors.with_opacity(0.1, c("#00e3fd")), border=c("#006571"),
-            ),
-            self._build_stat_card(
-                "失败任务", c("#455c7f", "fg"),
-                self._stat_cloud_value, self._stat_cloud_unit,
-                bg=c("#d5e3ff"), border=c("#61789c"),
-            ),
+        items = [
+            ("今日处理", self._stat_today_value, self._stat_today_unit),
+            ("累计处理", self._stat_saved_value, self._stat_saved_unit),
+            ("成功率", self._stat_rate_value, self._stat_rate_unit),
+            ("失败任务", self._stat_cloud_value, self._stat_cloud_unit),
         ]
-        return ft.Row(controls=cards, spacing=16)
+        cells = []
+        for i, (label, value, unit) in enumerate(items):
+            cells.append(ft.Container(
+                content=ft.Column(
+                    controls=[
+                        s.text(label, "caption"),
+                        ft.Row(controls=[value, unit], spacing=4,
+                               vertical_alignment=ft.CrossAxisAlignment.END, tight=True),
+                    ],
+                    spacing=6,
+                    tight=True,
+                ),
+                padding=ft.padding.symmetric(horizontal=20, vertical=16),
+                border=None if i == 0 else ft.border.only(left=ft.BorderSide(1, c("line"))),
+                expand=True,
+            ))
+        return s.card(ft.Row(controls=cells, spacing=0), padding=0)
 
-    def _build_stat_card(
-        self, label: str, label_color: str,
-        value: ft.Text, unit: ft.Text,
-        bg: str, border: str,
-    ) -> ft.Container:
-        return ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Text(
-                        label, size=10, weight=ft.FontWeight.W_900,
-                        color=label_color,
-                        font_family="42dot Sans",
-                    ),
-                    ft.Row(
-                        controls=[value, unit],
-                        spacing=2,
-                        vertical_alignment=ft.CrossAxisAlignment.END,
-                        tight=True,
-                    ),
-                ],
-                spacing=8,
-                tight=True,
-            ),
-            bgcolor=bg,
-            border=ft.border.all(1, ft.Colors.with_opacity(0.3, border)),
-            border_radius=16,
-            padding=ft.padding.all(20),
-            height=91,
-            expand=True,
-        )
-
-    # ── 数据表格（圆角 24）────────────────────────────────────
+    # ── 数据表格 ─────────────────────────────────────────────
     def _build_table(self) -> ft.Control:
-        return ft.Container(
-            content=ft.Column(
+        return s.card(
+            ft.Column(
                 controls=[
                     self._build_table_header(),
                     self._rows_column,
@@ -341,45 +194,34 @@ class HistoryPage(ft.Column):
                 ],
                 spacing=0,
             ),
-            bgcolor=c("#ffffff"),
-            border_radius=24,
-            shadow=ft.BoxShadow(
-                blur_radius=4, spread_radius=0,
-                color=ft.Colors.with_opacity(0.04, c("#000000", "fg")),
-                offset=ft.Offset(0, 2),
-            ),
+            padding=0,
             clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
         )
 
     def _build_table_header(self) -> ft.Control:
         def cell(text: str, width: int | None = None, expand: bool = False) -> ft.Container:
-            return ft.Container(
-                content=ft.Text(
-                    text, size=11, weight=ft.FontWeight.W_900,
-                    color=c("#455c7f", "fg"), font_family="42dot Sans",
-                ),
-                width=width, expand=expand,
-                padding=ft.padding.only(left=24, top=20, right=24, bottom=22),
-            )
+            return ft.Container(content=s.text(text, "caption"), width=width, expand=expand)
 
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    cell("文件名", width=241),
-                    cell("操作类型", width=151),
-                    cell("状态", width=92),
-                    cell("日期", width=159),
-                    cell("大小", width=105),
-                    cell("耗时", width=77),
-                    cell("操作", expand=True),
+                    cell("文件", expand=True),
+                    cell("操作类型", width=_COLS["action"]),
+                    cell("状态", width=_COLS["status"]),
+                    cell("日期", width=_COLS["date"]),
+                    cell("大小", width=_COLS["size"]),
+                    cell("耗时", width=_COLS["duration"]),
+                    cell("", width=_COLS["ops"]),
                 ],
                 spacing=0,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor=ft.Colors.with_opacity(0.5, c("#ebf1ff")),
-            height=55,
+            height=40,
+            padding=ft.padding.symmetric(horizontal=16),
+            border=ft.border.only(bottom=ft.BorderSide(1, c("line"))),
         )
 
-    # ── 分页器（高 64px）───────────────────────────────────────
+    # ── 分页器 ───────────────────────────────────────────────
     def _build_pagination(self) -> ft.Control:
         return ft.Container(
             content=ft.Row(
@@ -390,50 +232,21 @@ class HistoryPage(ft.Column):
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor=ft.Colors.with_opacity(0.3, c("#ebf1ff")),
-            height=64,
-            padding=ft.padding.symmetric(horizontal=24, vertical=16),
+            height=52,
+            padding=ft.padding.symmetric(horizontal=16),
+            border=ft.border.only(top=ft.BorderSide(1, c("line"))),
         )
 
-    # ── 效率提示卡片 ──────────────────────────────────────────
+    # ── 提示 ─────────────────────────────────────────────────
     def _build_tip_card(self) -> ft.Control:
-        return ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Container(
-                        content=ft.Icon(
-                            ft.Icons.LIGHTBULB_OUTLINE, color=c("#005f98", "fg"), size=22,
-                        ),
-                        width=48, height=48,
-                        border_radius=9999,
-                        bgcolor=ft.Colors.with_opacity(0.2, c("#005f98")),
-                        alignment=ft.Alignment(0, 0),
-                    ),
-                    ft.Column(
-                        controls=[
-                            ft.Text(
-                                "效率提示", size=16,
-                                weight=ft.FontWeight.W_700, color=c("#00253f", "fg"),
-                                font_family="42dot Sans",
-                            ),
-                            ft.Text(
-                                "所有处理均在本地完成，不上传任何文件。处理大文件时请确保磁盘有足够剩余空间，失败时可重新选择文件重试。",
-                                size=14, weight=ft.FontWeight.W_500,
-                                color=c("#455c7f", "fg"), font_family="42dot Sans",
-                            ),
-                        ],
-                        spacing=4,
-                        tight=True,
-                        expand=True,
-                    ),
-                ],
-                spacing=16,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            bgcolor=ft.Colors.with_opacity(0.1, c("#2aa7ff")),
-            border=ft.border.all(1, ft.Colors.with_opacity(0.2, c("#2aa7ff"))),
-            border_radius=16,
-            padding=ft.padding.all(24),
+        return ft.Row(
+            controls=[
+                ft.Icon(ft.Icons.LIGHTBULB_OUTLINE, color=c("ink-3", "fg"), size=16),
+                s.text("所有处理均在本地完成，不上传任何文件。处理大文件时请确保磁盘有足够剩余空间，"
+                       "失败时可重新选择文件重试。", "small", expand=True),
+            ],
+            spacing=8,
+            vertical_alignment=ft.CrossAxisAlignment.START,
         )
 
     # ── 数据加载与过滤 ────────────────────────────────────────
@@ -484,7 +297,7 @@ class HistoryPage(ft.Column):
         self._pagination_buttons.controls.clear()
         # 上一页
         self._pagination_buttons.controls.append(
-            self._page_btn(ft.Icons.CHEVRON_LEFT, None,
+            self._page_btn(ft.Icons.CHEVRON_LEFT_OUTLINED, None,
                            disabled=self._current_page <= 1,
                            on_click=lambda _: self._goto_page(self._current_page - 1)),
         )
@@ -493,12 +306,8 @@ class HistoryPage(ft.Column):
             if page_num == "...":
                 self._pagination_buttons.controls.append(
                     ft.Container(
-                        content=ft.Text(
-                            "...", size=12, color=c("#455c7f", "fg"),
-                            font_family="Plus Jakarta Sans",
-                            weight=ft.FontWeight.W_500,
-                        ),
-                        width=32, height=32, alignment=ft.Alignment(0, 0),
+                        content=s.text("…", "small"),
+                        width=30, height=30, alignment=ft.Alignment(0, 0),
                     ),
                 )
             else:
@@ -509,7 +318,7 @@ class HistoryPage(ft.Column):
                 )
         # 下一页
         self._pagination_buttons.controls.append(
-            self._page_btn(ft.Icons.CHEVRON_RIGHT, None,
+            self._page_btn(ft.Icons.CHEVRON_RIGHT_OUTLINED, None,
                            disabled=self._current_page >= total_pages,
                            on_click=lambda _: self._goto_page(self._current_page + 1)),
         )
@@ -538,30 +347,32 @@ class HistoryPage(ft.Column):
     ) -> ft.Container:
         content: ft.Control
         if icon is not None:
-            content = ft.Icon(
-                icon,
-                color=c("#94a3b8", "fg") if disabled else c("#455c7f", "fg"),
-                size=14,
-            )
+            content = ft.Icon(icon, color=c("ink-3" if disabled else "ink-2", "fg"), size=14)
         else:
             content = ft.Text(
-                label or "", size=12,
-                color=c("#ffffff", "fg") if active else c("#455c7f", "fg"),
-                font_family="Plus Jakarta Sans",
-                weight=ft.FontWeight.W_700 if active else ft.FontWeight.W_500,
+                label or "", size=12, font_family=s.MONO,
+                color=c("on-ink" if active else "ink-2", "fg"),
+                weight=ft.FontWeight.W_500,
                 text_align=ft.TextAlign.CENTER,
             )
-        return ft.Container(
+        btn = ft.Container(
             content=content,
-            width=32, height=32,
-            bgcolor=c("#005f98") if active else "transparent",
-            border=None if active else ft.border.all(1, ft.Colors.with_opacity(0.5, c("#e2e8f0"))),
-            border_radius=8,
+            width=30, height=30,
+            bgcolor=c("ink") if active else None,
+            border_radius=s.R_BUTTON,
             alignment=ft.Alignment(0, 0),
             on_click=None if (disabled or active) else on_click,
-            ink=not (disabled or active),
             opacity=0.4 if disabled else 1.0,
+            animate=s.snappy(),
         )
+        if not (disabled or active):
+            btn.on_hover = lambda e, b=btn: self._hover_bg(b, e)
+        return btn
+
+    @staticmethod
+    def _hover_bg(ctrl: ft.Container, e: ft.ControlEvent) -> None:
+        ctrl.bgcolor = c("surface-2") if e.data in (True, "true") else None
+        ctrl.update()
 
     def _goto_page(self, page_num: int) -> None:
         total_pages = max(1, (len(self._filtered_tasks) + _PAGE_SIZE - 1) // _PAGE_SIZE)
@@ -581,175 +392,95 @@ class HistoryPage(ft.Column):
         duration_s = task.get("duration_s")
         output_dir = task.get("output_dir") or ""
 
-        icon_bg, icon_color, icon_name, module_label = _MODULE_META.get(
-            module, ("#d5e3ff", "#162f50", ft.Icons.DESCRIPTION, module or "其他"),
+        icon_name, module_label = _MODULE_META.get(
+            module, (ft.Icons.DESCRIPTION_OUTLINED, module or "其他"),
         )
         action_label = _ACTION_LABELS.get(action, module_label)
         date_str = self._format_date(created_at)
         duration_str = "—" if status != "success" or duration_s is None else self._format_duration(duration_s)
 
-        # 文件名列：图标 + 文件名
-        filename_col = ft.Container(
-            width=241,
-            padding=ft.padding.only(left=24, right=12, top=14, bottom=14),
-            content=ft.Row(
-                controls=[
-                    ft.Container(
-                        content=ft.Icon(icon_name, color=c(icon_color, "fg"), size=18),
-                        width=40, height=40,
-                        bgcolor=c(icon_bg),
-                        border_radius=8,
-                        alignment=ft.Alignment(0, 0),
-                    ),
-                    ft.Container(
-                        content=ft.Text(
-                            input_desc, size=14,
-                            weight=ft.FontWeight.W_700, color=c("#162f50", "fg"),
-                            font_family="Plus Jakarta Sans",
-                            max_lines=1,
-                            overflow=ft.TextOverflow.ELLIPSIS,
-                        ),
-                        expand=True,
-                    ),
-                ],
-                spacing=12,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-        )
+        # 状态：圆点 + 文字（成功用强调色圆点，失败用 danger，其余中性）
+        dot, text_color, status_label = {
+            "success": ("accent", "ink-2", "成功"),
+            "failed": ("danger", "danger", "失败"),
+            "cancelled": ("ink-3", "ink-3", "已取消"),
+        }.get(status, ("ink", "ink", "处理中"))
 
-        # 操作类型列：药丸形标签
-        action_pill = ft.Container(
-            width=151,
-            padding=ft.padding.only(left=24, right=12, top=14, bottom=14),
-            content=ft.Container(
-                content=ft.Text(
-                    action_label, size=12,
-                    weight=ft.FontWeight.W_700, color=c("#455c7f", "fg"),
-                    font_family="42dot Sans",
-                ),
-                bgcolor=c("#dee9ff"),
-                border_radius=9999,
-                padding=ft.padding.symmetric(horizontal=12, vertical=4),
-                alignment=ft.Alignment(-1, 0),
-            ),
-            alignment=ft.Alignment(-1, 0),
-        )
-
-        # 状态列：圆点 + 文字
-        if status == "success":
-            dot_color, status_text_color, status_label = c("#10b981"), c("#059669"), "成功"
-        elif status == "failed":
-            dot_color, status_text_color, status_label = c("#b31b25"), c("#b31b25"), "失败"
-        elif status == "cancelled":
-            dot_color, status_text_color, status_label = c("#f59e0b"), c("#b45309"), "已取消"
-        else:  # running
-            dot_color, status_text_color, status_label = c("#005f98"), c("#005f98"), "处理中"
-
-        status_col = ft.Container(
-            width=92,
-            padding=ft.padding.only(left=24, right=12, top=14, bottom=14),
-            content=ft.Row(
-                controls=[
-                    ft.Container(
-                        width=8, height=8,
-                        bgcolor=dot_color,
-                        border_radius=9999,
-                    ),
-                    ft.Text(
-                        status_label, size=12,
-                        weight=ft.FontWeight.W_700, color=status_text_color,
-                        font_family="42dot Sans",
-                    ),
-                ],
-                spacing=8,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                tight=True,
-            ),
-        )
-
-        # 日期列
-        date_col = ft.Container(
-            width=159,
-            padding=ft.padding.only(left=24, right=12, top=14, bottom=14),
-            content=ft.Text(
-                date_str, size=12,
-                weight=ft.FontWeight.W_400, color=c("#455c7f", "fg"),
-                font_family="Plus Jakarta Sans",
-            ),
-        )
-        # 大小列（无数据源，占位 "—"）
-        size_col = ft.Container(
-            width=105,
-            padding=ft.padding.only(left=24, right=12, top=14, bottom=14),
-            content=ft.Text(
-                "—", size=12,
-                weight=ft.FontWeight.W_500, color=c("#455c7f", "fg"),
-                font_family="Plus Jakarta Sans",
-            ),
-        )
-        # 耗时列
-        duration_col = ft.Container(
-            width=77,
-            padding=ft.padding.only(left=24, right=12, top=14, bottom=14),
-            content=ft.Text(
-                duration_str, size=12,
-                weight=ft.FontWeight.W_400, color=c("#455c7f", "fg"),
-                font_family="Plus Jakarta Sans",
-            ),
-        )
-        # 操作列
         action_buttons: list[ft.Control] = []
         if status == "success" and output_dir:
-            action_buttons.append(
-                ft.Container(
-                    content=ft.Icon(ft.Icons.FOLDER_OPEN_OUTLINED, color=c("#00a3ff", "fg"), size=16),
-                    width=34, height=28,
-                    bgcolor=ft.Colors.with_opacity(0.1, c("#00a3ff")),
-                    border_radius=8,
-                    alignment=ft.Alignment(0, 0),
-                    on_click=lambda _, d=output_dir: self._open_dir(d),
-                    ink=True,
-                    tooltip="打开输出目录",
-                ),
-            )
-        # 删除按钮
+            action_buttons.append(s.icon_button(
+                ft.Icons.FOLDER_OPEN_OUTLINED, lambda _, d=output_dir: self._open_dir(d),
+                tooltip="打开输出目录", size=28,
+            ))
         task_id = task.get("id")
-        action_buttons.append(
-            ft.Container(
-                content=ft.Icon(ft.Icons.DELETE_OUTLINE, color=c("#00a3ff", "fg"), size=16),
-                width=29, height=29,
-                bgcolor=ft.Colors.with_opacity(0.1, c("#00a3ff")),
-                border_radius=8,
-                alignment=ft.Alignment(0, 0),
-                on_click=lambda _, tid=task_id: self._delete_row(tid),
-                ink=True,
-                tooltip="删除此记录",
-            ),
-        )
-        action_col = ft.Container(
-            expand=True,
-            padding=ft.padding.only(left=24, right=24, top=14, bottom=14),
-            content=ft.Row(
-                controls=action_buttons,
-                spacing=8,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                tight=True,
-            ),
-        )
+        action_buttons.append(s.icon_button(
+            ft.Icons.DELETE_OUTLINE, lambda _, tid=task_id: self._delete_row(tid),
+            tooltip="删除此记录", size=28, color="ink-3",
+        ))
 
         row = ft.Container(
             content=ft.Row(
-                controls=[filename_col, action_pill, status_col, date_col,
-                          size_col, duration_col, action_col],
+                controls=[
+                    ft.Container(
+                        content=ft.Row(
+                            controls=[
+                                ft.Container(
+                                    content=ft.Icon(icon_name, color=c("ink-2", "fg"), size=14),
+                                    width=26, height=26, bgcolor=c("surface-3"), border_radius=13,
+                                    alignment=ft.Alignment(0, 0),
+                                ),
+                                s.text(input_desc, "body-medium", max_lines=1,
+                                       overflow=ft.TextOverflow.ELLIPSIS, expand=True),
+                            ],
+                            spacing=10,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        ),
+                        expand=True,
+                        padding=ft.padding.only(right=12),
+                    ),
+                    ft.Container(
+                        content=ft.Container(
+                            content=s.text(action_label, "caption", color="ink-2"),
+                            height=22, alignment=ft.Alignment(0, 0),
+                            border=ft.border.all(1, c("line-strong")), border_radius=11,
+                            padding=ft.padding.symmetric(horizontal=8),
+                        ),
+                        width=_COLS["action"], alignment=ft.Alignment(-1, 0),
+                    ),
+                    ft.Container(
+                        content=ft.Row(
+                            controls=[
+                                ft.Container(width=6, height=6, bgcolor=c(dot), border_radius=3),
+                                s.text(status_label, "small", color=text_color),
+                            ],
+                            spacing=6, tight=True,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        ),
+                        width=_COLS["status"],
+                    ),
+                    ft.Container(content=s.text(date_str, "small"), width=_COLS["date"]),
+                    # 大小列（无数据源，占位 "—"）
+                    ft.Container(content=s.text("—", "mono"), width=_COLS["size"]),
+                    ft.Container(content=s.text(duration_str, "mono"), width=_COLS["duration"]),
+                    ft.Container(
+                        content=ft.Row(controls=action_buttons, spacing=2, tight=True),
+                        width=_COLS["ops"], alignment=ft.Alignment(1, 0),
+                    ),
+                ],
                 spacing=0,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            border=(
-                None if is_last
-                else ft.border.only(bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.5, c("#e2e8f0"))))
-            ),
+            height=s.H_ROW,
+            padding=ft.padding.only(left=16, right=12),
+            animate=s.snappy(),
         )
-        return row
+        row.on_hover = lambda e, r=row: self._hover_bg(r, e)
+        if is_last:
+            return row
+        return ft.Column(
+            controls=[row, ft.Container(height=1, bgcolor=c("line"), margin=ft.margin.symmetric(horizontal=12))],
+            spacing=0,
+        )
 
     # ── 统计卡数据 ────────────────────────────────────────────
     def _refresh_stats(self) -> None:
@@ -800,12 +531,12 @@ class HistoryPage(ft.Column):
         if seconds is None:
             return "—"
         try:
-            s = float(seconds)
+            secs = float(seconds)
         except (TypeError, ValueError):
             return "—"
-        if s < 60:
-            return f"{s:.1f}s"
-        m, r = divmod(s, 60)
+        if secs < 60:
+            return f"{secs:.1f}s"
+        m, r = divmod(secs, 60)
         return f"{int(m)}m{int(r)}s"
 
     # ── 交互：搜索 / 清空 / 删除 / 打开 / 导出 ─────────────────
@@ -816,9 +547,15 @@ class HistoryPage(ft.Column):
         if self._topbar.page:
             self.update()
 
+    def _confirm_clear(self, _) -> None:
+        s.confirm(
+            self._page, "清空所有历史记录？", "清空后无法恢复，已生成的文件不受影响。",
+            confirm_label="清空", on_confirm=lambda: self._clear_history(None), danger=True,
+        )
+
     def _clear_history(self, _) -> None:
         history_service.clear_history()
-        show_toast(self._page, "已清空所有历史记录")
+        show_toast(self._page, "已清空所有历史记录", kind="success")
         self._reload_from_service()
 
     def _delete_row(self, task_id: int | None) -> None:
@@ -834,9 +571,9 @@ class HistoryPage(ft.Column):
             with sqlite3.connect(_db_path) as conn:
                 conn.execute("DELETE FROM task_history WHERE id = ?", (task_id,))
         except sqlite3.Error as exc:
-            show_toast(self._page, f"删除失败：{exc}", color="#b31b25")
+            show_toast(self._page, f"删除失败：{exc}", kind="error")
             return
-        show_toast(self._page, "已删除该记录")
+        show_toast(self._page, "已删除该记录", kind="success")
         self._reload_from_service()
 
     def _open_dir(self, path_str: str) -> None:
@@ -844,7 +581,7 @@ class HistoryPage(ft.Column):
             return
         p = Path(path_str)
         if not p.exists():
-            show_toast(self._page, "目录不存在或已被移动", color="#b31b25")
+            show_toast(self._page, "目录不存在或已被移动", kind="error")
             return
         try:
             if sys.platform == "win32":
@@ -854,7 +591,7 @@ class HistoryPage(ft.Column):
             else:
                 subprocess.Popen(["xdg-open", str(p)])
         except OSError as exc:
-            show_toast(self._page, f"打开失败：{exc}", color="#b31b25")
+            show_toast(self._page, f"打开失败：{exc}", kind="error")
 
     def _export_history(self, _) -> None:
         """导出当前过滤结果为 CSV。"""
@@ -890,6 +627,6 @@ class HistoryPage(ft.Column):
                         t.get("error_msg", "") or "",
                     ])
         except OSError as exc:
-            show_toast(self._page, f"导出失败：{exc}", color="#b31b25")
+            show_toast(self._page, f"导出失败：{exc}", kind="error")
             return
         show_toast(self._page, f"已导出 {len(self._filtered_tasks)} 条记录到 {csv_path.name}")

@@ -26,6 +26,7 @@ from core.prompt_image import templates as tpl
 from core.prompt_image.option_labels import option_label
 from services import prompt_image_service, settings_service
 from services import prompt_library_service as lib
+from ui import style as s
 from ui.palette import c
 from ui.utils import open_folder, show_toast
 
@@ -35,36 +36,42 @@ _HISTORY_THUMBS = 12
 _KEY_LAST_SOURCE = "prompt_image_last_source"
 _KEY_LAST_TEMPLATE = "prompt_image_last_template"
 _KEY_MODIFIERS = "prompt_image_modifiers"
-_FONT = "42dot Sans"
+_FONT = s.FONT
 
 
-def _txt(value: str, size: int = 12, color: str = "#455c7f", **kw) -> ft.Text:
+def _txt(value: str, size: float = 12, color: str = "ink-2", **kw) -> ft.Text:
     return ft.Text(value, size=size, color=c(color, "fg"), font_family=_FONT, **kw)
 
 
 def _dropdown(**kw) -> ft.Dropdown:
-    """统一风格的下拉框：浅底无边框，聚焦时显示品牌色描边。"""
-    kw.setdefault("dense", True)
+    """统一风格的下拉框：白底 1px 描边，聚焦时描边换成强调色。"""
+    opts = s.field_style()
+    opts.pop("label_style")
+    opts.update(dense=True, text_size=13,
+                content_padding=ft.padding.symmetric(horizontal=12, vertical=9))
+    opts.update(kw)
+    return ft.Dropdown(**opts)
+
+
+def _field(**kw) -> ft.TextField:
+    """统一风格的输入框（多行时去掉 dense，留出行高）。"""
     kw.setdefault("text_size", 13)
-    kw.setdefault("border_radius", 10)
-    kw.setdefault("filled", True)
-    kw.setdefault("fill_color", c("#f8fafc"))
-    kw.setdefault("border_color", "transparent")
-    kw.setdefault("focused_border_color", c("#005f98"))
-    kw.setdefault("content_padding", ft.padding.symmetric(horizontal=12, vertical=10))
-    kw.setdefault("text_style", ft.TextStyle(color=c("#162f50", "fg"), size=13))
-    return ft.Dropdown(**kw)
+    if kw.get("multiline"):
+        kw.setdefault("dense", False)
+        kw.setdefault("content_padding", ft.padding.symmetric(horizontal=12, vertical=10))
+    return s.text_field(**kw)
 
 
 def _card(content: ft.Control, **kw) -> ft.Container:
-    return ft.Container(
-        content=content,
-        bgcolor=c("#ffffff"),
-        border_radius=16,
-        shadow=ft.BoxShadow(blur_radius=8, color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
-                            offset=ft.Offset(0, 2)),
-        **kw,
-    )
+    return s.card(content, **kw)
+
+
+def _outlined(icon: str) -> str:
+    """模板自带的图标名换成线性版本（有的话），保证全页图标风格一致。"""
+    name = getattr(icon, "name", str(icon)).upper()
+    if name.endswith(("_OUTLINED", "_OUTLINE")):
+        return icon
+    return getattr(ft.Icons, f"{name}_OUTLINED", icon)
 
 
 class PromptImagePage(ft.Column):
@@ -99,16 +106,13 @@ class PromptImagePage(ft.Column):
             value=self._source, options=[], dense=True, border_radius=10, expand=True,
             text_size=13, on_select=self._on_source_change,
         )
-        self._search = ft.TextField(
-            hint_text="搜索名称 / 标签 / 提示词",
-            hint_style=ft.TextStyle(color=c("#94a3b8", "fg"), size=13),
-            prefix_icon=ft.Icons.SEARCH, dense=True, text_size=13,
-            border_radius=10, bgcolor=c("#f8fafc"), border_color="transparent",
-            content_padding=ft.padding.symmetric(horizontal=12, vertical=10),
+        self._search = _field(
+            hint="搜索名称 / 标签 / 提示词",
+            prefix_icon=ft.Icons.SEARCH_OUTLINED,
             on_change=self._on_search_change,
         )
         self._category_area = ft.Container()
-        self._count_text = _txt("", 11, "#94a3b8")
+        self._count_text = _txt("", 11, "ink-3")
         self._template_list = ft.ListView(expand=True, spacing=6, padding=ft.padding.only(right=6))
 
         # ── 中栏控件 ────────────────────────────────────────────────────
@@ -116,25 +120,20 @@ class PromptImagePage(ft.Column):
         self._form_area = ft.Column(spacing=12)
         self._modifier_area = ft.Column(spacing=10, visible=bool(self._modifiers))
         self._modifier_toggle_icon = ft.Icon(
-            ft.Icons.EXPAND_LESS if self._modifiers else ft.Icons.EXPAND_MORE,
-            size=18, color=c("#455c7f", "fg"),
+            ft.Icons.EXPAND_LESS_OUTLINED if self._modifiers else ft.Icons.EXPAND_MORE_OUTLINED,
+            size=18, color=c("ink-3", "fg"),
         )
-        self._modifier_count = _txt("", 11, "#005f98")
-        self._negative = ft.TextField(
-            hint_text="避免出现的内容（可选），如：文字水印、多余手指、模糊",
-            hint_style=ft.TextStyle(color=c("#94a3b8", "fg"), size=12),
-            dense=True, text_size=13, border_radius=10, bgcolor=c("#f8fafc"),
-            border_color="transparent", on_change=lambda _e: self._refresh_prompt(),
+        self._modifier_count = _txt("", 11, "ink-3")
+        self._negative = _field(
+            hint="避免出现的内容（可选），如：文字水印、多余手指、模糊",
+            on_change=lambda _e: self._refresh_prompt(),
         )
-        self._prompt_state = _txt("自动生成", 11, "#94a3b8")
-        self._restore_btn = ft.TextButton(
-            "恢复自动", visible=False, on_click=self._on_restore_prompt,
-            style=ft.ButtonStyle(color=c("#005f98", "fg"), padding=ft.padding.all(4)),
-        )
-        self._prompt_field = ft.TextField(
-            multiline=True, min_lines=4, max_lines=10, text_size=13,
-            text_style=ft.TextStyle(color=c("#162f50", "fg")),
-            border_radius=12, bgcolor=c("#f8fafc"), border_color="transparent",
+        self._prompt_state = _txt("自动生成", 11, "ink-3")
+        self._restore_btn = s.button("恢复自动", self._on_restore_prompt, kind="ghost",
+                                     height=26, visible=False)
+        self._prompt_field = _field(
+            multiline=True, min_lines=4, max_lines=10,
+            text_style=ft.TextStyle(color=c("ink", "fg"), size=13, font_family=s.MONO),
             on_change=self._on_prompt_edited,
         )
         self._size_dd = _dropdown(
@@ -155,17 +154,17 @@ class PromptImagePage(ft.Column):
                 ft.dropdown.Option("auto", "自动"),
             ],
         )
-        self._generate_label = _txt("生成图片", 15, "#ffffff", weight=ft.FontWeight.W_600)
+        self._generate_label = _txt("生成图片", 13.5, "on-ink", weight=ft.FontWeight.W_500)
         self._generate_btn = self._build_generate_button()
         self._config_hint = self._build_config_hint()
 
         # ── 右栏控件 ────────────────────────────────────────────────────
         self._preview = ft.Container(
-            expand=True, border_radius=12, bgcolor=c("#f8fafc"),
-            border=ft.border.all(1, c("#e2e8f0")), alignment=ft.Alignment(0, 0),
-            padding=8,
+            expand=True, border_radius=12, bgcolor=c("surface-2"),
+            border=ft.border.all(1, c("line")), alignment=ft.Alignment(0, 0),
+            padding=8, animate=s.snappy(),
         )
-        self._result_meta = _txt("", 11, "#94a3b8", max_lines=2,
+        self._result_meta = s.text("", "mono", "ink-3", size=11, max_lines=2,
                                  overflow=ft.TextOverflow.ELLIPSIS)
         self._result_actions = ft.Row(spacing=6, run_spacing=6, wrap=True, visible=False)
         self._history_row = ft.Row(spacing=8, run_spacing=8, wrap=True)
@@ -197,28 +196,24 @@ class PromptImagePage(ft.Column):
     # ═════════════════════════════════════════════════════════════════
     def _build_header(self) -> ft.Control:
         return ft.Container(
-            padding=ft.padding.only(left=24, top=16, right=32, bottom=12),
+            padding=ft.padding.only(left=s.PAGE_X - 8, top=16, right=s.PAGE_X, bottom=14),
             content=ft.Row(
                 controls=[
-                    ft.IconButton(ft.Icons.ARROW_BACK, icon_color=c("#455c7f", "fg"),
-                                  on_click=lambda _e: self._page.go("/")),
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.AUTO_FIX_HIGH, color=c("#e11d48", "fg"), size=20),
-                        width=40, height=40, bgcolor=c("#fff1f2"), border_radius=12,
-                        alignment=ft.Alignment(0, 0),
-                    ),
+                    s.icon_button(ft.Icons.ARROW_BACK_OUTLINED, lambda _e: self._page.go("/"), "返回首页"),
                     ft.Column(
                         controls=[
-                            _txt("提示词出图", 20, "#162f50", weight=ft.FontWeight.W_600),
-                            _txt("挑一个模板，填几个关键词，AI 帮你出图", 12, "#455c7f"),
+                            s.text("提示词出图", "headline"),
+                            s.text("挑一个模板，填几个关键词，AI 帮你出图", "small"),
                         ],
-                        spacing=0, tight=True,
+                        spacing=2, tight=True,
                     ),
                     ft.Container(expand=True),
-                    self._pill_button("提示词源", ft.Icons.HUB_OUTLINED, self._open_source_manager),
-                    self._pill_button("新建模板", ft.Icons.ADD, lambda _e: self._open_template_editor()),
+                    s.button("提示词源", self._open_source_manager, kind="secondary",
+                             icon=ft.Icons.HUB_OUTLINED),
+                    s.button("新建模板", lambda _e: self._open_template_editor(), kind="secondary",
+                             icon=ft.Icons.ADD_OUTLINED),
                 ],
-                spacing=12,
+                spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
         )
@@ -249,8 +244,8 @@ class PromptImagePage(ft.Column):
                 ft.Container(
                     content=ft.Row(
                         controls=[
-                            ft.Icon(ft.Icons.TUNE, size=16, color=c("#e11d48", "fg")),
-                            _txt("风格增强", 14, "#162f50", weight=ft.FontWeight.W_600),
+                            ft.Icon(ft.Icons.TUNE_OUTLINED, size=16, color=c("ink-2", "fg")),
+                            s.text("风格增强", "title", size=14),
                             self._modifier_count,
                             ft.Container(expand=True),
                             self._modifier_toggle_icon,
@@ -259,23 +254,21 @@ class PromptImagePage(ft.Column):
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
                     on_click=self._toggle_modifiers,
-                    ink=True, border_radius=8, padding=ft.padding.symmetric(vertical=4),
+                    border_radius=8, padding=ft.padding.symmetric(vertical=4),
                 ),
                 self._modifier_area,
                 self._negative,
                 self._divider(),
                 ft.Row(
                     controls=[
-                        ft.Icon(ft.Icons.SUBJECT, size=16, color=c("#e11d48", "fg")),
-                        _txt("最终提示词", 14, "#162f50", weight=ft.FontWeight.W_600),
+                        ft.Icon(ft.Icons.SUBJECT_OUTLINED, size=16, color=c("ink-2", "fg")),
+                        s.text("最终提示词", "title", size=14),
                         self._prompt_state,
                         self._restore_btn,
                         ft.Container(expand=True),
-                        ft.IconButton(ft.Icons.COPY_ALL_OUTLINED, icon_size=18, tooltip="复制提示词",
-                                      icon_color=c("#455c7f", "fg"), on_click=self._on_copy_prompt),
-                        ft.IconButton(ft.Icons.BOOKMARK_ADD_OUTLINED, icon_size=18,
-                                      tooltip="存为我的模板", icon_color=c("#455c7f", "fg"),
-                                      on_click=self._on_save_as_template),
+                        s.icon_button(ft.Icons.COPY_ALL_OUTLINED, self._on_copy_prompt, "复制提示词"),
+                        s.icon_button(ft.Icons.BOOKMARK_ADD_OUTLINED, self._on_save_as_template,
+                                      "存为我的模板"),
                     ],
                     spacing=6,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -303,7 +296,7 @@ class PromptImagePage(ft.Column):
                 horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
             padding=ft.padding.only(top=12),
-            border=ft.border.only(top=ft.BorderSide(1, c("#e2e8f0"))),
+            border=ft.border.only(top=ft.BorderSide(1, c("line"))),
         )
         middle = _card(
             ft.Column([ft.Container(editor_scroll, expand=True, padding=ft.padding.only(right=8)),
@@ -316,8 +309,8 @@ class PromptImagePage(ft.Column):
                 controls=[
                     ft.Row(
                         controls=[
-                            ft.Icon(ft.Icons.IMAGE_OUTLINED, size=16, color=c("#e11d48", "fg")),
-                            _txt("生成结果", 14, "#162f50", weight=ft.FontWeight.W_600),
+                            ft.Icon(ft.Icons.IMAGE_OUTLINED, size=16, color=c("ink-2", "fg")),
+                            s.text("生成结果", "title", size=14),
                         ],
                         spacing=6,
                     ),
@@ -339,47 +332,29 @@ class PromptImagePage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.STRETCH,
                 expand=True,
             ),
-            padding=ft.padding.only(left=24, right=24, bottom=24),
+            padding=ft.padding.only(left=s.PAGE_X, right=s.PAGE_X, bottom=s.PAGE_X),
             expand=True,
         )
 
     def _divider(self) -> ft.Control:
-        return ft.Divider(height=1, thickness=1, color=c("#e2e8f0"))
+        return ft.Divider(height=1, thickness=1, color=c("line"))
 
     def _section_title(self, title: str, icon: str) -> ft.Control:
         return ft.Row(
-            controls=[ft.Icon(icon, size=16, color=c("#e11d48", "fg")),
-                      _txt(title, 14, "#162f50", weight=ft.FontWeight.W_600)],
+            controls=[ft.Icon(icon, size=16, color=c("ink-2", "fg")),
+                      s.text(title, "title", size=14)],
             spacing=6,
         )
 
     def _labeled(self, label: str, body: ft.Control) -> ft.Control:
-        return ft.Column([_txt(label, 11), body], spacing=4, expand=True)
-
-    def _pill_button(self, label: str, icon: str, on_click) -> ft.Control:
-        return ft.Container(
-            content=ft.Row(
-                controls=[ft.Icon(icon, size=16, color=c("#005f98", "fg")),
-                          _txt(label, 13, "#005f98", weight=ft.FontWeight.W_500)],
-                spacing=6, tight=True,
-            ),
-            bgcolor=c("#ffffff"), border=ft.border.all(1, c("#d5e3ff")), border_radius=9999,
-            padding=ft.padding.symmetric(horizontal=14, vertical=8), on_click=on_click, ink=True,
-        )
+        return ft.Column([s.text(label, "caption", "ink-2"), body], spacing=5, expand=True)
 
     def _small_button(self, label: str, icon: str, on_click, primary: bool = False) -> ft.Control:
-        fg = "#ffffff" if primary else "#005f98"
-        return ft.Container(
-            content=ft.Row(
-                controls=[ft.Icon(icon, size=14, color=c(fg, "fg")), _txt(label, 12, fg)],
-                spacing=4, tight=True,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            bgcolor=c("#005f98") if primary else c("#ffffff"),
-            border=None if primary else ft.border.all(1, c("#d5e3ff")),
-            border_radius=8, padding=ft.padding.symmetric(horizontal=10, vertical=6),
-            on_click=on_click, ink=True,
-        )
+        btn = s.button(label, on_click, kind="primary" if primary else "secondary", icon=icon,
+                       height=30)
+        btn.style.padding = ft.padding.symmetric(horizontal=10)
+        btn.style.icon_size = 14
+        return btn
 
     # ═════════════════════════════════════════════════════════════════
     # 左栏：模板库
@@ -437,15 +412,8 @@ class PromptImagePage(ft.Column):
             chips = []
             for cat in cats:
                 active = cat == self._category
-                chips.append(ft.Container(
-                    content=_txt(cat, 12, "#ffffff" if active else "#455c7f",
-                                 weight=ft.FontWeight.W_500),
-                    bgcolor=c("#005f98") if active else c("#f1f5f9"),
-                    border_radius=9999,
-                    padding=ft.padding.symmetric(horizontal=10, vertical=5),
-                    on_click=lambda _e, cat=cat: self._on_category_change(cat),
-                    ink=True,
-                ))
+                chips.append(self._chip(cat, active,
+                                        lambda _e, cat=cat: self._on_category_change(cat)))
             self._category_area.content = ft.Row(chips, spacing=6, run_spacing=6, wrap=True)
         self._update(self._category_area)
 
@@ -463,7 +431,7 @@ class PromptImagePage(ft.Column):
             hint = "还没有自己的模板，点右上角「新建模板」，或在提示词旁点书签保存" \
                 if self._source == lib.CUSTOM_SOURCE and not self._keyword else "没有匹配的模板"
             self._template_list.controls = [ft.Container(
-                content=_txt(hint, 12, "#94a3b8", text_align=ft.TextAlign.CENTER),
+                content=_txt(hint, 12, "ink-3", text_align=ft.TextAlign.CENTER),
                 padding=ft.padding.symmetric(vertical=24, horizontal=8),
                 alignment=ft.Alignment(0, 0),
             )]
@@ -475,44 +443,69 @@ class PromptImagePage(ft.Column):
 
     def _template_tile(self, t: dict, favorite: bool) -> ft.Control:
         selected = self._current is not None and self._current["id"] == t["id"]
-        icon = getattr(ft.Icons, t.get("icon") or "AUTO_AWESOME", ft.Icons.AUTO_AWESOME)
+        icon = getattr(ft.Icons, t.get("icon") or "AUTO_AWESOME", ft.Icons.AUTO_AWESOME_OUTLINED)
         sub = t.get("author") or (lib.source_label(t["source"])
                                   if t.get("source") not in (tpl.BUILTIN_SOURCE, None) else "")
         texts: list[ft.Control] = [
             ft.Row(
                 controls=[
-                    ft.Text(t["name"], size=13, weight=ft.FontWeight.W_600,
-                            color=c("#162f50", "fg"), font_family=_FONT, expand=True,
-                            max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                    ft.Icon(ft.Icons.STAR, size=13, color=c("#d97706", "fg"), visible=favorite),
+                    s.text(t["name"], "label", expand=True,
+                           max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                    ft.Icon(ft.Icons.STAR_ROUNDED, size=13, color=c("ink", "fg"), visible=favorite),
                 ],
                 spacing=4,
             ),
-            _txt(t.get("description", ""), 11, "#61789c", max_lines=1,
+            _txt(t.get("description", ""), 11.5, "ink-2", max_lines=1,
                  overflow=ft.TextOverflow.ELLIPSIS),
         ]
         if sub:
-            texts.append(_txt(sub, 10, "#94a3b8", max_lines=1, overflow=ft.TextOverflow.ELLIPSIS))
-        return ft.Container(
+            texts.append(_txt(sub, 10.5, "ink-3", max_lines=1, overflow=ft.TextOverflow.ELLIPSIS))
+        tile = ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Container(
-                        content=ft.Icon(icon, size=18, color=c("#e11d48", "fg")),
-                        width=34, height=34, border_radius=10, bgcolor=c("#fff1f2"),
-                        alignment=ft.Alignment(0, 0),
-                    ),
+                    s.icon_tile(_outlined(icon), size=32, icon_size=16, active=selected),
                     ft.Column(texts, spacing=1, expand=True, tight=True),
                 ],
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor=c("#f0f7ff") if selected else None,
-            border=ft.border.all(1, c("#005f98") if selected else "transparent"),
-            border_radius=12,
-            padding=ft.padding.symmetric(horizontal=8, vertical=8),
+            bgcolor=c("accent-soft") if selected else None,
+            border=ft.border.all(1, c("accent") if selected else ft.Colors.TRANSPARENT),
+            border_radius=s.R_INPUT,
+            padding=ft.padding.symmetric(horizontal=8, vertical=7),
             on_click=lambda _e, t=t: self._select_template(t),
-            ink=True,
+            animate=s.snappy(),
         )
+        if not selected:
+            tile.on_hover = lambda e, tile=tile: self._tile_hover(tile, e)
+        return tile
+
+    @staticmethod
+    def _tile_hover(tile: ft.Container, e: ft.ControlEvent) -> None:
+        on = e.data in (True, "true")
+        tile.bgcolor = c("surface-2") if on else None
+        tile.update()
+
+    @staticmethod
+    def _chip(label: str, active: bool, on_click) -> ft.Control:
+        """可选标签：未选中 surface-2 底 + ink-2 字，选中墨黑实心。"""
+        chip = ft.Container(
+            content=_txt(label, 12, "on-ink" if active else "ink-2", weight=ft.FontWeight.W_500),
+            bgcolor=c("ink") if active else c("surface-2"),
+            border=ft.border.all(1, c("ink") if active else c("line")),
+            border_radius=999,
+            padding=ft.padding.symmetric(horizontal=10, vertical=4),
+            on_click=on_click,
+            animate=s.snappy(),
+        )
+        if not active:
+            def _hover(e: ft.ControlEvent) -> None:
+                on = e.data in (True, "true")
+                chip.border = ft.border.all(1, c("line-strong") if on else c("line"))
+                chip.content.color = c("ink" if on else "ink-2", "fg")
+                chip.update()
+            chip.on_hover = _hover
+        return chip
 
     # ═════════════════════════════════════════════════════════════════
     # 中栏：模板信息、表单、风格增强、最终提示词
@@ -545,51 +538,47 @@ class PromptImagePage(ft.Column):
         if not t:
             return
         fav = lib.is_favorite(t["id"])
-        icon = getattr(ft.Icons, t.get("icon") or "AUTO_AWESOME", ft.Icons.AUTO_AWESOME)
+        icon = getattr(ft.Icons, t.get("icon") or "AUTO_AWESOME", ft.Icons.AUTO_AWESOME_OUTLINED)
         actions: list[ft.Control] = [
-            ft.IconButton(
-                ft.Icons.STAR if fav else ft.Icons.STAR_BORDER, icon_size=20,
-                icon_color=c("#d97706", "fg") if fav else c("#94a3b8", "fg"),
-                tooltip="取消收藏" if fav else "收藏", on_click=self._on_toggle_favorite,
+            s.icon_button(
+                ft.Icons.STAR_ROUNDED if fav else ft.Icons.STAR_BORDER_ROUNDED,
+                self._on_toggle_favorite, "取消收藏" if fav else "收藏",
+                color="ink" if fav else "ink-3",
             ),
         ]
         if t.get("source") == lib.CUSTOM_SOURCE:
             actions += [
-                ft.IconButton(ft.Icons.EDIT_OUTLINED, icon_size=18, tooltip="编辑模板",
-                              icon_color=c("#455c7f", "fg"),
-                              on_click=lambda _e: self._open_template_editor(self._current)),
-                ft.IconButton(ft.Icons.DELETE_OUTLINE, icon_size=18, tooltip="删除模板",
-                              icon_color=c("#b91c1c", "fg"), on_click=self._on_delete_custom),
+                s.icon_button(ft.Icons.EDIT_OUTLINED,
+                              lambda _e: self._open_template_editor(self._current), "编辑模板"),
+                s.icon_button(ft.Icons.DELETE_OUTLINE, self._on_delete_custom, "删除模板",
+                              color="danger"),
             ]
         credit: list[ft.Control] = [
-            self._badge(t.get("category") or "未分类", "#dee9ff", "#005f98"),
-            self._badge(lib.source_label(t.get("source") or tpl.BUILTIN_SOURCE), "#f1f5f9", "#455c7f"),
+            self._badge(t.get("category") or "未分类"),
+            self._badge(lib.source_label(t.get("source") or tpl.BUILTIN_SOURCE)),
         ]
         if t.get("author"):
-            credit.append(_txt(f"作者 {t['author']}", 11, "#61789c"))
+            credit.append(_txt(f"作者 {t['author']}", 11, "ink-3"))
         if t.get("license"):
-            credit.append(_txt(t["license"], 11, "#61789c"))
+            credit.append(_txt(t["license"], 11, "ink-3"))
         if t.get("link"):
-            credit.append(ft.Container(
-                content=ft.Row([ft.Icon(ft.Icons.OPEN_IN_NEW, size=12, color=c("#005f98", "fg")),
-                                _txt("原文", 11, "#005f98")], spacing=2, tight=True),
-                on_click=lambda _e, url=t["link"]: self._launch(url), ink=True, border_radius=6,
-                padding=ft.padding.symmetric(horizontal=4, vertical=2),
-            ))
+            link = ft.Container(
+                content=ft.Row([ft.Icon(ft.Icons.OPEN_IN_NEW_OUTLINED, size=12, color=c("ink-2", "fg")),
+                                _txt("原文", 11, "ink-2", weight=ft.FontWeight.W_500)],
+                               spacing=3, tight=True),
+                on_click=lambda _e, url=t["link"]: self._launch(url), border_radius=6,
+                padding=ft.padding.symmetric(horizontal=5, vertical=2),
+            )
+            credit.append(s.hover_surface(link, bg=None, hover_bg="surface-2", border=None))
         self._tpl_header.controls = [
             ft.Row(
                 controls=[
-                    ft.Container(
-                        content=ft.Icon(icon, size=22, color=c("#e11d48", "fg")),
-                        width=42, height=42, border_radius=12, bgcolor=c("#fff1f2"),
-                        alignment=ft.Alignment(0, 0),
-                    ),
+                    s.icon_tile(_outlined(icon), size=42, icon_size=20),
                     ft.Column(
                         controls=[
-                            ft.Text(t["name"], size=17, weight=ft.FontWeight.W_600,
-                                    color=c("#162f50", "fg"), font_family=_FONT,
-                                    max_lines=2, overflow=ft.TextOverflow.ELLIPSIS),
-                            _txt(t.get("description", ""), 12, "#455c7f", max_lines=2,
+                            s.text(t["name"], "title", size=17,
+                                   max_lines=2, overflow=ft.TextOverflow.ELLIPSIS),
+                            _txt(t.get("description", ""), 12, "ink-2", max_lines=2,
                                  overflow=ft.TextOverflow.ELLIPSIS),
                         ],
                         spacing=2, expand=True, tight=True,
@@ -604,11 +593,11 @@ class PromptImagePage(ft.Column):
         ]
         self._update(self._tpl_header)
 
-    def _badge(self, text: str, bg: str, fg: str) -> ft.Control:
+    def _badge(self, text: str) -> ft.Control:
         return ft.Container(
-            content=_txt(text, 10, fg, weight=ft.FontWeight.W_500),
-            bgcolor=c(bg), border_radius=9999,
-            padding=ft.padding.symmetric(horizontal=8, vertical=2),
+            content=_txt(text, 10.5, "ink-2", weight=ft.FontWeight.W_500),
+            bgcolor=c("surface-2"), border=ft.border.all(1, c("line")), border_radius=999,
+            padding=ft.padding.symmetric(horizontal=8, vertical=1),
         )
 
     def _render_form(self) -> None:
@@ -620,7 +609,7 @@ class PromptImagePage(ft.Column):
         if not variables:
             self._form_area.controls.append(_txt(
                 "这个提示词没有需要填写的内容，可以直接生成，或在下方「最终提示词」里修改。",
-                12, "#94a3b8"))
+                12, "ink-3"))
         for var in variables:
             name = var["name"]
             var_type = var.get("type", "text")
@@ -629,25 +618,23 @@ class PromptImagePage(ft.Column):
                 ctrl: ft.Control = _dropdown(
                     value=default or var["options"][0], dense=True, text_size=13,
                     options=[ft.dropdown.Option(o, option_label(o)) for o in var["options"]],
-                    border_radius=10, expand=True,
+                    expand=True,
                     on_select=lambda _e: self._refresh_prompt(),
                 )
             else:
                 multiline = var_type == "textarea"
-                ctrl = ft.TextField(
-                    value=default, hint_text=var.get("placeholder", ""),
-                    hint_style=ft.TextStyle(color=c("#94a3b8", "fg"), size=12),
+                ctrl = _field(
+                    value=default, hint=var.get("placeholder", ""),
                     multiline=multiline, min_lines=4 if multiline else None,
-                    max_lines=10 if multiline else 1, dense=not multiline, text_size=13,
-                    border_radius=10, bgcolor=c("#f8fafc"), border_color="transparent",
+                    max_lines=10 if multiline else 1,
                     on_change=lambda _e: self._refresh_prompt(),
                 )
             self._var_controls[name] = ctrl
             label = var.get("label") or name
             self._form_area.controls.append(ft.Column(
                 controls=[
-                    ft.Row([_txt(label, 12),
-                            _txt("*", 12, "#e11d48", visible=bool(var.get("required")))], spacing=2),
+                    ft.Row([_txt(label, 12, "ink-2", weight=ft.FontWeight.W_500),
+                            _txt("*", 12, "danger", visible=bool(var.get("required")))], spacing=2),
                     ctrl,
                 ],
                 spacing=4,
@@ -668,16 +655,10 @@ class PromptImagePage(ft.Column):
             chips = []
             for mid, label, _text in items:
                 on = mid in selected
-                chips.append(ft.Container(
-                    content=_txt(label, 12, "#ffffff" if on else "#455c7f"),
-                    bgcolor=c("#e11d48", "fg") if on else c("#f1f5f9"),
-                    border_radius=9999,
-                    padding=ft.padding.symmetric(horizontal=10, vertical=5),
-                    on_click=lambda _e, mid=mid: self._on_toggle_modifier(mid),
-                    ink=True,
-                ))
+                chips.append(self._chip(label, on,
+                                        lambda _e, mid=mid: self._on_toggle_modifier(mid)))
             groups.append(ft.Column(
-                controls=[_txt(group, 11, "#94a3b8"),
+                controls=[_txt(group, 11, "ink-3"),
                           ft.Row(chips, spacing=6, run_spacing=6, wrap=True)],
                 spacing=4,
             ))
@@ -687,8 +668,8 @@ class PromptImagePage(ft.Column):
 
     def _toggle_modifiers(self, _e) -> None:
         self._modifier_area.visible = not self._modifier_area.visible
-        self._modifier_toggle_icon.icon = (ft.Icons.EXPAND_LESS if self._modifier_area.visible
-                                           else ft.Icons.EXPAND_MORE)
+        self._modifier_toggle_icon.icon = (ft.Icons.EXPAND_LESS_OUTLINED if self._modifier_area.visible
+                                           else ft.Icons.EXPAND_MORE_OUTLINED)
         self._update(self._modifier_area, self._modifier_toggle_icon)
 
     def _on_toggle_modifier(self, mid: str) -> None:
@@ -732,7 +713,7 @@ class PromptImagePage(ft.Column):
         if not self._current:
             return
         on = lib.toggle_favorite(self._current["id"])
-        show_toast(self._page, "已收藏" if on else "已取消收藏", color="#047857" if on else None)
+        show_toast(self._page, "已收藏" if on else "已取消收藏", kind="success" if on else "info")
         self._render_template_header()
         self._reload_library()
 
@@ -740,43 +721,50 @@ class PromptImagePage(ft.Column):
     # 生成
     # ═════════════════════════════════════════════════════════════════
     def _build_generate_button(self) -> ft.Control:
-        return ft.Container(
-            content=ft.Row(
-                controls=[ft.Icon(ft.Icons.AUTO_FIX_HIGH, color=c("#ffffff", "fg"), size=18),
-                          self._generate_label],
-                spacing=10,
-                alignment=ft.MainAxisAlignment.CENTER,
-            ),
-            gradient=ft.LinearGradient(
-                begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
-                colors=[c("#005f98"), c("#6b1ef3")],
-            ),
-            border_radius=12,
-            padding=ft.padding.symmetric(vertical=13),
-            shadow=ft.BoxShadow(blur_radius=15, spread_radius=-3,
-                                color=ft.Colors.with_opacity(0.25, c("#005f98", "fg")),
-                                offset=ft.Offset(0, 6)),
-            on_click=self._on_generate,
-            ink=True,
-            animate_opacity=150,
+        """墨黑主按钮。生成中图标换成转圈、文字换成「生成中…」，形状不变（宽度随栏宽）。"""
+        self._generate_icon = ft.AnimatedSwitcher(
+            content=ft.Icon(ft.Icons.AUTO_FIX_HIGH_OUTLINED, color=c("on-ink", "fg"), size=16),
+            transition=ft.AnimatedSwitcherTransition.FADE, duration=170, reverse_duration=110,
         )
+        btn = ft.Container(
+            content=ft.Row(
+                controls=[self._generate_icon, self._generate_label],
+                spacing=8,
+                alignment=ft.MainAxisAlignment.CENTER,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            bgcolor=c("ink"),
+            border_radius=s.R_PRIMARY,
+            height=s.H_PRIMARY,
+            on_click=self._on_generate,
+            animate=s.snappy(),
+        )
+
+        def _hover(e: ft.ControlEvent) -> None:
+            if self._generating:
+                return
+            btn.bgcolor = c("ink-hover") if e.data in (True, "true") else c("ink")
+            btn.update()
+
+        btn.on_hover = _hover
+        return btn
 
     def _build_config_hint(self) -> ft.Control:
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.INFO_OUTLINE, color=c("#b45309", "fg"), size=16),
-                    _txt("尚未配置 AI 生图 API Key", 12, "#92400e", expand=True),
-                    ft.TextButton("去设置", on_click=lambda _e: self._page.go("/settings"),
-                                  style=ft.ButtonStyle(color=c("#b45309", "fg"))),
+                    ft.Icon(ft.Icons.INFO_OUTLINE, color=c("ink-2", "fg"), size=16),
+                    _txt("尚未配置 AI 生图 API Key", 12, "ink", expand=True),
+                    s.button("去设置", lambda _e: self._page.go("/settings"), kind="ghost",
+                             height=28),
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=8,
             ),
-            bgcolor=c("#fffbeb"),
-            border=ft.border.all(1, c("#fcd34d")),
-            border_radius=10,
-            padding=ft.padding.only(left=12, right=4, top=2, bottom=2),
+            bgcolor=c("surface-2"),
+            border=ft.border.all(1, c("line")),
+            border_radius=s.R_INPUT,
+            padding=ft.padding.only(left=12, right=4, top=4, bottom=4),
             visible=not prompt_image_service.is_configured(),
         )
 
@@ -788,17 +776,17 @@ class PromptImagePage(ft.Column):
             missing = [v.get("label") or v["name"] for v in self._current.get("variables", [])
                        if v.get("required") and not values.get(v["name"])]
             if missing:
-                show_toast(self._page, f"请填写：{'、'.join(missing)}", color="#b91c1c")
+                show_toast(self._page, f"请填写：{'、'.join(missing)}", kind="error")
                 return
             self._refresh_prompt()
         prompt = (self._prompt_field.value or "").strip()
         if not prompt:
-            show_toast(self._page, "提示词为空", color="#b91c1c")
+            show_toast(self._page, "提示词为空", kind="error")
             return
         if not prompt_image_service.is_configured():
             self._config_hint.visible = True
             self._update(self._config_hint)
-            show_toast(self._page, "请先在设置中配置 AI 生图 API Key", color="#b45309")
+            show_toast(self._page, "请先在设置中配置 AI 生图 API Key", kind="warning")
             return
 
         size = self._size_dd.value or "1024x1024"
@@ -829,7 +817,7 @@ class PromptImagePage(ft.Column):
             lib.add_history(saved_path, prompt, self._current["name"] if self._current else "",
                             size)
         except Exception as e:
-            show_toast(self._page, f"保存失败：{e}", color="#b91c1c")
+            show_toast(self._page, f"保存失败：{e}", kind="error")
 
         self._last_bytes = image_bytes
         self._last_path = saved_path
@@ -850,19 +838,27 @@ class PromptImagePage(ft.Column):
     def _set_generating(self, on: bool) -> None:
         self._generating = on
         self._generate_btn.disabled = on
-        self._generate_btn.opacity = 0.6 if on else 1.0
+        self._generate_btn.bgcolor = c("ink")
+        self._generate_icon.content = ft.ProgressRing(
+            width=15, height=15, stroke_width=1.75, color=c("on-ink", "fg"),
+            bgcolor=ft.Colors.with_opacity(0.22, c("on-ink", "fg")),
+        ) if on else ft.Icon(ft.Icons.AUTO_FIX_HIGH_OUTLINED, color=c("on-ink", "fg"), size=16)
         self._generate_label.value = "生成中…" if on else "生成图片"
         self._update(self._generate_btn)
 
     # ── 右栏状态 ─────────────────────────────────────────────────────
     def _preview_state(self, icon: str, title: str, detail: str = "",
-                       color: str = "#94a3b8", extra: ft.Control | None = None) -> ft.Control:
+                       color: str = "ink-2", extra: ft.Control | None = None) -> ft.Control:
         controls: list[ft.Control] = [
-            ft.Icon(icon, size=40, color=c(color, "fg")),
-            _txt(title, 13, "#455c7f", weight=ft.FontWeight.W_500, text_align=ft.TextAlign.CENTER),
+            ft.Container(
+                content=ft.Icon(icon, size=20, color=c(color, "fg")),
+                width=44, height=44, border_radius=22, bgcolor=c("surface"),
+                border=ft.border.all(1, c("line")), alignment=ft.Alignment(0, 0),
+            ),
+            s.text(title, "label", text_align=ft.TextAlign.CENTER),
         ]
         if detail:
-            controls.append(_txt(detail, 11, "#94a3b8", text_align=ft.TextAlign.CENTER))
+            controls.append(_txt(detail, 11.5, "ink-3", text_align=ft.TextAlign.CENTER))
         if extra:
             controls.append(extra)
         return ft.Column(controls, spacing=8, tight=True,
@@ -879,16 +875,17 @@ class PromptImagePage(ft.Column):
         self._update(self._preview, self._result_actions, self._result_meta)
 
     def _show_loading(self, prompt: str) -> None:
-        waited = _txt("已等待 0 秒", 11, "#94a3b8")
+        waited = s.text("已等待 0 秒", "mono", "ink-3", size=11)
         self._preview.data = waited
         self._preview.on_click = None
         self._preview.content = ft.Column(
             controls=[
-                ft.ProgressRing(width=36, height=36, stroke_width=3, color=c("#005f98", "fg")),
-                _txt("AI 正在创作中…", 13, "#455c7f", weight=ft.FontWeight.W_500),
+                ft.ProgressRing(width=28, height=28, stroke_width=2, color=c("ink", "fg"),
+                                bgcolor=c("surface-3")),
+                s.text("AI 正在创作中…", "label"),
                 waited,
                 ft.Container(
-                    content=_txt(prompt, 11, "#94a3b8", max_lines=4,
+                    content=_txt(prompt, 11, "ink-3", max_lines=4,
                                  overflow=ft.TextOverflow.ELLIPSIS, text_align=ft.TextAlign.CENTER),
                     padding=ft.padding.symmetric(horizontal=16),
                 ),
@@ -903,8 +900,8 @@ class PromptImagePage(ft.Column):
         self._preview.data = None
         self._preview.on_click = None
         self._preview.content = self._preview_state(
-            ft.Icons.ERROR_OUTLINE, "生成失败", error[:300], color="#b91c1c",
-            extra=self._small_button("重试", ft.Icons.REFRESH, self._on_generate, primary=True),
+            ft.Icons.ERROR_OUTLINE, "生成失败", error[:300], color="danger",
+            extra=self._small_button("重试", ft.Icons.REFRESH_OUTLINED, self._on_generate, primary=True),
         )
         self._result_meta.value = ""
         self._result_actions.visible = False
@@ -923,8 +920,8 @@ class PromptImagePage(ft.Column):
         return ft.Image(
             src=source, fit=ft.BoxFit.CONTAIN, border_radius=10, gapless_playback=True,
             error_content=ft.Column(
-                controls=[ft.Icon(ft.Icons.BROKEN_IMAGE_OUTLINED, color=c("#b91c1c", "fg")),
-                          _txt("预览加载失败，图片已保存，可点「打开图片」查看", 11, "#b91c1c")],
+                controls=[ft.Icon(ft.Icons.BROKEN_IMAGE_OUTLINED, color=c("danger", "fg")),
+                          _txt("预览加载失败，图片已保存，可点「打开图片」查看", 11, "danger")],
                 tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             **kw,
@@ -937,8 +934,8 @@ class PromptImagePage(ft.Column):
                 ft.Container(self._image_control(image_bytes, path), alignment=ft.Alignment(0, 0),
                              expand=True),
                 ft.Container(
-                    content=ft.Icon(ft.Icons.ZOOM_OUT_MAP, size=16, color=c("#ffffff", "fg")),
-                    bgcolor=ft.Colors.with_opacity(0.45, "#000000"), border_radius=8, padding=6,
+                    content=ft.Icon(ft.Icons.ZOOM_OUT_MAP_OUTLINED, size=15, color=c("on-ink", "fg")),
+                    bgcolor=ft.Colors.with_opacity(0.72, c("ink")), border_radius=8, padding=6,
                     right=6, top=6, tooltip="查看大图",
                 ),
             ],
@@ -947,11 +944,11 @@ class PromptImagePage(ft.Column):
         self._preview.on_click = lambda _e: self._open_lightbox()
         self._result_meta.value = meta
         self._result_actions.controls = [
-            self._small_button("打开图片", ft.Icons.OPEN_IN_NEW, self._on_open_image),
-            self._small_button("打开目录", ft.Icons.FOLDER_OPEN, self._on_open_dir),
-            self._small_button("另存为", ft.Icons.DOWNLOAD, self._on_download),
-            self._small_button("复用提示词", ft.Icons.REPLAY, self._on_reuse_prompt),
-            self._small_button("再来一张", ft.Icons.REFRESH, self._on_generate, primary=True),
+            self._small_button("打开图片", ft.Icons.OPEN_IN_NEW_OUTLINED, self._on_open_image),
+            self._small_button("打开目录", ft.Icons.FOLDER_OPEN_OUTLINED, self._on_open_dir),
+            self._small_button("另存为", ft.Icons.DOWNLOAD_OUTLINED, self._on_download),
+            self._small_button("复用提示词", ft.Icons.REPLAY_OUTLINED, self._on_reuse_prompt),
+            self._small_button("再来一张", ft.Icons.REFRESH_OUTLINED, self._on_generate, primary=True),
         ]
         self._result_actions.visible = True
         self._update(self._preview, self._result_meta, self._result_actions)
@@ -961,8 +958,8 @@ class PromptImagePage(ft.Column):
         history = lib.list_history()[:_HISTORY_THUMBS]
         self._history_row.controls = [self._history_thumb(h) for h in history]
         self._history_section.controls = [
-            ft.Row([_txt("最近作品", 12, "#455c7f", weight=ft.FontWeight.W_500),
-                    _txt(f"{len(history)}", 11, "#94a3b8")], spacing=6),
+            ft.Row([_txt("最近作品", 12, "ink-2", weight=ft.FontWeight.W_500),
+                    s.text(f"{len(history)}", "mono", "ink-3", size=11)], spacing=6),
             self._history_row,
         ] if history else []
         self._update(self._history_section)
@@ -989,16 +986,15 @@ class PromptImagePage(ft.Column):
                              fit=ft.BoxFit.COVER, border_radius=8, cache_width=112,
                              error_content=ft.Icon(ft.Icons.IMAGE_OUTLINED, size=18)),
             width=60, height=60, border_radius=10, padding=2,
-            border=ft.border.all(2, c("#e11d48", "fg") if current else "transparent"),
+            border=ft.border.all(2, c("accent") if current else ft.Colors.TRANSPARENT),
             tooltip=f"{h.get('template') or '提示词出图'} · {stamp}",
             on_click=lambda _e, h=h: self._show_history_item(h),
-            ink=True,
         )
 
     def _show_history_item(self, h: dict) -> None:
         path = Path(h["path"])
         if not path.exists():
-            show_toast(self._page, "图片文件已不存在", color="#b91c1c")
+            show_toast(self._page, "图片文件已不存在", kind="error")
             self._render_history()
             return
         self._last_path = path
@@ -1069,15 +1065,15 @@ class PromptImagePage(ft.Column):
                 initial_directory=settings_service.get("default_output_dir", "") or str(Path.home()),
             )
         except Exception as e:
-            show_toast(self._page, f"无法打开保存对话框：{e}", color="#b91c1c")
+            show_toast(self._page, f"无法打开保存对话框：{e}", kind="error")
             return
         if not target:
             return
         try:
             Path(target).write_bytes(data)
-            show_toast(self._page, "已保存", color="#047857")
+            show_toast(self._page, "已保存", kind="success")
         except OSError as e:
-            show_toast(self._page, f"保存失败：{e}", color="#b91c1c")
+            show_toast(self._page, f"保存失败：{e}", kind="error")
 
     def _on_copy_prompt(self, _e) -> None:
         text = self._prompt_field.value or ""
@@ -1087,9 +1083,9 @@ class PromptImagePage(ft.Column):
     async def _copy_async(self, text: str) -> None:
         try:
             await ft.Clipboard().set(text)
-            show_toast(self._page, "提示词已复制", color="#047857")
+            show_toast(self._page, "提示词已复制", kind="success")
         except Exception as e:
-            show_toast(self._page, f"复制失败：{e}", color="#b91c1c")
+            show_toast(self._page, f"复制失败：{e}", kind="error")
 
     def _launch(self, url: str) -> None:
         self._page.run_task(self._page.launch_url, url)
@@ -1111,16 +1107,14 @@ class PromptImagePage(ft.Column):
     def _open_template_editor(self, template: dict | None = None) -> None:
         template = template or {}
         editing_id = template.get("id", "") if template.get("source") == lib.CUSTOM_SOURCE else ""
-        name = ft.TextField(label="模板名称", value=template.get("name", ""), dense=True,
-                            border_radius=10, text_size=13)
-        category = ft.TextField(label="分类", value=template.get("category") or "我的模板",
-                                dense=True, border_radius=10, text_size=13)
-        prompt = ft.TextField(
+        name = _field(label="模板名称", value=template.get("name", ""))
+        category = _field(label="分类", value=template.get("category") or "我的模板")
+        prompt = _field(
             label="提示词", value=template.get("prompt_template", ""), multiline=True,
-            min_lines=6, max_lines=12, border_radius=10, text_size=13,
-            hint_text="例如：A cozy {房间} interior in {风格} style, warm light",
+            min_lines=6, max_lines=12,
+            hint="例如：A cozy {房间} interior in {风格} style, warm light",
         )
-        detected = _txt("", 11, "#005f98")
+        detected = _txt("", 11, "ink-2")
 
         def refresh_detected(_e=None) -> None:
             _p, variables = src.detect_variables(prompt.value or "")
@@ -1134,14 +1128,14 @@ class PromptImagePage(ft.Column):
 
         def save(_e) -> None:
             if not (prompt.value or "").strip():
-                show_toast(self._page, "提示词不能为空", color="#b91c1c")
+                show_toast(self._page, "提示词不能为空", kind="error")
                 return
             item = lib.save_custom(name.value or "", prompt.value or "",
                                    category=category.value or "我的模板",
                                    default_size=template.get("default_size", "1024x1024"),
                                    template_id=editing_id)
             self._page.pop_dialog()
-            show_toast(self._page, "模板已保存", color="#047857")
+            show_toast(self._page, "模板已保存", kind="success")
             self._source = lib.CUSTOM_SOURCE
             settings_service.set(_KEY_LAST_SOURCE, self._source)
             self._category = "全部"
@@ -1149,8 +1143,7 @@ class PromptImagePage(ft.Column):
 
         dlg = ft.AlertDialog(
             modal=True,
-            title=_txt("编辑模板" if editing_id else "保存为我的模板", 16, "#162f50",
-                       weight=ft.FontWeight.W_600),
+            title=s.text("编辑模板" if editing_id else "保存为我的模板", "title", size=16),
             content=ft.Container(
                 ft.Column([name, category, prompt, detected], spacing=12, tight=True,
                           scroll=ft.ScrollMode.AUTO,
@@ -1158,8 +1151,8 @@ class PromptImagePage(ft.Column):
                 width=520,
             ),
             actions=[
-                ft.TextButton("取消", on_click=lambda _e: self._page.pop_dialog()),
-                ft.FilledButton("保存", on_click=save),
+                s.button("取消", lambda _e: self._page.pop_dialog(), kind="secondary"),
+                s.button("保存", save),
             ],
         )
         self._page.show_dialog(dlg)
@@ -1169,45 +1162,35 @@ class PromptImagePage(ft.Column):
         if not t:
             return
 
-        def confirm(_e) -> None:
+        def confirm() -> None:
             lib.delete_custom(t["id"])
-            self._page.pop_dialog()
             self._current = None
             self._reload_library()
             show_toast(self._page, "模板已删除")
 
-        self._page.show_dialog(ft.AlertDialog(
-            modal=True,
-            title=_txt("删除模板", 16, "#162f50", weight=ft.FontWeight.W_600),
-            content=_txt(f"确定删除「{t['name']}」吗？此操作不可撤销。", 13),
-            actions=[
-                ft.TextButton("取消", on_click=lambda _e: self._page.pop_dialog()),
-                ft.FilledButton("删除", on_click=confirm,
-                                style=ft.ButtonStyle(bgcolor=c("#b91c1c", "fg"))),
-            ],
-        ))
+        s.confirm(self._page, "删除模板", f"确定删除「{t['name']}」吗？此操作不可撤销。",
+                  confirm_label="删除", on_confirm=confirm, danger=True)
 
     # ═════════════════════════════════════════════════════════════════
     # 提示词源管理
     # ═════════════════════════════════════════════════════════════════
     def _open_source_manager(self, _e=None) -> None:
         self._source_body = ft.Column(spacing=14, tight=True, scroll=ft.ScrollMode.AUTO)
-        self._source_url = ft.TextField(
-            hint_text="粘贴 JSON / CSV / Markdown 提示词集合的链接（支持 GitHub 文件页地址）",
-            hint_style=ft.TextStyle(size=12, color=c("#94a3b8", "fg")),
-            dense=True, text_size=13, border_radius=10, expand=True,
+        self._source_url = _field(
+            hint="粘贴 JSON / CSV / Markdown 提示词集合的链接（支持 GitHub 文件页地址）",
+            expand=True,
         )
         self._source_busy = ft.ProgressRing(width=16, height=16, stroke_width=2, visible=False)
         self._render_source_manager()
         dlg = ft.AlertDialog(
             modal=True,
             title=ft.Row([
-                ft.Icon(ft.Icons.HUB_OUTLINED, color=c("#e11d48", "fg")),
-                _txt("提示词源", 16, "#162f50", weight=ft.FontWeight.W_600),
+                ft.Icon(ft.Icons.HUB_OUTLINED, color=c("ink-2", "fg"), size=18),
+                s.text("提示词源", "title", size=16),
                 self._source_busy,
             ], spacing=8),
             content=ft.Container(self._source_body, width=600, height=520),
-            actions=[ft.TextButton("完成", on_click=self._close_source_manager)],
+            actions=[s.button("完成", self._close_source_manager)],
         )
         self._page.show_dialog(dlg)
 
@@ -1217,90 +1200,91 @@ class PromptImagePage(ft.Column):
 
     def _render_source_manager(self) -> None:
         sources = lib.list_sources()
-        added_urls = {s.get("url") for s in sources}
+        added_urls = {item.get("url") for item in sources}
         body: list[ft.Control] = []
 
-        body.append(_txt("已添加", 13, "#162f50", weight=ft.FontWeight.W_600))
+        body.append(s.text("已添加", "label"))
         if not sources:
             body.append(_txt("还没有添加外部提示词源。可从下方推荐里一键添加，或粘贴链接 / 导入本地文件。",
-                             12, "#94a3b8"))
-        for s in sources:
-            updated = datetime.fromtimestamp(s.get("updated_at", 0)).strftime("%Y-%m-%d")
-            info = f"{s.get('count', 0)} 条 · 更新于 {updated}"
-            if s.get("license"):
-                info += f" · {s['license']}"
+                             12, "ink-3"))
+        for s_ in sources:
+            updated = datetime.fromtimestamp(s_.get("updated_at", 0)).strftime("%Y-%m-%d")
+            info = f"{s_.get('count', 0)} 条 · 更新于 {updated}"
+            if s_.get("license"):
+                info += f" · {s_['license']}"
             body.append(ft.Container(
                 content=ft.Row(
                     controls=[
                         ft.Column([
-                            _txt(s["name"], 13, "#162f50", weight=ft.FontWeight.W_500,
-                                 max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                            _txt(info, 11, "#94a3b8"),
+                            s.text(s_["name"], "label",
+                                   max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                            s.text(info, "mono", "ink-3", size=11),
                         ], spacing=2, expand=True, tight=True),
-                        ft.Switch(value=s.get("enabled", True), scale=0.8, tooltip="在模板库中显示",
-                                  on_change=lambda e, sid=s["id"]: self._on_source_enabled(sid, e)),
-                        ft.IconButton(ft.Icons.REFRESH, icon_size=18, tooltip="重新下载",
-                                      on_click=lambda _e, sid=s["id"]: self._run_source_op(
-                                          lib.refresh_source(sid), "已更新")),
-                        ft.IconButton(ft.Icons.OPEN_IN_NEW, icon_size=18, tooltip="打开主页",
-                                      visible=bool(s.get("homepage") or s["url"].startswith("http")),
-                                      on_click=lambda _e, u=s.get("homepage") or s["url"]: self._launch(u)),
-                        ft.IconButton(ft.Icons.DELETE_OUTLINE, icon_size=18, tooltip="移除",
-                                      icon_color=c("#b91c1c", "fg"),
-                                      on_click=lambda _e, sid=s["id"]: self._on_remove_source(sid)),
+                        ft.Switch(value=s_.get("enabled", True), scale=0.8, tooltip="在模板库中显示",
+                                  on_change=lambda e, sid=s_["id"]: self._on_source_enabled(sid, e)),
+                        s.icon_button(ft.Icons.REFRESH_OUTLINED, lambda _e, sid=s_["id"]: self._run_source_op(
+                                          lib.refresh_source(sid), "已更新"), "重新下载"),
+                        s.icon_button(ft.Icons.OPEN_IN_NEW_OUTLINED,
+                                      lambda _e, u=s_.get("homepage") or s_["url"]: self._launch(u),
+                                      "打开主页",
+                                      visible=bool(s_.get("homepage") or s_["url"].startswith("http"))),
+                        s.icon_button(ft.Icons.DELETE_OUTLINE,
+                                      lambda _e, sid=s_["id"]: self._on_remove_source(sid), "移除",
+                                      color="danger"),
                     ],
                     spacing=2,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                bgcolor=c("#f8fafc"), border_radius=10,
+                bgcolor=c("surface-2"), border=ft.border.all(1, c("line")), border_radius=s.R_INPUT,
                 padding=ft.padding.only(left=12, right=4, top=4, bottom=4),
             ))
 
         body.append(ft.Container(height=4))
-        body.append(_txt("推荐的开源提示词库", 13, "#162f50", weight=ft.FontWeight.W_600))
+        body.append(s.text("推荐的开源提示词库", "label"))
         body.append(_txt("内容从 GitHub 下载到本机，版权归原作者，使用时请遵守对应许可证并保留署名。",
-                         11, "#94a3b8"))
+                         11, "ink-3"))
         for rec in src.RECOMMENDED_SOURCES:
             added = rec["url"] in added_urls
             body.append(ft.Container(
                 content=ft.Row(
                     controls=[
                         ft.Column([
-                            ft.Row([_txt(rec["name"], 13, "#162f50", weight=ft.FontWeight.W_500),
-                                    self._badge(rec["license"], "#dcfce7", "#047857")], spacing=6),
-                            _txt(rec["description"], 11, "#61789c"),
+                            ft.Row([s.text(rec["name"], "label"),
+                                    self._badge(rec["license"])], spacing=6),
+                            _txt(rec["description"], 11.5, "ink-2"),
                         ], spacing=2, expand=True, tight=True),
-                        ft.IconButton(ft.Icons.OPEN_IN_NEW, icon_size=18, tooltip="查看仓库",
-                                      on_click=lambda _e, u=rec["homepage"]: self._launch(u)),
-                        ft.FilledButton(
-                            "已添加" if added else "添加", disabled=added,
-                            on_click=lambda _e, rec=rec: self._run_source_op(
+                        s.icon_button(ft.Icons.OPEN_IN_NEW_OUTLINED,
+                                      lambda _e, u=rec["homepage"]: self._launch(u), "查看仓库"),
+                        s.button(
+                            "已添加" if added else "添加",
+                            lambda _e, rec=rec: self._run_source_op(
                                 lib.add_source(rec["url"], rec["name"], rec["homepage"],
                                                rec["license"]), "已添加"),
+                            kind="secondary" if added else "primary", height=30, disabled=added,
                         ),
                     ],
                     spacing=4,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                border=ft.border.all(1, c("#e2e8f0")), border_radius=10,
+                border=ft.border.all(1, c("line")), border_radius=s.R_INPUT,
                 padding=ft.padding.only(left=12, right=8, top=6, bottom=6),
             ))
 
         body.append(ft.Container(height=4))
-        body.append(_txt("添加其他来源", 13, "#162f50", weight=ft.FontWeight.W_600))
+        body.append(s.text("添加其他来源", "label"))
         body.append(ft.Row([
             self._source_url,
-            ft.FilledButton("添加", on_click=self._on_add_url),
+            s.button("添加", self._on_add_url, height=s.H_INPUT),
         ], spacing=8))
         body.append(ft.Row([
-            self._small_button("从本地文件导入", ft.Icons.UPLOAD_FILE, self._on_import_file),
-            self._small_button("导出我的模板", ft.Icons.IOS_SHARE, self._on_export_custom),
+            self._small_button("从本地文件导入", ft.Icons.UPLOAD_FILE_OUTLINED, self._on_import_file),
+            self._small_button("导出我的模板", ft.Icons.IOS_SHARE_OUTLINED, self._on_export_custom),
         ], spacing=8))
         body.append(_txt(
             "支持格式：① JSON：{\"name\": \"库名\", \"templates\": [{\"name\": ..., \"prompt\": ..., "
             "\"category\": ...}]}；② CSV：含 prompt 列，可选 title / category / tags；"
             "③ Markdown：每个标题下第一个代码块为一条提示词。提示词中的 {变量} 或 [变量] 会变成可填写项。",
-            11, "#94a3b8"))
+            11, "ink-3"))
         self._source_body.controls = body
         self._update(self._source_body)
 
@@ -1314,9 +1298,9 @@ class PromptImagePage(ft.Column):
             try:
                 record = await coro
                 show_toast(self._page, f"{ok_text}：{record['name']}（{record['count']} 条）",
-                           color="#047857")
+                           kind="success")
             except Exception as e:
-                show_toast(self._page, f"操作失败：{_friendly_error(e)}", color="#b91c1c",
+                show_toast(self._page, f"操作失败：{_friendly_error(e)}", kind="error",
                            duration=4000)
             finally:
                 self._set_source_busy(False)
@@ -1327,7 +1311,7 @@ class PromptImagePage(ft.Column):
     def _on_add_url(self, _e) -> None:
         url = (self._source_url.value or "").strip()
         if not url.startswith(("http://", "https://")):
-            show_toast(self._page, "请输入以 http(s):// 开头的链接", color="#b91c1c")
+            show_toast(self._page, "请输入以 http(s):// 开头的链接", kind="error")
             return
         self._source_url.value = ""
         self._run_source_op(lib.add_source(url), "已添加")
@@ -1353,16 +1337,16 @@ class PromptImagePage(ft.Column):
                 allowed_extensions=["json", "csv", "tsv", "md", "markdown", "txt"],
             )
         except Exception as e:
-            show_toast(self._page, f"无法打开文件选择器：{e}", color="#b91c1c")
+            show_toast(self._page, f"无法打开文件选择器：{e}", kind="error")
             return
         if not picked or not picked[0].path:
             return
         try:
             record = lib.import_file(Path(picked[0].path))
             show_toast(self._page, f"已导入：{record['name']}（{record['count']} 条）",
-                       color="#047857")
+                       kind="success")
         except Exception as e:
-            show_toast(self._page, f"导入失败：{_friendly_error(e)}", color="#b91c1c", duration=4000)
+            show_toast(self._page, f"导入失败：{_friendly_error(e)}", kind="error", duration=4000)
         self._render_source_manager()
         self._reload_library()
 
@@ -1381,15 +1365,15 @@ class PromptImagePage(ft.Column):
                 allowed_extensions=["json"],
             )
         except Exception as e:
-            show_toast(self._page, f"无法打开保存对话框：{e}", color="#b91c1c")
+            show_toast(self._page, f"无法打开保存对话框：{e}", kind="error")
             return
         if not target:
             return
         try:
             Path(target).write_text(lib.export_custom_json(), encoding="utf-8")
-            show_toast(self._page, "已导出，可分享给他人导入", color="#047857")
+            show_toast(self._page, "已导出，可分享给他人导入", kind="success")
         except OSError as e:
-            show_toast(self._page, f"导出失败：{e}", color="#b91c1c")
+            show_toast(self._page, f"导出失败：{e}", kind="error")
 
 
 def _friendly_error(e: Exception) -> str:

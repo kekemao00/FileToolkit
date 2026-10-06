@@ -1,157 +1,158 @@
 """
-调色板 — 浅色 / 深色两套颜色的唯一来源。
+调色板 — 浅色 / 深色两套颜色的唯一来源（暖灰黑白风格）。
 
-页面里的颜色统一写成 `c("#162f50")` / `c("#ffffff", "fg")`：
-  - 参数是浅色设计稿里的色值（保持与 Figma 对照可读）
-  - 浅色模式原样返回；深色模式按下表换成对应深色值
+设计令牌（warm-mono）：浅暖灰底、白色表面、墨黑元素，强调色只有一个 #2F5BFF，
+只用在主操作、选中态、焦点态；danger 只用于错误和危险操作。
+
+新代码直接写令牌名：`c("ink")`、`c("surface")`、`c("accent")`。
+
+旧页面里的写法 `c("#162f50")` / `c("#ffffff", "fg")` 继续有效：
+  - 参数是旧设计稿里的色值，下表把它映射到对应令牌
   - role 区分同一色值的不同用途：
         "bg"（默认）填充、背景、边框、进度条轨道
         "fg"        文字、图标、强调色前景
-    例如 #ffffff 作卡片背景时深色下变深灰，作蓝色按钮上的文字时保持白色。
+    例如 #ffffff 作卡片背景时是 surface，作实心按钮上的文字时是 on-ink
+    （深色模式下主按钮反转为浅底深字，on-ink 随之变成深色）。
 
 页面在每次导航时重建，切换主题时 router 会重建侧栏和当前页，
 因此 c() 在构建控件时求值即可，无需响应式绑定。
 
-新增颜色时：浅色值直接写在页面里，再到下面两张表补上深色值；
-没登记的色值在深色模式下原样输出（不会报错，但会显得突兀）。
+没登记的色值原样输出（不会报错，但会显得突兀），新增颜色请用令牌。
 """
 import flet as ft
 
 _dark = False
 
-# ── 深色：填充 / 背景 / 边框 ─────────────────────────────────────────
-_DARK_BG: dict[str, str] = {
-    # 中性面
-    "#ffffff": "#1a2332",   # 卡片、面板
-    "#f4f6ff": "#0f1620",   # 页面底色
-    "#f8fafc": "#151d29",   # 次级面 / 输入框
-    "#f1f5f9": "#1e2836",
-    "#e2e8f0": "#2a3546",   # 分隔线、边框
-    "#ebf1ff": "#16233a",   # 首页 Hero
-    "#f0f7ff": "#16233a",
-    "#000000": "#000000",   # 阴影
-    "#1e3a8a": "#000000",
-    # 品牌蓝 & 浅蓝 tint
-    "#005f98": "#0a6aa8",
-    "#00a3ff": "#0090e0",
-    "#2aa7ff": "#2aa7ff",
-    "#2563eb": "#2563eb",
-    "#d5e3ff": "#1f3352",
-    "#dee9ff": "#1f3150",
-    "#cbdeff": "#23395c",
-    "#dbeafe": "#1b3150",
-    "#eff6ff": "#16304a",
-    "#e0f4ff": "#16304a",
-    "#e0f0ff": "#16304a",
-    "#e0f2fe": "#16304a",
-    "#ecf3ff": "#16304a",
-    "#162f50": "#2b3a52",
-    "#455c7f": "#2b3a52",
-    "#61789c": "#3a4a66",
-    "#94a3b8": "#3a4658",
-    "#97aed5": "#3a4a66",
-    # 绿
-    "#16a34a": "#16a34a",
-    "#059669": "#059669",
-    "#10b981": "#10b981",
-    "#d1fae5": "#0f2e22",
-    "#dcfce7": "#10291d",
-    "#f0fdf4": "#10291d",
-    "#bbf7d0": "#1a4a33",
-    # 红
-    "#dc2626": "#dc2626",
-    "#b91c1c": "#b91c1c",
-    "#be123c": "#be123c",
-    "#fb5151": "#fb5151",
-    "#fee2e2": "#3a1a1f",
-    "#fef2f2": "#3a1a1f",
-    "#fff1f2": "#3a1a1f",
-    "#ffe4e6": "#3a1a1f",
-    "#fecdd3": "#5a2a30",
-    "#fecaca": "#5a2a30",
-    # 琥珀 / 橙
-    "#fef3c7": "#33270f",
-    "#fffbeb": "#33270f",
-    "#fff7ed": "#33220f",
-    "#ffedd5": "#33220f",
-    "#fcd34d": "#5a4a1a",
-    # 紫
-    "#7c3aed": "#7c3aed",
-    "#ede9fe": "#261a3d",
-    "#faf5ff": "#261a3d",
-    "#f3e8ff": "#261a3d",
-    "#d9caff": "#3a2a60",
-    # 青
-    "#cffafe": "#0f2a30",
-    "#ecfeff": "#0f2a30",
-    "#00e3fd": "#00e3fd",
+# ── 令牌：(浅色, 深色) ────────────────────────────────────────────────
+TOKENS: dict[str, tuple[str, str]] = {
+    "canvas":      ("#EFEEEA", "#161614"),   # 窗口 / 页面背景
+    "surface":     ("#FFFFFF", "#1E1E1C"),   # 卡片、输入框、面板
+    "surface-2":   ("#F6F5F2", "#252523"),   # 表面上的悬停、次级填充
+    "surface-3":   ("#ECEBE7", "#2C2B28"),   # 按下态、头像底、幽灵按钮悬停
+    "ink":         ("#141413", "#F2F1ED"),   # 主文字、主按钮、指示条
+    "ink-hover":   ("#2B2A28", "#DCDAD4"),   # 主按钮悬停
+    "ink-2":       ("#5E5B56", "#A8A49C"),   # 次级文字
+    "ink-3":       ("#9A968F", "#6F6B64"),   # 占位符、提示、表头
+    "on-ink":      ("#FFFFFF", "#141413"),   # 墨黑实心块上的文字 / 图标
+    "line":        ("#E3E1DC", "#2E2D2A"),   # 分隔线、默认描边
+    "line-strong": ("#CFCCC5", "#3D3B37"),   # 悬停描边、标签描边
+    "accent":      ("#2F5BFF", "#2F5BFF"),   # 唯一强调色（填充）
+    "accent-fg":   ("#2F5BFF", "#7391FF"),   # 强调色作文字 / 图标（深色下提亮保证可读）
+    "accent-soft": ("#E8EDFF", "#1D2442"),   # 选中行底色
+    "on-accent":   ("#FFFFFF", "#FFFFFF"),
+    "danger":      ("#D93B2B", "#E5574A"),
+    "danger-soft": ("#FCEBE8", "#3A201C"),
+    "scrim":       ("#1A1814", "#000000"),
+    "shadow":      ("#000000", "#000000"),
 }
 
-# ── 深色：文字 / 图标 / 前景强调色（没登记的回落到 _DARK_BG）─────────
-_DARK_FG: dict[str, str] = {
-    "#ffffff": "#ffffff",   # 彩色按钮上的白字
-    "#ecf3ff": "#ecf3ff",
-    "#f8fafc": "#f8fafc",
-    "#000000": "#000000",
-    "#1e3a8a": "#000000",
-    # 文字层级
-    "#162f50": "#e3eaf5",
-    "#0f172a": "#f1f5f9",
-    "#001d33": "#e3eaf5",
-    "#00253f": "#cfe3ff",
-    "#455c7f": "#a3b3cc",
-    "#475569": "#a3b3cc",
-    "#64748b": "#8b99ad",
-    "#61789c": "#93a6c4",
-    "#94a3b8": "#7c8aa0",
-    "#97aed5": "#6d82a6",
-    # 品牌
-    "#005f98": "#6cb8f0",
-    "#00a3ff": "#4dbbff",
-    "#2aa7ff": "#5cbcff",
-    "#2563eb": "#6b9bff",
-    "#004d64": "#6cc6e0",
-    "#d5e3ff": "#1f3352",
-    "#cbdeff": "#9fc2ff",
-    "#e2e8f0": "#2a3546",
-    # 绿
-    "#16a34a": "#4ade80",
-    "#047857": "#34d399",
-    "#059669": "#34d399",
-    # 红
-    "#dc2626": "#f87171",
-    "#b91c1c": "#f87171",
-    "#b31b25": "#f87171",
-    "#be123c": "#fb7185",
-    "#e11d48": "#fb7185",
-    "#7f1d1d": "#fecaca",
-    # 琥珀 / 橙
-    "#d97706": "#fbbf24",
-    "#b45309": "#fbbf24",
-    "#92400e": "#fcd34d",
-    "#ea580c": "#fb923c",
-    # 紫
-    "#7c3aed": "#a78bfa",
-    "#6b1ef3": "#a78bfa",
-    "#9333ea": "#c084fc",
-    "#5500cd": "#c4b5fd",
-    # 青
-    "#0891b2": "#22d3ee",
-    "#006571": "#5eead4",
-    "#007276": "#5eead4",
-    "#004d57": "#5eead4",
+# ── 旧色值 → (作填充时的令牌, 作文字时的令牌) ─────────────────────────
+_NEUTRAL_TINT = ("surface-3", "ink-2")
+_LEGACY: dict[str, tuple[str, str]] = {
+    # 中性面
+    "#ffffff": ("surface", "on-ink"),
+    "#f4f6ff": ("canvas", "canvas"),
+    "#f8fafc": ("surface-2", "surface-2"),
+    "#f1f5f9": ("surface-2", "surface-2"),
+    "#ebf1ff": ("surface-2", "surface-2"),
+    "#f0f7ff": ("surface-2", "surface-2"),
+    "#e2e8f0": ("line", "line"),
+    "#000000": ("shadow", "shadow"),
+    "#1e3a8a": ("shadow", "shadow"),
+    # 品牌蓝 → 墨黑（主操作、图标、链接）
+    "#005f98": ("ink", "ink"),
+    "#00a3ff": ("ink", "ink"),
+    "#2aa7ff": ("ink", "ink"),
+    "#2563eb": ("ink", "ink"),
+    "#162f50": ("ink", "ink"),
+    "#0f172a": ("ink", "ink"),
+    "#001d33": ("ink", "ink"),
+    "#00253f": ("ink", "ink"),
+    # 浅蓝 tint → 中性灰
+    "#d5e3ff": ("surface-3", "ink-2"),
+    "#dee9ff": ("surface-3", "ink-2"),
+    "#cbdeff": ("surface-3", "on-ink"),
+    "#dbeafe": ("surface-3", "ink-2"),
+    "#eff6ff": ("surface-3", "ink-2"),
+    "#e0f4ff": ("surface-3", "ink-2"),
+    "#e0f0ff": ("surface-3", "ink-2"),
+    "#e0f2fe": ("surface-3", "ink-2"),
+    "#ecf3ff": ("surface-3", "on-ink"),
+    # 次级 / 三级文字
+    "#455c7f": ("ink-2", "ink-2"),
+    "#475569": ("ink-2", "ink-2"),
+    "#64748b": ("ink-2", "ink-2"),
+    "#61789c": ("ink-3", "ink-2"),
+    "#94a3b8": ("line-strong", "ink-3"),
+    "#97aed5": ("line-strong", "ink-3"),
+    # 绿（成功）→ 强调色
+    "#16a34a": ("accent", "accent-fg"),
+    "#059669": ("accent", "accent-fg"),
+    "#10b981": ("accent", "accent-fg"),
+    "#047857": ("accent", "accent-fg"),
+    "#d1fae5": ("accent-soft", "accent-fg"),
+    "#dcfce7": ("accent-soft", "accent-fg"),
+    "#f0fdf4": ("accent-soft", "accent-fg"),
+    "#bbf7d0": ("accent-soft", "accent-fg"),
+    # 红（错误）→ danger
+    "#dc2626": ("danger", "danger"),
+    "#b91c1c": ("danger", "danger"),
+    "#be123c": ("danger", "danger"),
+    "#fb5151": ("danger", "danger"),
+    "#e11d48": ("danger", "danger"),
+    "#b31b25": ("danger", "danger"),
+    "#7f1d1d": ("danger", "danger"),
+    "#fee2e2": ("danger-soft", "danger"),
+    "#fef2f2": ("danger-soft", "danger"),
+    "#fff1f2": ("danger-soft", "danger"),
+    "#ffe4e6": ("danger-soft", "danger"),
+    "#fecdd3": ("danger-soft", "danger"),
+    "#fecaca": ("danger-soft", "danger"),
+    # 琥珀 / 橙（提醒）→ 墨黑，不另设颜色
+    "#d97706": ("ink", "ink"),
+    "#b45309": ("ink", "ink"),
+    "#92400e": ("ink", "ink"),
+    "#ea580c": ("ink", "ink"),
+    "#f59e0b": ("ink", "ink"),
+    "#fef3c7": _NEUTRAL_TINT,
+    "#fffbeb": _NEUTRAL_TINT,
+    "#fff7ed": _NEUTRAL_TINT,
+    "#ffedd5": _NEUTRAL_TINT,
+    "#fcd34d": ("line-strong", "ink-2"),
+    # 紫 / 青 → 墨黑与中性灰
+    "#7c3aed": ("ink", "ink"),
+    "#6b1ef3": ("ink", "ink"),
+    "#9333ea": ("ink", "ink"),
+    "#5500cd": ("ink", "ink"),
+    "#ede9fe": _NEUTRAL_TINT,
+    "#faf5ff": _NEUTRAL_TINT,
+    "#f3e8ff": _NEUTRAL_TINT,
+    "#d9caff": _NEUTRAL_TINT,
+    "#0891b2": ("ink", "ink"),
+    "#006571": ("ink-2", "ink-2"),
+    "#007276": ("ink-2", "ink-2"),
+    "#004d57": ("ink-2", "ink-2"),
+    "#004d64": ("ink-2", "ink-2"),
+    "#00e3fd": ("surface-3", "ink-2"),
+    "#cffafe": _NEUTRAL_TINT,
+    "#ecfeff": _NEUTRAL_TINT,
 }
+
+
+def t(token: str) -> str:
+    """令牌名 → 当前主题下的色值。"""
+    light, dark = TOKENS[token]
+    return dark if _dark else light
 
 
 def c(color: str, role: str = "bg") -> str:
-    """把浅色设计稿色值映射为当前主题下的色值。"""
-    if not _dark:
+    """令牌名或旧设计稿色值 → 当前主题下的色值。"""
+    if color in TOKENS:
+        return t(color)
+    entry = _LEGACY.get(color.lower())
+    if entry is None:
         return color
-    key = color.lower()
-    if role == "fg":
-        return _DARK_FG.get(key) or _DARK_BG.get(key, color)
-    # 只登记在前景表里的是纯文字色，被当作参数传给辅助函数时也按文字处理
-    return _DARK_BG.get(key) or _DARK_FG.get(key, color)
+    return t(entry[1] if role == "fg" else entry[0])
 
 
 def is_dark() -> bool:

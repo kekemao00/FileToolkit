@@ -143,3 +143,5 @@ tag 与 `pyproject.toml` 版本不一致、或该版本已经发过时，工作�
 本项目基于 [Apache License 2.0](LICENSE) 开源。Copyright © 2026 kekemao00
 
 Windows / Linux 安装包内置的 FFmpeg 来自 [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds)，以 GPL 授权单独分发。
+
+界面字体 [Geist / Geist Mono](https://github.com/vercel/geist-font) 以 SIL Open Font License 1.1 授权，许可证全文见 `file-toolkit/assets/fonts/Geist-OFL.txt`。

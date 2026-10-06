@@ -17,8 +17,11 @@ File Toolkit — 路由管理
   /settings        → SettingsPage
 旧的独立子页路由（如 /pdf/merge）重定向到对应工作台功能，见 _LEGACY_ROUTES。
 """
+import asyncio
+
 import flet as ft
 
+from ui import style as s
 from ui.components.nav_rail import NavRail
 from ui.pages.ai_task_page import AiTaskPage
 from ui.pages.archive_page import ArchivePage
@@ -30,7 +33,6 @@ from ui.pages.ocr_page import OcrPage
 from ui.pages.pdf_page import PdfPage
 from ui.pages.prompt_image_page import PromptImagePage
 from ui.pages.settings_page import SettingsPage
-from ui.palette import c
 from ui.theme import set_rebuild_hook
 
 
@@ -97,24 +99,9 @@ def _unknown_route_page(page: ft.Page, route: str) -> ft.Column:
     """未知路由提示页面：显示路由信息 + 返回首页按钮。"""
     return ft.Column(
         controls=[
-            ft.Icon(ft.Icons.SEARCH_OFF, color=c("#94a3b8", "fg"), size=48),
-            ft.Text(
-                f"页面不存在: {route}", size=20, color=c("#162f50", "fg"),
-                font_family="42dot Sans", weight=ft.FontWeight.W_500,
-            ),
-            ft.Text(
-                "请检查入口链接或返回首页重新选择功能。",
-                size=13, color=c("#455c7f", "fg"), font_family="42dot Sans",
-            ),
-            ft.ElevatedButton(
-                "返回首页",
-                on_click=lambda _: page.go("/"),
-                style=ft.ButtonStyle(
-                    bgcolor=c("#005f98"), color=c("#ffffff", "fg"),
-                    shape=ft.RoundedRectangleBorder(radius=12),
-                    padding=ft.padding.symmetric(horizontal=24, vertical=12),
-                ),
-            ),
+            s.empty_state(ft.Icons.SEARCH_OFF_OUTLINED, f"页面不存在: {route}",
+                          "请检查入口链接或返回首页重新选择功能。"),
+            s.button("返回首页", lambda _: page.go("/")),
         ],
         alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -142,8 +129,15 @@ def setup_router(page: ft.Page) -> None:
     page.spacing = 0
 
     # 内容区域用 Column，通过 controls 列表切换
-    content_area = ft.Column(expand=True)
+    frame = ft.Container(expand=True)
+    content_area = ft.Column(controls=[frame], expand=True)
     current_route = "/"
+
+    async def _fade_in() -> None:
+        await asyncio.sleep(0.016)
+        frame.animate_opacity = s.smooth()
+        frame.opacity = 1
+        frame.update()
 
     def navigate(route: str) -> None:
         """手动导航：切换内容区 + 同步 NavRail 高亮。"""
@@ -151,8 +145,12 @@ def setup_router(page: ft.Page) -> None:
         current_route = route
         path, _ = _parse_route(route)
         nav.sync_selected(path)
-        content_area.controls = [_resolve_page(route, page)]
+        # 页面入场：新页面从透明淡入（相当于一层 canvas 色遮罩从 1 淡到 0）
+        frame.animate_opacity = None
+        frame.opacity = 0
+        frame.content = _resolve_page(route, page)
         page.update()
+        page.run_task(_fade_in)
 
     def rebuild() -> None:
         """主题切换后重建侧栏和当前页（颜色在构建时求值）。"""

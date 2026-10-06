@@ -1,36 +1,40 @@
 """
-侧边导航栏 — 1:1 还原 Figma 设计稿
+侧边导航栏 — 暖灰黑白风格
 
-设计规格：
-  宽度：256px（固定）
-  背景：#FFFFFF，阴影 offset=(0,20) blur=25 spread=-5 rgba(30,58,138,0.05)
-  内边距：16px
-  Logo 区：48px 图标 + 标题 + 副标题
-  导航项：44px 高，激活态 bg=#00A3FF 实色，r=12，文字白色，图标白色
-  未激活态：无背景，r=12，文字 #475569，图标 #475569
-  底部用户区：分隔线 + 用户信息
+规格：
+  宽度 232，canvas 底色，无阴影；右侧 1px line 分隔
+  品牌区：32px 墨黑方块 + 白色图标，标题 title 字号，副标题 small
+  导航项：36 高、圆角 9；选中指示是一块墨黑胶囊，切换时在项之间滑动
+          （同一个形状移动，不是每项各自变色），未选中项悬停 surface-3
+  底部：设置入口
 """
 import flet as ft
 
+from ui import style as s
 from ui.palette import c
 
-# 导航项配置：(label, route, icon_outline, icon_filled)
+# 导航项配置：(label, route, icon_outline, icon_selected)
 _NAV_ITEMS = [
-    ("首页",      "/",        ft.Icons.HOME_OUTLINED,          ft.Icons.HOME),
-    ("AI 智能任务", "/ai",    ft.Icons.AUTO_AWESOME_OUTLINED,  ft.Icons.AUTO_AWESOME),
-    ("提示词出图", "/prompt-image", ft.Icons.AUTO_FIX_HIGH_OUTLINED, ft.Icons.AUTO_FIX_HIGH),
-    ("PDF工具",   "/pdf",     ft.Icons.PICTURE_AS_PDF_OUTLINED, ft.Icons.PICTURE_AS_PDF),
-    ("图片工具",  "/image",   ft.Icons.IMAGE_OUTLINED,          ft.Icons.IMAGE),
-    ("音视频工具", "/media",  ft.Icons.MOVIE_OUTLINED,          ft.Icons.MOVIE),
-    ("压缩解压",  "/archive", ft.Icons.FOLDER_ZIP_OUTLINED,     ft.Icons.FOLDER_ZIP),
-    ("OCR识别",   "/ocr",     ft.Icons.DOCUMENT_SCANNER_OUTLINED, ft.Icons.DOCUMENT_SCANNER),
-    ("最近操作",  "/history", ft.Icons.HISTORY,                 ft.Icons.HISTORY),
+    ("首页",      "/",        ft.Icons.HOME_OUTLINED,          ft.Icons.HOME_OUTLINED),
+    ("AI 智能任务", "/ai",    ft.Icons.AUTO_AWESOME_OUTLINED,  ft.Icons.AUTO_AWESOME_OUTLINED),
+    ("提示词出图", "/prompt-image", ft.Icons.AUTO_FIX_HIGH_OUTLINED, ft.Icons.AUTO_FIX_HIGH_OUTLINED),
+    ("PDF工具",   "/pdf",     ft.Icons.PICTURE_AS_PDF_OUTLINED, ft.Icons.PICTURE_AS_PDF_OUTLINED),
+    ("图片工具",  "/image",   ft.Icons.IMAGE_OUTLINED,          ft.Icons.IMAGE_OUTLINED),
+    ("音视频工具", "/media",  ft.Icons.MOVIE_OUTLINED,          ft.Icons.MOVIE_OUTLINED),
+    ("压缩解压",  "/archive", ft.Icons.FOLDER_ZIP_OUTLINED,     ft.Icons.FOLDER_ZIP_OUTLINED),
+    ("OCR识别",   "/ocr",     ft.Icons.DOCUMENT_SCANNER_OUTLINED, ft.Icons.DOCUMENT_SCANNER_OUTLINED),
+    ("最近操作",  "/history", ft.Icons.HISTORY_OUTLINED,                 ft.Icons.HISTORY_OUTLINED),
 ]
+
+_ITEM_H = 36
+_GAP = 2
+_WIDTH = 232
+_PAD = 12
 
 
 class NavRail(ft.Container):
     """
-    自定义侧边导航栏，完全按照 Figma 设计实现。
+    自定义侧边导航栏。
     on_navigate: 路由跳转回调。
     """
 
@@ -40,192 +44,144 @@ class NavRail(ft.Container):
         self._nav_item_refs: list[ft.Container] = []
 
         super().__init__(
-            width=256,
+            width=_WIDTH,
             expand_loose=True,
-            bgcolor=c("#ffffff"),
-            border=ft.border.only(right=ft.BorderSide(1, c("#e2e8f0"))),
-            shadow=ft.BoxShadow(
-                spread_radius=-5,
-                blur_radius=25,
-                color=ft.Colors.with_opacity(0.05, c("#1e3a8a", "fg")),
-                offset=ft.Offset(0, 20),
-            ),
+            bgcolor=c("canvas"),
+            border=ft.border.only(right=ft.BorderSide(1, c("line"))),
             content=ft.Column(
                 controls=[
                     self._build_logo(),
                     self._build_nav_list(),
-                    self._build_user_section(),
+                    self._build_footer(),
                 ],
                 spacing=0,
                 expand=True,
             ),
-            padding=16,
+            padding=ft.padding.only(left=_PAD, right=_PAD, top=16, bottom=14),
         )
 
-    # ── Logo 区 ──────────────────────────────────────────────────────────
+    # ── 品牌区 ───────────────────────────────────────────────────────────
     def _build_logo(self) -> ft.Control:
         return ft.Container(
             content=ft.Row(
                 controls=[
                     ft.Container(
-                        content=ft.Icon(
-                            ft.Icons.FOLDER_SPECIAL,
-                            color=c("#005f98", "fg"),
-                            size=28,
-                        ),
-                        width=48,
-                        height=48,
-                        border_radius=8,
-                        bgcolor=c("#ffffff"),
-                        shadow=ft.BoxShadow(
-                            blur_radius=2,
-                            color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
-                        ),
+                        content=ft.Icon(ft.Icons.FOLDER_OUTLINED, color=c("on-ink", "fg"), size=16),
+                        width=32,
+                        height=32,
+                        border_radius=s.R_BUTTON,
+                        bgcolor=c("ink"),
                         alignment=ft.Alignment(0, 0),
                     ),
                     ft.Column(
                         controls=[
-                            ft.Text(
-                                "文件全能王",
-                                size=18,
-                                weight=ft.FontWeight.W_600,
-                                color=c("#001d33", "fg"),
-                                font_family="42dot Sans",
-                            ),
-                            ft.Text(
-                                "一个软件，搞定所有文件",
-                                size=11,
-                                color=c("#001d33", "fg"),
-                                font_family="42dot Sans",
-                                opacity=0.7,
-                            ),
+                            s.text("文件全能王", "title"),
+                            s.text("一个软件，搞定所有文件", "caption"),
                         ],
-                        spacing=2,
+                        spacing=1,
                         tight=True,
                     ),
                 ],
-                spacing=12,
+                spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.only(bottom=32),
+            padding=ft.padding.only(left=6, bottom=22, top=2),
         )
 
     # ── 导航列表 ─────────────────────────────────────────────────────────
     def _build_nav_list(self) -> ft.Control:
         self._nav_item_refs.clear()
-        items = []
-        for i, (label, route, icon, selected_icon) in enumerate(_NAV_ITEMS):
-            item = self._build_nav_item(i, label, route, icon, selected_icon)
+        self._indicator = ft.Container(
+            left=0, right=0, top=0, height=_ITEM_H,
+            bgcolor=c("ink"), border_radius=s.R_BUTTON,
+            animate_position=s.default(), animate_opacity=s.snappy(),
+        )
+        items: list[ft.Control] = []
+        for i, (label, route, icon, _sel) in enumerate(_NAV_ITEMS):
+            item = self._build_nav_item(i, label, route, icon)
             self._nav_item_refs.append(item)
             items.append(item)
+        self._place_indicator(animate=False)
 
         return ft.Container(
-            content=ft.Column(controls=items, spacing=4),
+            content=ft.Stack(
+                controls=[self._indicator, *items],
+                height=len(_NAV_ITEMS) * (_ITEM_H + _GAP),
+            ),
             expand=True,
         )
 
-    def _build_nav_item(
-        self,
-        index: int,
-        label: str,
-        route: str,
-        icon: str,
-        selected_icon: str,
-    ) -> ft.Container:
-        is_selected = index == self._selected_index
-        item_ref = ft.Container(
+    def _build_nav_item(self, index: int, label: str, route: str, icon: str) -> ft.Container:
+        selected = index == self._selected_index
+        fg = c("on-ink" if selected else "ink-2", "fg")
+        item = ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(
-                        selected_icon if is_selected else icon,
-                        color=c("#ffffff", "fg") if is_selected else c("#475569", "fg"),
-                        size=18,
-                    ),
-                    ft.Text(
-                        label,
-                        size=14,
-                        color=c("#ffffff", "fg") if is_selected else c("#475569", "fg"),
-                        font_family="42dot Sans",
-                        weight=ft.FontWeight.W_500,
-                    ),
+                    ft.Icon(icon, color=fg, size=16),
+                    ft.Text(label, size=13, color=fg, font_family=s.FONT, weight=ft.FontWeight.W_500),
                 ],
-                spacing=12,
+                spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor=c("#00a3ff") if is_selected else None,
-            border_radius=12,
-            padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            left=0, right=0, top=index * (_ITEM_H + _GAP), height=_ITEM_H,
+            border_radius=s.R_BUTTON,
+            padding=ft.padding.symmetric(horizontal=12),
             on_click=lambda e, r=route: self._on_navigate(r),
-            ink=True,
+            on_hover=lambda e, i=index: self._on_item_hover(i, e),
+            animate=s.snappy(),
             data=index,
         )
-        return item_ref
+        return item
 
-    # ── 用户信息区 ───────────────────────────────────────────────────────
-    def _build_user_section(self) -> ft.Control:
-        return ft.Container(
-            content=ft.Column(
+    def _on_item_hover(self, index: int, e: ft.ControlEvent) -> None:
+        if index == self._selected_index:
+            return
+        item = self._nav_item_refs[index]
+        on = e.data in (True, "true")
+        item.bgcolor = ft.Colors.with_opacity(0.75, c("surface-3")) if on else None
+        row: ft.Row = item.content
+        row.controls[0].color = row.controls[1].color = c("ink" if on else "ink-2", "fg")
+        item.update()
+
+    def _place_indicator(self, animate: bool = True) -> None:
+        idx = self._selected_index
+        self._indicator.animate_position = s.default() if animate else None
+        if 0 <= idx < len(_NAV_ITEMS):
+            self._indicator.top = idx * (_ITEM_H + _GAP)
+            self._indicator.opacity = 1
+        else:
+            self._indicator.opacity = 0
+
+    # ── 底部 ─────────────────────────────────────────────────────────────
+    def _build_footer(self) -> ft.Control:
+        settings = ft.Container(
+            content=ft.Row(
                 controls=[
-                    ft.Divider(height=1, color=c("#e2e8f0", "fg")),
-                    ft.Container(
-                        content=ft.Row(
-                            controls=[
-                                ft.Container(
-                                    content=ft.Icon(
-                                        ft.Icons.PERSON,
-                                        color=c("#ffffff", "fg"),
-                                        size=20,
-                                    ),
-                                    width=40,
-                                    height=40,
-                                    border_radius=20,
-                                    bgcolor=c("#005f98"),
-                                    alignment=ft.Alignment(0, 0),
-                                    border=ft.border.all(2, c("#ffffff")),
-                                    shadow=ft.BoxShadow(
-                                        blur_radius=2,
-                                        color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
-                                    ),
-                                ),
-                                ft.Column(
-                                    controls=[
-                                        ft.Text(
-                                            "本地用户",
-                                            size=14,
-                                            weight=ft.FontWeight.BOLD,
-                                            color=c("#0f172a", "fg"),
-                                            font_family="42dot Sans",
-                                        ),
-                                        ft.Text(
-                                            "免费版",
-                                            size=11,
-                                            color=c("#64748b", "fg"),
-                                            font_family="42dot Sans",
-                                        ),
-                                    ],
-                                    spacing=2,
-                                    tight=True,
-                                    expand=True,
-                                ),
-                                ft.Icon(
-                                    ft.Icons.CHEVRON_RIGHT,
-                                    color=c("#64748b", "fg"),
-                                    size=16,
-                                ),
-                            ],
-                            spacing=12,
-                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        ),
-                        padding=ft.padding.symmetric(horizontal=16, vertical=12),
-                        border_radius=8,
-                        ink=True,
-                        on_click=lambda e: self._on_navigate("/settings"),
-                    ),
+                    ft.Icon(ft.Icons.SETTINGS_OUTLINED, color=c("ink-2", "fg"), size=16),
+                    s.text("设置", "label", "ink-2", expand=True),
+                    s.text("本地处理", "caption"),
                 ],
-                spacing=0,
+                spacing=10,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.only(top=8),
+            height=_ITEM_H,
+            padding=ft.padding.symmetric(horizontal=12),
+            border_radius=s.R_BUTTON,
+            on_click=lambda e: self._on_navigate("/settings"),
+            animate=s.snappy(),
         )
+        settings.on_hover = lambda e: self._footer_hover(settings, e)
+        return ft.Container(
+            content=settings,
+            padding=ft.padding.only(top=8),
+            border=ft.border.only(top=ft.BorderSide(1, c("line"))),
+        )
+
+    @staticmethod
+    def _footer_hover(item: ft.Container, e: ft.ControlEvent) -> None:
+        on = e.data in (True, "true")
+        item.bgcolor = ft.Colors.with_opacity(0.75, c("surface-3")) if on else None
+        item.update()
 
     # ── 公共方法 ─────────────────────────────────────────────────────────
     def sync_selected(self, route: str) -> None:
@@ -240,17 +196,19 @@ class NavRail(ft.Container):
             return
 
         old_index = self._selected_index
+        was_hidden = not (0 <= old_index < len(_NAV_ITEMS))
         self._selected_index = new_index
         if 0 <= old_index < len(self._nav_item_refs):
             self._style_item(old_index, selected=False)
         if 0 <= new_index < len(self._nav_item_refs):
             self._style_item(new_index, selected=True)
+        # 从无选中状态出现时直接到位再淡入，不从别处滑过来
+        self._place_indicator(animate=not was_hidden)
 
     def _style_item(self, index: int, selected: bool) -> None:
         item = self._nav_item_refs[index]
-        _, _, icon, sel_icon = _NAV_ITEMS[index]
         row: ft.Row = item.content
-        row.controls[0].icon = sel_icon if selected else icon
-        row.controls[0].color = c("#ffffff", "fg") if selected else c("#475569", "fg")
-        row.controls[1].color = c("#ffffff", "fg") if selected else c("#475569", "fg")
-        item.bgcolor = c("#00a3ff") if selected else None
+        fg = c("on-ink" if selected else "ink-2", "fg")
+        row.controls[0].color = fg
+        row.controls[1].color = fg
+        item.bgcolor = None

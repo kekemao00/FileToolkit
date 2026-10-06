@@ -1,33 +1,37 @@
-"""AI 智能任务页 — 基于 Figma 设计稿 1:1 还原
+"""AI 智能任务页 — 暖灰黑白风格
 
-布局：Hero 区（渐变头像 + 标题 + 副标题）+ 交互区（Prompt 建议 + 输入控制台 + 附件列表 + 状态指示）
-遵循核心模式的视觉风格；AI 服务未配置时给出明确提示，不使用"即将上线"。
+布局：居中的一列 —— 墨黑图标块 + 标题 + 副标题、建议任务、输入框（白卡片）、
+附件、三条能力说明。无渐变、无光晕、无阴影；只有发送按钮是墨黑实心。
+AI 服务未配置时给出明确提示，不使用"即将上线"。
 """
 from pathlib import Path
 
 import flet as ft
 
 from services import settings_service
+from ui import style as s
 from ui.palette import c
 from ui.utils import show_toast
 
 # Prompt 建议按钮数据
 _PROMPT_SUGGESTIONS = [
-    {"icon": ft.Icons.IMAGE, "label": "图片转PDF并加水印"},
-    {"icon": ft.Icons.MOVIE, "label": "压缩视频并提取音频"},
+    {"icon": ft.Icons.IMAGE_OUTLINED, "label": "图片转PDF并加水印"},
+    {"icon": ft.Icons.MOVIE_OUTLINED, "label": "压缩视频并提取音频"},
     {"icon": ft.Icons.DRIVE_FILE_RENAME_OUTLINE, "label": "批量重命名图片"},
 ]
 
-# 底部状态指示器
+# 底部能力说明
 _STATUS_INDICATORS = [
-    {"color": "#006571", "label": "支持 50+ 种格式"},
-    {"color": "#6b1ef3", "label": "端到端加密处理"},
-    {"color": "#2aa7ff", "label": "极速 AI 编排"},
+    "支持 50+ 种格式",
+    "本地处理，文件不上传",
+    "自动编排多步流程",
 ]
+
+_MAX_WIDTH = 680
 
 
 class AiTaskPage(ft.Column):
-    """AI 智能任务：Hero + 输入控制台 + 状态指示器。"""
+    """AI 智能任务：标题区 + 输入框 + 能力说明。"""
 
     def __init__(self, page: ft.Page) -> None:
         super().__init__(expand=True, spacing=0)
@@ -35,24 +39,27 @@ class AiTaskPage(ft.Column):
         self._attached_files: list[Path] = []
 
         self._input_field = ft.TextField(
-            hint_text="描述您想完成的任务...",
-            hint_style=ft.TextStyle(color=c("#455c7f", "fg"), size=16),
-            text_style=ft.TextStyle(color=c("#162f50", "fg"), size=16),
+            hint_text="描述您想完成的任务…",
+            hint_style=ft.TextStyle(color=c("ink-3", "fg"), size=14, font_family=s.FONT),
+            text_style=ft.TextStyle(color=c("ink", "fg"), size=14, font_family=s.FONT),
             border=ft.InputBorder.NONE,
-            cursor_color=c("#005f98", "fg"),
-            selection_color=ft.Colors.with_opacity(0.15, c("#005f98")),
+            cursor_color=c("ink"),
+            selection_color=ft.Colors.with_opacity(0.3, c("accent")),
             expand=True,
             multiline=True,
-            min_lines=1,
-            max_lines=4,
-            content_padding=ft.padding.symmetric(horizontal=12, vertical=8),
+            min_lines=2,
+            max_lines=6,
+            dense=True,
+            content_padding=ft.padding.symmetric(horizontal=4, vertical=6),
+            on_focus=lambda e: self._focus_console(True),
+            on_blur=lambda e: self._focus_console(False),
         )
 
         self._attach_list = ft.Row(
             controls=[],
             wrap=True,
-            spacing=8,
-            run_spacing=8,
+            spacing=6,
+            run_spacing=6,
             visible=False,
         )
 
@@ -60,299 +67,175 @@ class AiTaskPage(ft.Column):
 
     # ── 整体内容 ──────────────────────────────────────
     def _build_content(self) -> ft.Control:
-        return ft.Container(
+        return ft.Column(
             expand=True,
-            clip_behavior=ft.ClipBehavior.HARD_EDGE,
-            content=ft.Stack(
-                expand=True,
-                controls=[
-                    # 装饰性模糊圆（右上）
-                    ft.Container(
-                        width=384, height=384,
-                        border_radius=9999,
-                        bgcolor=ft.Colors.with_opacity(0.05, c("#005f98")),
-                        blur=32,
-                        right=-96, top=-96,
-                    ),
-                    # 装饰性模糊圆（左下）
-                    ft.Container(
-                        width=384, height=384,
-                        border_radius=9999,
-                        bgcolor=ft.Colors.with_opacity(0.05, c("#6b1ef3")),
-                        blur=32,
-                        left=-96, bottom=-96,
-                    ),
-                    # 主内容列
-                    ft.Column(
-                        expand=True,
-                        scroll=ft.ScrollMode.AUTO,
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            scroll=ft.ScrollMode.AUTO,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                ft.Container(
+                    width=_MAX_WIDTH,
+                    padding=ft.padding.only(left=s.PAGE_X, right=s.PAGE_X, top=72, bottom=40),
+                    content=ft.Column(
+                        spacing=0,
+                        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
                         controls=[
                             self._build_hero_section(),
-                            self._build_interaction_area(),
+                            ft.Container(height=28),
+                            self._build_prompt_suggestions(),
+                            ft.Container(height=12),
+                            self._build_input_console(),
+                            ft.Container(content=self._attach_list, padding=ft.padding.only(top=10)),
+                            ft.Container(height=20),
+                            self._build_status_indicators(),
                         ],
                     ),
-                ],
-            ),
+                ),
+            ],
         )
 
-    # ── Hero 区域 ──────────────────────────────────────
+    # ── 标题区 ──────────────────────────────────────
     def _build_hero_section(self) -> ft.Control:
-        return ft.Container(
-            padding=ft.padding.only(top=80, bottom=40),
-            alignment=ft.Alignment(0, 0),
-            content=ft.Column(
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=0,
-                controls=[
-                    self._build_ai_avatar(),
-                    ft.Container(
-                        padding=ft.padding.only(bottom=16, top=24),
-                        content=ft.Text(
-                            "你好，我是您的 文件全能王 AI 助手",
-                            size=30,
-                            weight=ft.FontWeight.W_500,
-                            color=c("#162f50", "fg"),
-                            text_align=ft.TextAlign.CENTER,
-                        ),
+        return ft.Column(
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=0,
+            controls=[
+                ft.Container(
+                    width=48, height=48, border_radius=14, bgcolor=c("ink"),
+                    alignment=ft.Alignment(0, 0),
+                    content=ft.Icon(ft.Icons.AUTO_AWESOME_OUTLINED, color=c("on-ink", "fg"), size=22),
+                ),
+                ft.Container(height=20),
+                s.text("你好，我是文件全能王 AI 助手", "headline", size=24,
+                       text_align=ft.TextAlign.CENTER),
+                ft.Container(height=8),
+                s.text(
+                    "告诉我您的需求，我会把它拆成步骤，调用本机的 PDF、图片、音视频等工具自动完成。",
+                    "body", "ink-2", size=14, text_align=ft.TextAlign.CENTER,
+                ),
+                ft.Container(height=12),
+                ft.Container(
+                    content=ft.Row(
+                        controls=[
+                            ft.Container(width=6, height=6, border_radius=3, bgcolor=c("line-strong")),
+                            s.text("功能开发中，配置 API Key 后可试用", "caption", "ink-2"),
+                        ],
+                        spacing=7, tight=True,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
-                    ft.Container(
-                        padding=ft.padding.symmetric(horizontal=24),
-                        content=ft.Text(
-                            "一个软件，搞定所有文件。请告诉我您的需求，\n我将为您自动编排并执行最复杂的文件处理流程。",
-                            size=18,
-                            color=c("#455c7f", "fg"),
-                            text_align=ft.TextAlign.CENTER,
-                        ),
-                    ),
-                ],
-            ),
-        )
-
-    def _build_ai_avatar(self) -> ft.Control:
-        """AI 头像：渐变方块 + 旋转边框装饰 + 动态光晕"""
-        border_outer = ft.Container(
-            width=192, height=192,
-            alignment=ft.Alignment(0, 0),
-            content=ft.Container(
-                width=172, height=172,
-                border_radius=32,
-                border=ft.border.all(2, ft.Colors.with_opacity(0.2, c("#005f98"))),
-                rotate=ft.Rotate(angle=0.21),
-            ),
-        )
-        border_inner = ft.Container(
-            width=192, height=192,
-            alignment=ft.Alignment(0, 0),
-            content=ft.Container(
-                width=164, height=164,
-                border_radius=32,
-                border=ft.border.all(2, ft.Colors.with_opacity(0.2, c("#6b1ef3"))),
-                rotate=ft.Rotate(angle=-0.105),
-            ),
-        )
-        core = ft.Container(
-            width=128, height=128,
-            border_radius=24,
-            gradient=ft.LinearGradient(
-                begin=ft.Alignment(-1, -1),
-                end=ft.Alignment(1, 1),
-                colors=[c("#005f98"), c("#6b1ef3")],
-            ),
-            shadow=ft.BoxShadow(
-                blur_radius=50,
-                spread_radius=-12,
-                color=ft.Colors.with_opacity(0.2, c("#005f98", "fg")),
-                offset=ft.Offset(0, 25),
-            ),
-            alignment=ft.Alignment(0, 0),
-            content=ft.Icon(ft.Icons.AUTO_AWESOME, color=c("#ffffff", "fg"), size=55),
-        )
-        aura = ft.Container(
-            width=192, height=192,
-            border_radius=9999,
-            bgcolor=ft.Colors.with_opacity(0.20, c("#2aa7ff")),
-            blur=32,
-        )
-
-        return ft.Container(
-            width=192, height=192,
-            content=ft.Stack(
-                width=192, height=192,
-                controls=[
-                    ft.Container(
-                        width=192, height=192,
-                        alignment=ft.Alignment(0, 0),
-                        content=aura,
-                    ),
-                    border_outer,
-                    border_inner,
-                    ft.Container(
-                        width=192, height=192,
-                        alignment=ft.Alignment(0, 0),
-                        content=core,
-                    ),
-                ],
-            ),
+                    padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                    border=ft.border.all(1, c("line")),
+                    border_radius=999,
+                ),
+            ],
         )
 
     # ── 交互区域 ──────────────────────────────────────
-    def _build_interaction_area(self) -> ft.Control:
-        return ft.Container(
-            expand=True,
-            padding=ft.padding.symmetric(horizontal=24),
-            alignment=ft.Alignment(0, 0),
-            content=ft.Column(
-                expand=True,
-                spacing=24,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                controls=[
-                    self._build_prompt_suggestions(),
-                    self._build_input_console(),
-                    self._attach_list,
-                    self._build_status_indicators(),
-                ],
-            ),
-        )
-
     def _build_prompt_suggestions(self) -> ft.Control:
         buttons = []
         for item in _PROMPT_SUGGESTIONS:
             btn = ft.Container(
-                bgcolor=c("#ffffff"),
-                border=ft.border.all(1, ft.Colors.with_opacity(0.1, c("#97aed5"))),
-                border_radius=12,
-                padding=ft.padding.symmetric(horizontal=21, vertical=11),
-                shadow=ft.BoxShadow(
-                    blur_radius=1,
-                    color=ft.Colors.with_opacity(0.05, c("#000000", "fg")),
-                    offset=ft.Offset(0, 1),
-                ),
-                ink=True,
+                bgcolor=c("surface"),
+                border=ft.border.all(1, c("line")),
+                border_radius=999,
+                height=32,
+                padding=ft.padding.symmetric(horizontal=12),
                 on_click=lambda _, lbl=item["label"]: self._use_suggestion(lbl),
-                on_hover=self._on_btn_hover,
-                animate=ft.Animation(150, ft.AnimationCurve.EASE_OUT),
                 content=ft.Row(
-                    spacing=8,
+                    spacing=6,
+                    tight=True,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        ft.Icon(item["icon"], color=c("#455c7f", "fg"), size=15),
-                        ft.Text(
-                            item["label"], size=14, color=c("#162f50", "fg"),
-                            text_align=ft.TextAlign.CENTER,
-                        ),
+                        ft.Icon(item["icon"], color=c("ink-2", "fg"), size=14),
+                        s.text(item["label"], "label", "ink", size=12.5),
                     ],
                 ),
             )
-            buttons.append(btn)
+            buttons.append(s.hover_surface(btn))
 
         return ft.Row(
             alignment=ft.MainAxisAlignment.CENTER,
-            spacing=12,
+            spacing=8,
             controls=buttons,
             wrap=True,
             run_spacing=8,
         )
 
     def _build_input_console(self) -> ft.Control:
-        """毛玻璃风格主输入控制台"""
-        attach_btn = ft.Container(
-            padding=8,
-            border_radius=8,
-            tooltip="附加文件",
-            ink=True,
-            on_click=self._on_attach,
-            content=ft.Icon(ft.Icons.ATTACH_FILE, color=c("#455c7f", "fg"), size=20),
-        )
-        # 麦克风（本地无语音识别后端，点击提示功能配置）
-        mic_btn = ft.Container(
-            padding=8,
-            border_radius=8,
-            tooltip="语音输入",
-            ink=True,
-            on_click=self._on_mic,
-            content=ft.Icon(ft.Icons.MIC_NONE, color=c("#455c7f", "fg"), size=19),
-        )
+        """白色输入卡片：文本区在上，附件 / 语音 / 发送在下。聚焦时描边换成强调色。"""
         send_btn = ft.Container(
-            padding=12,
-            border_radius=12,
-            bgcolor=c("#005f98"),
-            ink=True,
+            width=34, height=34,
+            border_radius=17,
+            bgcolor=c("ink"),
+            alignment=ft.Alignment(0, 0),
+            tooltip="发送",
             on_click=self._on_submit,
-            shadow=ft.BoxShadow(
-                blur_radius=15,
-                spread_radius=-3,
-                color=ft.Colors.with_opacity(0.2, c("#005f98", "fg")),
-                offset=ft.Offset(0, 10),
-            ),
-            content=ft.Icon(ft.Icons.SEND_ROUNDED, color=c("#ffffff", "fg"), size=16),
+            animate=s.snappy(),
+            content=ft.Icon(ft.Icons.ARROW_UPWARD_ROUNDED, color=c("on-ink", "fg"), size=18),
         )
+        send_btn.on_hover = lambda e: self._send_hover(send_btn, e)
 
-        inner_row = ft.Container(
-            padding=ft.padding.symmetric(horizontal=16, vertical=12),
-            content=ft.Row(
-                vertical_alignment=ft.CrossAxisAlignment.END,
-                spacing=12,
+        self._console = ft.Container(
+            border_radius=s.R_PANEL,
+            border=ft.border.all(1, c("line")),
+            bgcolor=c("surface"),
+            padding=ft.padding.only(left=14, right=10, top=10, bottom=10),
+            animate=s.snappy(),
+            content=ft.Column(
+                spacing=6,
                 controls=[
-                    attach_btn,
-                    ft.Container(
-                        expand=True,
-                        padding=ft.padding.symmetric(vertical=3),
-                        content=self._input_field,
-                    ),
+                    self._input_field,
                     ft.Row(
-                        spacing=4,
-                        controls=[mic_btn, send_btn],
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=2,
+                        controls=[
+                            s.icon_button(ft.Icons.ATTACH_FILE_OUTLINED, self._on_attach, "附加文件"),
+                            s.icon_button(ft.Icons.MIC_NONE_OUTLINED, self._on_mic, "语音输入"),
+                            ft.Container(expand=True),
+                            send_btn,
+                        ],
                     ),
                 ],
             ),
         )
-
-        return ft.Container(
-            border_radius=16,
-            border=ft.border.all(1, c("#d5e3ff")),
-            bgcolor=c("#f8fafc"),
-            shadow=ft.BoxShadow(
-                blur_radius=50,
-                spread_radius=-12,
-                color=ft.Colors.with_opacity(0.08, c("#005f98", "fg")),
-                offset=ft.Offset(0, 25),
-            ),
-            padding=9,
-            content=inner_row,
-        )
+        return self._console
 
     def _build_status_indicators(self) -> ft.Control:
         items = []
-        for ind in _STATUS_INDICATORS:
-            item = ft.Row(
-                spacing=12,
+        for label in _STATUS_INDICATORS:
+            items.append(ft.Row(
+                spacing=6,
+                tight=True,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    ft.Container(
-                        width=6, height=6,
-                        border_radius=9999,
-                        bgcolor=c(ind["color"]),
-                    ),
-                    ft.Text(
-                        ind["label"], size=11, color=c("#61789c", "fg"),
-                        weight=ft.FontWeight.BOLD,
-                    ),
+                    ft.Icon(ft.Icons.CHECK_ROUNDED, size=13, color=c("ink-3", "fg")),
+                    s.text(label, "small", "ink-3"),
                 ],
-            )
-            items.append(item)
-
-        return ft.Container(
-            padding=ft.padding.only(top=16, bottom=48),
-            opacity=0.6,
-            content=ft.Row(
-                alignment=ft.MainAxisAlignment.CENTER,
-                spacing=24,
-                controls=items,
-            ),
+            ))
+        return ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=18,
+            wrap=True,
+            run_spacing=6,
+            controls=items,
         )
 
     # ── 事件处理 ──────────────────────────────────────
+    def _focus_console(self, on: bool) -> None:
+        console = getattr(self, "_console", None)
+        if console is None:
+            return
+        console.border = ft.border.all(1.5 if on else 1, c("accent" if on else "line"))
+        try:
+            console.update()
+        except RuntimeError:
+            pass
+
+    @staticmethod
+    def _send_hover(btn: ft.Container, e: ft.ControlEvent) -> None:
+        on = e.data in (True, "true")
+        btn.bgcolor = c("ink-hover" if on else "ink")
+        btn.update()
+
     def _use_suggestion(self, label: str) -> None:
         self._input_field.value = label
         self._input_field.update()
@@ -360,7 +243,7 @@ class AiTaskPage(ft.Column):
     def _on_submit(self, _) -> None:
         text = (self._input_field.value or "").strip()
         if not text:
-            self._show_snack("请先输入任务描述", color="#455c7f")
+            self._show_snack("请先输入任务描述", kind="info")
             return
 
         # 检查 AI 服务配置
@@ -369,13 +252,13 @@ class AiTaskPage(ft.Column):
         if not api_key:
             self._show_snack(
                 "AI 服务配置中，请在「设置」中配置 API Key 后使用",
-                color=c("#005f98", "fg"),
+                kind="warning",
                 duration=3000,
             )
             return
 
         # 已配置时的处理入口（后端服务就绪后接入）
-        self._show_snack("正在解析任务…", color="#005f98")
+        self._show_snack("正在解析任务…", kind="info")
 
     def _on_attach(self, _) -> None:
         self._page.run_task(self._pick_attach_async)
@@ -390,7 +273,7 @@ class AiTaskPage(ft.Column):
                 allow_multiple=True,
             )
         except RuntimeError:
-            self._show_snack("无法打开文件选择器，请检查系统环境")
+            self._show_snack("无法打开文件选择器，请检查系统环境", kind="error")
             return
         if not files:
             self._page.update()
@@ -407,30 +290,21 @@ class AiTaskPage(ft.Column):
         self._attach_list.visible = has_files
         for f in self._attached_files:
             chip = ft.Container(
-                bgcolor=c("#ffffff"),
-                border=ft.border.all(1, c("#d5e3ff")),
-                border_radius=9999,
-                padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                bgcolor=c("surface"),
+                border=ft.border.all(1, c("line")),
+                border_radius=999,
+                height=30,
+                padding=ft.padding.only(left=10, right=2),
                 content=ft.Row(
-                    spacing=8,
+                    spacing=6,
+                    tight=True,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        ft.Icon(ft.Icons.ATTACHMENT, color=c("#005f98", "fg"), size=14),
-                        ft.Text(
-                            f.name, size=12, color=c("#162f50", "fg"),
-                            max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
-                        ),
-                        ft.IconButton(
-                            icon=ft.Icons.CLOSE,
-                            icon_color=c("#94a3b8", "fg"),
-                            icon_size=12,
-                            tooltip="移除",
-                            on_click=lambda _, path=f: self._remove_attach(path),
-                            style=ft.ButtonStyle(
-                                padding=ft.padding.all(2),
-                                overlay_color=ft.Colors.with_opacity(0.08, c("#dc2626")),
-                            ),
-                        ),
+                        ft.Icon(ft.Icons.INSERT_DRIVE_FILE_OUTLINED, color=c("ink-2", "fg"), size=14),
+                        s.text(f.name, "small", "ink", max_lines=1,
+                               overflow=ft.TextOverflow.ELLIPSIS),
+                        s.icon_button(ft.Icons.CLOSE_ROUNDED, lambda _, path=f: self._remove_attach(path),
+                                      "移除", size=26, color="ink-3"),
                     ],
                 ),
             )
@@ -445,16 +319,6 @@ class AiTaskPage(ft.Column):
     def _on_mic(self, _) -> None:
         self._show_snack("语音输入需要系统麦克风权限，请在系统设置中授权后重试")
 
-    def _show_snack(self, msg: str, color: str | None = None, duration: int = 2200) -> None:
-        show_toast(self._page, msg, duration=duration, color=color)
-
-    @staticmethod
-    def _on_btn_hover(e: ft.ControlEvent) -> None:
-        btn = e.control
-        if e.data == "true":
-            btn.bgcolor = c("#f8fafc")
-            btn.border = ft.border.all(1, ft.Colors.with_opacity(0.3, c("#005f98")))
-        else:
-            btn.bgcolor = c("#ffffff")
-            btn.border = ft.border.all(1, ft.Colors.with_opacity(0.1, c("#97aed5")))
-        btn.update()
+    def _show_snack(self, msg: str, color: str | None = None, duration: int = 2200,
+                    kind: str | None = None) -> None:
+        show_toast(self._page, msg, duration=duration, color=color, kind=kind)

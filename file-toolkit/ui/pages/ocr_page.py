@@ -1,7 +1,7 @@
-"""OCR 文字识别 — 基于 Figma 设计稿 1:1 还原
+"""OCR 文字识别
 
-布局：左侧主内容区（标题+拖拽区+文件信息/进度/结果） + 右侧参数面板
-遵循核心模式：三视图互斥切换、并排按钮、文件列表、拖拽区
+布局：左侧主内容区（标题 + 选择文件区 + 文件信息 / 进度 / 结果） + 右侧参数面板（白色卡片）
+三视图互斥切换，外观与 ui/components/workbench.py 一致。
 """
 import asyncio
 import subprocess
@@ -13,6 +13,7 @@ import flet as ft
 from core.ocr.client import recognize
 from services import history_service, settings_service
 from services.task_service import run_task
+from ui import style as s
 from ui.components.top_bar import TopBar
 from ui.palette import c
 from ui.utils import show_toast
@@ -40,91 +41,48 @@ class OcrPage(ft.Column):
         self._result_text_value: str = ""
 
         # 处理中视图组件
-        self._progress_title = ft.Text(
-            "", size=30, weight=ft.FontWeight.W_600, color=c("#162f50", "fg"),
-            font_family="42dot Sans",
-        )
-        self._progress_pct = ft.Text(
-            "0%", size=30, weight=ft.FontWeight.BOLD, color=c("#005f98", "fg"),
-            font_family="42dot Sans",
-        )
+        self._progress_title = s.text(kind="title")
+        self._progress_pct = s.text("0%", "mono", color="ink")
         self._progress_bar = ft.ProgressBar(
-            value=0, color=c("#005f98", "fg"), bgcolor=c("#d5e3ff"), bar_height=10,
-            border_radius=5,
+            value=0, color=c("ink"), bgcolor=c("surface-3"), bar_height=4, border_radius=2,
         )
-        self._progress_desc = ft.Text(
-            "", size=13, color=c("#455c7f", "fg"), font_family="42dot Sans",
-        )
-        self._progress_cancel_btn = ft.FilledButton(
-            "取消识别",
-            style=ft.ButtonStyle(bgcolor=c("#be123c"), color=c("#ffffff", "fg")),
-            on_click=lambda _: self._cancel(),
-        )
+        self._progress_desc = s.text(kind="small")
+        self._progress_cancel_btn = s.button("取消识别", lambda _: self._cancel(), kind="secondary")
 
         # 结果视图组件
-        self._result_title = ft.Text(
-            "", size=30, weight=ft.FontWeight.W_600, color=c("#162f50", "fg"),
-            font_family="42dot Sans",
+        self._result_title = s.text(kind="title", expand=True)
+        self._result_icon = ft.Icon(ft.Icons.CHECK_ROUNDED, color="#FFFFFF", size=16)
+        self._result_icon_box = ft.Container(
+            content=self._result_icon, width=32, height=32, bgcolor=c("accent"),
+            border_radius=16, alignment=ft.Alignment(0, 0),
         )
-        self._result_text = ft.TextField(
+        self._result_text = s.text_field(
             multiline=True,
             min_lines=10,
             max_lines=18,
             read_only=False,
-            border_radius=12,
-            border_color=c("#e2e8f0"),
-            text_size=14,
-            color=c("#162f50", "fg"),
-            value="",
         )
         # 摘要字段
-        self._sum_lang = ft.Text("--", size=13, color=c("#162f50", "fg"),
-                                 weight=ft.FontWeight.W_500, font_family="42dot Sans")
-        self._sum_chars = ft.Text("--", size=13, color=c("#162f50", "fg"),
-                                  weight=ft.FontWeight.W_500, font_family="42dot Sans")
-        self._sum_paras = ft.Text("--", size=13, color=c("#162f50", "fg"),
-                                  weight=ft.FontWeight.W_500, font_family="42dot Sans")
-        self._sum_status = ft.Text("--", size=13, color=c("#162f50", "fg"),
-                                   weight=ft.FontWeight.W_500, font_family="42dot Sans")
+        self._sum_lang = s.text("--", "body-medium")
+        self._sum_chars = s.text("--", "mono", color="ink")
+        self._sum_paras = s.text("--", "mono", color="ink")
+        self._sum_status = s.text("--", "body-medium")
 
-        # 语言选择（并排按钮）
+        # 语言选择（分段标签页，墨黑指示条在选项间滑动）
         self._language_value = "chi_sim"
-        self._lang_btns: list[ft.Container] = []
-        for lang in _LANGUAGES:
-            self._lang_btns.append(self._make_lang_btn(lang["key"], lang["label"]))
+        self._lang_tabs = s.Segmented(
+            [(lang["key"], lang["label"]) for lang in _LANGUAGES], self._language_value,
+            on_change=self._select_lang, size=12.5, fill_width=278,
+        )
 
         # 文件名显示
-        self._file_name = ft.Text("", size=14, color=c("#162f50", "fg"),
-                                  font_family="42dot Sans")
+        self._file_name = s.text(kind="body-medium")
         self._file_info_container = ft.Container(visible=False)
 
-        # 运行按钮
-        self._run_btn = ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Icon(ft.Icons.DOCUMENT_SCANNER, color=c("#ffffff", "fg"), size=20),
-                    ft.Text("开始识别", size=18, color=c("#ffffff", "fg"),
-                            font_family="42dot Sans"),
-                ],
-                spacing=8,
-                alignment=ft.MainAxisAlignment.CENTER,
-            ),
-            bgcolor=c("#005f98"),
-            gradient=ft.LinearGradient(
-                begin=ft.Alignment(-1, 0), end=ft.Alignment(1, 0),
-                colors=[c("#005f98"), c("#00a3ff")],
-            ),
-            border_radius=16,
-            padding=ft.padding.symmetric(vertical=16),
-            shadow=ft.BoxShadow(
-                blur_radius=25, spread_radius=-5,
-                color=ft.Colors.with_opacity(0.2, c("#005f98", "fg")),
-                offset=ft.Offset(0, 20),
-            ),
-            on_click=self._start_task,
-            ink=True,
-            opacity=0.4,
-        )
+        # 运行按钮（会变形：按钮 → 加载圆 → 对勾 / 错误）
+        self._run_btn = s.MorphButton(self._start_task, label="开始识别",
+                                      icon=ft.Icons.DOCUMENT_SCANNER_OUTLINED)
+        self._run_btn.set_label("开始识别", enabled=False)
 
         self._main_content = self._build_main_content()
         self._build_param_panel()
@@ -175,37 +133,27 @@ class OcrPage(ft.Column):
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Container(
-                        content=ft.Row(
-                            controls=[
-                                ft.Column(
-                                    controls=[
-                                        ft.Text(
-                                            "OCR 文字识别", size=30,
-                                            weight=ft.FontWeight.W_500,
-                                            color=c("#005f98", "fg"),
-                                            font_family="42dot Sans",
-                                        ),
-                                        ft.Text(
-                                            "图片 / 扫描件 / PDF 文字识别",
-                                            size=16, color=c("#455c7f", "fg"),
-                                            font_family="42dot Sans",
-                                        ),
-                                    ],
-                                    spacing=4,
-                                ),
-                                ft.Container(expand=True),
-                                self._build_engine_badge(),
-                            ],
-                            vertical_alignment=ft.CrossAxisAlignment.END,
-                        ),
-                        padding=ft.padding.only(left=32, right=32, top=32),
+                    ft.Row(
+                        controls=[
+                            ft.Column(
+                                controls=[
+                                    s.text("OCR 文字识别", "headline"),
+                                    s.text("图片 / 扫描件 / PDF 文字识别", "small"),
+                                ],
+                                spacing=4,
+                            ),
+                            ft.Container(expand=True),
+                            self._build_engine_badge(),
+                        ],
+                        vertical_alignment=ft.CrossAxisAlignment.END,
                     ),
                     self._build_drop_zone(),
                     self._build_file_info(),
                 ],
-                spacing=24,
+                spacing=16,
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
+            padding=ft.padding.only(left=s.PAGE_X, right=16, top=4, bottom=20),
         )
 
     def _build_engine_badge(self) -> ft.Control:
@@ -213,235 +161,114 @@ class OcrPage(ft.Column):
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.VERIFIED, color=c("#006571", "fg"), size=12),
-                    ft.Text(
-                        "本地引擎就绪", size=10, color=c("#006571", "fg"),
-                        weight=ft.FontWeight.BOLD,
-                    ),
+                    ft.Container(width=6, height=6, border_radius=3, bgcolor=c("accent")),
+                    s.text("本地引擎就绪", "caption", color="ink-2"),
                 ],
                 spacing=6,
+                tight=True,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor=ft.Colors.with_opacity(0.2, c("#00e3fd")),
-            border_radius=9999,
-            padding=ft.padding.symmetric(horizontal=12, vertical=6),
+            height=22,
+            bgcolor=c("surface"),
+            border=ft.border.all(1, c("line-strong")),
+            border_radius=11,
+            padding=ft.padding.symmetric(horizontal=9),
         )
 
     def _build_drop_zone(self) -> ft.Control:
-        dash_color = ft.Colors.with_opacity(0.3, c("#005f98"))
-
-        def dash_segment() -> ft.Container:
-            return ft.Container(
-                width=16, height=2, bgcolor=dash_color, border_radius=9999,
-            )
-
-        def dash_column() -> ft.Container:
-            return ft.Container(
-                width=2, height=16, bgcolor=dash_color, border_radius=9999,
-            )
-        top_dash = ft.Row(
-            controls=[dash_segment() for _ in range(30)],
-            spacing=8,
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        self._drop_icon = ft.Container(
+            content=ft.Icon(ft.Icons.DOCUMENT_SCANNER_OUTLINED, color=c("ink-2", "fg"), size=20),
+            width=44, height=44, bgcolor=c("surface-2"), border_radius=22,
+            alignment=ft.Alignment(0, 0), animate=s.snappy(),
         )
-        side_dash = ft.Column(
-            controls=[dash_column() for _ in range(10)],
-            spacing=8,
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-        )
-        body = ft.Container(
+        self._drop_zone_body = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.DOCUMENT_SCANNER,
-                                        color=c("#005f98", "fg"), size=40),
-                        width=72, height=72,
-                        bgcolor=ft.Colors.with_opacity(0.12, c("#005f98")),
-                        border_radius=9999,
-                        alignment=ft.Alignment(0, 0),
-                    ),
-                    ft.Text(
-                        "点击选择图片或 PDF",
-                        size=18, color=c("#005f98", "fg"),
-                        font_family="42dot Sans",
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Text(
-                        "支持 JPG / PNG / BMP / TIFF / PDF",
-                        size=14, color=c("#455c7f", "fg"),
-                        font_family="42dot Sans",
-                        text_align=ft.TextAlign.CENTER,
-                    ),
+                    self._drop_icon,
+                    s.text("点击选择图片或 PDF", "title", text_align=ft.TextAlign.CENTER),
+                    s.text("支持 JPG / PNG / BMP / TIFF / PDF", "small", text_align=ft.TextAlign.CENTER),
                 ],
-                spacing=10,
+                spacing=8,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(vertical=36, horizontal=24),
-            expand=True,
+            bgcolor=c("surface"),
+            border=ft.border.all(1, c("line")),
+            border_radius=s.R_PANEL,
             on_click=self._pick_file,
-            ink=True,
-        )
-        self._drop_zone_body = ft.Container(
-            content=ft.Stack(
-                controls=[
-                    ft.Container(content=body, expand=True, padding=ft.padding.all(0)),
-                    ft.Container(
-                        content=ft.Column(
-                            controls=[
-                                top_dash,
-                                ft.Row(
-                                    controls=[
-                                        side_dash,
-                                        ft.Container(expand=True),
-                                        side_dash,
-                                    ],
-                                    expand=True,
-                                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                                ),
-                                top_dash,
-                            ],
-                            spacing=10,
-                            expand=True,
-                        ),
-                        padding=ft.padding.all(12),
-                        ignore_interactions=True,
-                        expand=True,
-                    ),
-                ],
-            ),
-            border_radius=20,
-            bgcolor=c("#f4f6ff"),
             on_hover=self._on_drop_zone_hover,
-            ink=False,
             expand=True,
-            clip_behavior=ft.ClipBehavior.HARD_EDGE,
+            animate=s.snappy(),
         )
         self._drop_zone_wrapper = ft.Container(
             content=self._drop_zone_body,
-            padding=ft.padding.symmetric(horizontal=32),
-            height=260,
-            animate=ft.Animation(200, ft.AnimationCurve.EASE_IN_OUT),
+            height=168,
+            animate_size=s.default(),
         )
         return self._drop_zone_wrapper
 
     def _on_drop_zone_hover(self, e: ft.ControlEvent) -> None:
-        self._drop_zone_body.bgcolor = (
-            ft.Colors.with_opacity(0.06, c("#005f98")) if e.data == "true"
-            else c("#f4f6ff")
-        )
+        on = e.data in (True, "true")
+        self._drop_zone_body.bgcolor = c("surface-2" if on else "surface")
+        self._drop_zone_body.border = ft.border.all(1, c("line-strong" if on else "line"))
+        self._drop_icon.bgcolor = c("surface-3" if on else "surface-2")
         self._drop_zone_body.update()
 
     def _build_file_info(self) -> ft.Control:
         self._file_info_container = ft.Container(
             visible=False,
-            padding=ft.padding.symmetric(horizontal=32),
-            content=ft.Container(
-                content=ft.Row(
+            content=s.card(
+                ft.Row(
                     controls=[
                         ft.Container(
-                            content=ft.Icon(
-                                ft.Icons.INSERT_DRIVE_FILE, color=c("#005f98", "fg"), size=18,
-                            ),
-                            width=36, height=36,
-                            bgcolor=ft.Colors.with_opacity(0.15, c("#005f98")),
-                            border_radius=10,
+                            content=ft.Icon(ft.Icons.INSERT_DRIVE_FILE_OUTLINED, color=c("ink-2", "fg"), size=16),
+                            width=32, height=32, bgcolor=c("surface-2"), border_radius=s.R_BUTTON,
                             alignment=ft.Alignment(0, 0),
                         ),
                         ft.Column(
-                            controls=[
-                                self._file_name,
-                                ft.Text("准备识别", size=11, color=c("#455c7f", "fg")),
-                            ],
+                            controls=[self._file_name, s.text("准备识别", "caption")],
                             spacing=2, tight=True, expand=True,
                         ),
-                        ft.IconButton(
-                            icon=ft.Icons.CLOSE,
-                            icon_color=c("#94a3b8", "fg"),
-                            icon_size=16,
-                            tooltip="移除",
-                            on_click=self._remove_file,
-                        ),
+                        s.icon_button(ft.Icons.CLOSE_OUTLINED, self._remove_file, tooltip="移除", color="ink-3"),
                     ],
-                    spacing=16,
+                    spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                bgcolor=c("#ffffff"),
-                border_radius=16,
-                border=ft.border.all(1, c("#e2e8f0")),
-                padding=ft.padding.all(16),
+                padding=ft.padding.only(left=14, right=8, top=10, bottom=10),
             ),
         )
         return self._file_info_container
 
     def _build_param_panel(self) -> ft.Control:
-        self._param_panel = ft.Container(
-            content=ft.Column(
+        self._param_panel = s.card(
+            ft.Column(
                 controls=[
-                    ft.Text(
-                        "参数设置", size=20, weight=ft.FontWeight.W_500,
-                        color=c("#005f98", "fg"), font_family="42dot Sans",
-                    ),
-                    self._section("识别语言", ft.Column(
+                    ft.Column(
                         controls=[
-                            ft.Row(controls=[self._lang_btns[0], self._lang_btns[1]],
-                                   spacing=8),
-                            ft.Row(controls=[self._lang_btns[2], self._lang_btns[3]],
-                                   spacing=8),
+                            s.text("参数设置", "title"),
+                            self._section("识别语言", self._lang_tabs),
                         ],
-                        spacing=8,
-                    )),
-                    self._run_btn,
-                    ft.Text("本地处理 • 隐私保护已开启", size=10, color=c("#455c7f", "fg"),
-                            font_family="42dot Sans", text_align=ft.TextAlign.CENTER),
+                        spacing=20,
+                        scroll=ft.ScrollMode.AUTO,
+                        expand=True,
+                    ),
+                    ft.Row(controls=[self._run_btn], alignment=ft.MainAxisAlignment.CENTER),
+                    s.text("本地处理 · 隐私保护已开启", "caption", text_align=ft.TextAlign.CENTER),
                 ],
-                spacing=24,
-                scroll=ft.ScrollMode.AUTO,
+                spacing=10,
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
                 expand=True,
             ),
             width=320,
-            bgcolor=c("#f4f6ff"),
-            border_radius=16,
-            border=ft.border.only(left=ft.BorderSide(1, c("#d5e3ff"))),
-            padding=ft.padding.all(24),
+            margin=ft.margin.only(right=s.PAGE_X, bottom=20, top=4),
         )
         return self._param_panel
 
     def _section(self, label: str, content: ft.Control) -> ft.Control:
-        return ft.Column(controls=[
-            ft.Text(label.upper(), size=12, color=c("#455c7f", "fg"),
-                    font_family="42dot Sans"),
-            content,
-        ], spacing=12)
-
-    def _make_lang_btn(self, key: str, label: str) -> ft.Container:
-        active = key == getattr(self, "_language_value", "chi_sim")
-        return ft.Container(
-            content=ft.Text(
-                label, size=13, weight=ft.FontWeight.W_600,
-                color=c("#ffffff", "fg") if active else c("#162f50", "fg"),
-                text_align=ft.TextAlign.CENTER,
-                font_family="42dot Sans",
-            ),
-            bgcolor=c("#005f98") if active else c("#ffffff"),
-            border=ft.border.all(1, c("#005f98") if active else c("#e2e8f0")),
-            border_radius=10,
-            padding=ft.padding.symmetric(vertical=10),
-            on_click=lambda _, k=key: self._select_lang(k),
-            ink=True,
-            data=key,
-            expand=True,
-            alignment=ft.Alignment(0, 0),
-        )
+        return ft.Column(controls=[s.text(label, "caption"), content], spacing=8)
 
     def _select_lang(self, key: str) -> None:
         self._language_value = key
-        for btn in self._lang_btns:
-            active = btn.data == key
-            btn.bgcolor = c("#005f98") if active else c("#ffffff")
-            btn.border = ft.border.all(1, c("#005f98") if active else c("#e2e8f0"))
-            btn.content.color = c("#ffffff", "fg") if active else c("#162f50", "fg")
-        self.update()
 
     def _build_processing_view(self) -> ft.Container:
         return ft.Container(
@@ -465,80 +292,47 @@ class OcrPage(ft.Column):
                 ],
                 spacing=12,
             ),
-            bgcolor=c("#ffffff"),
-            border=ft.border.all(1, c("#e2e8f0")),
-            border_radius=16,
+            bgcolor=c("surface"),
+            border=ft.border.all(1, c("line")),
+            border_radius=s.R_PANEL,
             padding=ft.padding.all(24),
-            margin=ft.margin.symmetric(horizontal=32),
+            margin=ft.margin.only(left=s.PAGE_X, right=16, top=4),
         )
 
     def _build_complete_view(self) -> ft.Container:
-        summary_panel = ft.Container(
-            content=ft.Column(
+        summary_panel = s.card(
+            ft.Column(
                 controls=[
-                    ft.Text(
-                        "文档摘要", size=16,
-                        weight=ft.FontWeight.W_600,
-                        color=c("#162f50", "fg"), font_family="42dot Sans",
-                    ),
-                    ft.Divider(height=1, color=c("#e2e8f0", "fg")),
+                    s.text("文档摘要", "title"),
+                    ft.Container(height=4),
                     self._build_summary_row("识别语言", self._sum_lang),
                     self._build_summary_row("字符数", self._sum_chars),
                     self._build_summary_row("段落数", self._sum_paras),
-                    self._build_summary_row("状态", self._sum_status),
-                    ft.Container(expand=True),
+                    self._build_summary_row("状态", self._sum_status, last=True),
+                    ft.Container(height=8),
                     ft.Row(
                         controls=[
-                            ft.FilledButton(
-                                "复制文本",
-                                style=ft.ButtonStyle(
-                                    bgcolor=c("#f1f5f9"), color=c("#005f98", "fg")),
-                                on_click=self._copy_result,
-                            ),
-                            ft.FilledButton(
-                                "保存 TXT",
-                                style=ft.ButtonStyle(
-                                    bgcolor=c("#005f98"), color=c("#ffffff", "fg")),
-                                on_click=self._save_result,
-                            ),
+                            s.button("复制文本", self._copy_result, kind="secondary", expand=True),
+                            s.button("保存 TXT", self._save_result, expand=True),
                         ],
                         spacing=8,
                     ),
-                    ft.FilledButton(
-                        "打开所在文件夹",
-                        style=ft.ButtonStyle(color=c("#455c7f", "fg")),
-                        on_click=self._open_output_folder,
-                    ),
-                    ft.TextButton(
-                        "继续识别",
-                        style=ft.ButtonStyle(color=c("#455c7f", "fg")),
-                        on_click=lambda _: self._reset(),
-                    ),
+                    s.button("打开所在文件夹", self._open_output_folder, kind="secondary",
+                             icon=ft.Icons.FOLDER_OPEN_OUTLINED),
+                    s.button("继续识别", lambda _: self._reset(), kind="ghost"),
                 ],
-                spacing=8,
+                spacing=6,
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
-            bgcolor=c("#ffffff"),
-            border=ft.border.all(1, c("#d1fae5")),
-            border_radius=16,
-            padding=ft.padding.all(16),
+            padding=16,
             width=260,
         )
 
-        result_panel = ft.Container(
-            content=ft.Column(
+        result_panel = s.card(
+            ft.Column(
                 controls=[
                     ft.Row(
-                        controls=[
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.CHECK_CIRCLE,
-                                                color=c("#16a34a", "fg"), size=22),
-                                width=36, height=36,
-                                bgcolor=c("#d1fae5"),
-                                border_radius=9999,
-                                alignment=ft.Alignment(0, 0),
-                            ),
-                            self._result_title,
-                        ],
+                        controls=[self._result_icon_box, self._result_title],
                         spacing=12,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
@@ -546,10 +340,7 @@ class OcrPage(ft.Column):
                 ],
                 spacing=12,
             ),
-            bgcolor=c("#ffffff"),
-            border=ft.border.all(1, c("#e2e8f0")),
-            border_radius=16,
-            padding=ft.padding.all(16),
+            padding=16,
             expand=True,
         )
 
@@ -559,24 +350,16 @@ class OcrPage(ft.Column):
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.START,
             ),
-            margin=ft.margin.symmetric(horizontal=32),
+            margin=ft.margin.only(left=s.PAGE_X, right=16, top=4),
         )
 
-    def _build_summary_row(self, label: str, value_text: ft.Text) -> ft.Control:
+    def _build_summary_row(self, label: str, value_text: ft.Text, last: bool = False) -> ft.Control:
         return ft.Container(
             content=ft.Row(
-                controls=[
-                    ft.Text(label, size=13, color=c("#455c7f", "fg"),
-                            font_family="42dot Sans"),
-                    ft.Container(expand=True),
-                    value_text,
-                ],
+                controls=[s.text(label, "small"), ft.Container(expand=True), value_text],
             ),
             padding=ft.padding.symmetric(vertical=8),
-            border=ft.border.only(
-                bottom=ft.BorderSide(
-                    1, ft.Colors.with_opacity(0.3, c("#e2e8f0"))),
-            ),
+            border=None if last else ft.border.only(bottom=ft.BorderSide(1, c("line"))),
         )
 
     # ── 响应式 ──────────────────────────────────────────────
@@ -588,18 +371,16 @@ class OcrPage(ft.Column):
         self._is_narrow = narrow
         if narrow:
             self._param_panel.width = None
-            self._param_panel.border_radius = 0
-            self._param_panel.border = ft.border.only(
-                top=ft.BorderSide(1, c("#d5e3ff")))
+            self._param_panel.margin = ft.margin.only(left=s.PAGE_X, right=s.PAGE_X, bottom=20)
+            self._run_btn.full_width = 320
             new_body = ft.Column(
                 controls=[self._main_content, self._param_panel],
                 expand=True, spacing=0, scroll=ft.ScrollMode.AUTO,
             )
         else:
             self._param_panel.width = 320
-            self._param_panel.border_radius = 16
-            self._param_panel.border = ft.border.only(
-                left=ft.BorderSide(1, c("#d5e3ff")))
+            self._param_panel.margin = ft.margin.only(right=s.PAGE_X, bottom=20, top=4)
+            self._run_btn.full_width = 278
             new_body = ft.Row(
                 controls=[self._main_content, self._param_panel],
                 expand=True, spacing=0,
@@ -639,15 +420,15 @@ class OcrPage(ft.Column):
             self._input_file = paths[0]
             self._file_name.value = self._input_file.name
             self._file_info_container.visible = True
-            self._run_btn.opacity = 1.0
-            self._drop_zone_wrapper.height = 140
+            self._run_btn.set_label("开始识别", enabled=True)
+            self._drop_zone_wrapper.height = 120
         self._page.update()
 
     def _remove_file(self, _) -> None:
         self._input_file = None
         self._file_info_container.visible = False
-        self._run_btn.opacity = 0.4
-        self._drop_zone_wrapper.height = 260
+        self._run_btn.set_label("开始识别", enabled=False)
+        self._drop_zone_wrapper.height = 168
         self.update()
 
     def _start_task(self, _) -> None:
@@ -679,10 +460,11 @@ class OcrPage(ft.Column):
             if result.status == TaskStatus.FAILED:
                 text = ""
                 err = result.error_message or "识别失败"
+                ok = False
                 self._result_title.value = f"识别失败：{err[:60]}"
-                self._result_title.color = c("#dc2626", "fg")
+                self._result_title.color = c("danger", "fg")
                 self._sum_status.value = "失败"
-                self._sum_status.color = c("#dc2626", "fg")
+                self._sum_status.color = c("danger", "fg")
             else:
                 # 优先从保存的 txt 读取
                 text = ""
@@ -695,18 +477,24 @@ class OcrPage(ft.Column):
                 if not text and result.error_message:
                     # 客户端将文本存在 error_message 供 UI 读取（已在 client 约定）
                     text = result.error_message
-                self._result_title.value = "识别完成！"
-                self._result_title.color = c("#16a34a", "fg")
+                ok = True
+                self._result_title.value = "识别完成"
+                self._result_title.color = c("ink", "fg")
                 self._sum_status.value = "成功"
-                self._sum_status.color = c("#16a34a", "fg")
+                self._sum_status.color = c("accent-fg", "fg")
         elif isinstance(result, dict):
+            ok = True
             text = result.get("text", "")
-            self._result_title.value = "识别完成！"
-            self._result_title.color = c("#16a34a", "fg")
+            self._result_title.value = "识别完成"
+            self._result_title.color = c("ink", "fg")
         else:
+            ok = True
             text = str(result) if result else ""
-            self._result_title.value = "识别完成！"
-            self._result_title.color = c("#16a34a", "fg")
+            self._result_title.value = "识别完成"
+            self._result_title.color = c("ink", "fg")
+        self._result_icon.icon = ft.Icons.CHECK_ROUNDED if ok else ft.Icons.PRIORITY_HIGH_ROUNDED
+        self._result_icon_box.bgcolor = c("accent") if ok else c("danger")
+        self._last_ok = ok
 
         self._result_text_value = text
         self._result_text.value = text
@@ -735,8 +523,8 @@ class OcrPage(ft.Column):
         self._result_text_value = ""
         self._result_text.value = ""
         self._file_info_container.visible = False
-        self._drop_zone_wrapper.height = 260
-        self._run_btn.opacity = 0.4
+        self._drop_zone_wrapper.height = 168
+        self._run_btn.set_label("开始识别", enabled=False)
         self._reset_to_workspace()
 
     def _reset_to_workspace(self) -> None:
@@ -744,6 +532,7 @@ class OcrPage(ft.Column):
         self._processing_view.visible = False
         self._complete_view.visible = False
         self.update()
+        self._run_btn.morph_idle()
 
     def _show_processing(self, file_label: str) -> None:
         self._progress_title.value = f"正在识别 {file_label}…"
@@ -754,12 +543,14 @@ class OcrPage(ft.Column):
         self._processing_view.visible = True
         self._complete_view.visible = False
         self.update()
+        self._run_btn.morph_loading()
 
     def _show_complete(self) -> None:
         self._workspace_view.visible = False
         self._processing_view.visible = False
         self._complete_view.visible = True
         self.update()
+        self._run_btn.morph_result(getattr(self, "_last_ok", True), "识别失败")
 
     def _copy_result(self, _) -> None:
         if self._result_text.value:
@@ -769,7 +560,7 @@ class OcrPage(ft.Column):
         # Flet 0.84 已移除 page.set_clipboard，改用 Clipboard 服务
         try:
             await ft.Clipboard().set(text)
-            self._show_snack("已复制到剪贴板")
+            self._show_snack("已复制到剪贴板", kind="success")
         except Exception as e:
             self._show_snack(f"复制失败：{e}")
 
@@ -782,9 +573,9 @@ class OcrPage(ft.Column):
         try:
             out_path.write_text(self._result_text.value, encoding="utf-8")
             self._output_file = out_path
-            self._show_snack(f"已保存到 {out_path}")
+            self._show_snack(f"已保存到 {out_path}", kind="success")
         except OSError as exc:
-            self._show_snack(f"保存失败：{exc}", color="#be123c")
+            self._show_snack(f"保存失败：{exc}", kind="error")
 
     def _open_output_folder(self, _) -> None:
         target = self._output_file
@@ -799,5 +590,5 @@ class OcrPage(ft.Column):
         else:
             subprocess.Popen(["xdg-open", str(folder)])
 
-    def _show_snack(self, msg: str, color: str | None = None) -> None:
-        show_toast(self._page, msg, duration=2200, color=color)
+    def _show_snack(self, msg: str, color: str | None = None, kind: str | None = None) -> None:
+        show_toast(self._page, msg, color=color, kind=kind)
