@@ -46,10 +46,11 @@ def main(page: ft.Page) -> None:
     page.window.min_width = 1024
     page.window.min_height = 640
 
-    # 字体注册（42dot Sans + Plus Jakarta Sans，从 assets/fonts/ 加载）
+    # 字体注册（Geist + Geist Mono，SIL OFL，从 assets/fonts/ 加载）；
+    # 中文字形不在 Geist 里，由系统字体自动回落
     page.fonts = {
-        "42dot Sans": "fonts/42dotSans-VariableFont_wght.ttf",
-        "Plus Jakarta Sans": "fonts/PlusJakartaSans-VariableFont_wght.ttf",
+        "Geist": "fonts/Geist-Variable.ttf",
+        "Geist Mono": "fonts/GeistMono-Variable.ttf",
     }
 
     # 主题配置（从设置读取持久化的模式）
