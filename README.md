@@ -28,7 +28,7 @@
 |---|---|---|
 | Windows 10/11 (x64) | `FileToolkit-<版本>-windows-x64.zip` | 解压后运行 `FileToolkit` 文件夹里的 `.exe`；SmartScreen 拦截时选「更多信息 → 仍要运行」 |
 | macOS (Apple 芯片) | `FileToolkit-<版本>-macos-arm64.zip` | 解压后把 `.app` 拖进「应用程序」，首次打开请右键 → 打开（应用暂未签名） |
-| Linux (x64) | `FileToolkit-<版本>-linux-x64.tar.gz` | `tar -xzf` 解压后运行 `FileToolkit/` 里的可执行文件 |
+| Linux (x64) | `FileToolkit-<版本>-linux-x64.tar.gz` | `tar -xzf` 解压后运行 `FileToolkit/` 里的可执行文件；运行一次 `./install-desktop-entry.sh` 可加入应用菜单（带图标） |
 
 每个版本都附带 `SHA256SUMS.txt`，可用 `sha256sum -c SHA256SUMS.txt` 校验下载是否完整。
 

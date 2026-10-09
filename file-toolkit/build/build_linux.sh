@@ -11,3 +11,7 @@ if [ -n "${BUILD_NUMBER:-}" ]; then
 fi
 
 uv run --group build -- flet "${args[@]}" "$@"
+
+# 可执行文件本身不带图标，附上图标和加入应用菜单的脚本（与发布包一致）
+cp packaging/linux/file-toolkit.png build/linux/
+install -m 755 packaging/linux/install-desktop-entry.sh build/linux/

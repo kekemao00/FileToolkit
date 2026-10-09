@@ -70,10 +70,13 @@ copyright = "Copyright (c) 2026 kekemao00. Apache License 2.0."
 
 [tool.flet.app]
 # 不打进安装包的文件（build/ 由 flet 默认排除）
+# 应用图标由 flet build 自动读取 assets/icon.png（默认）和 assets/icon_macos.png，
+# 改图标后运行 packaging/icon/generate_icons.py 重新生成
 exclude = [
     ".venv",
     ".data",
     "tests",
+    "packaging",
     "uv.lock",
     ".pytest_cache",
     ".ruff_cache",

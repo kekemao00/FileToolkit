@@ -168,6 +168,9 @@ jobs:
               ;;
             linux)
               [ -n "$(find "$out" -maxdepth 1 -type f -perm -u+x -print -quit)" ] || { echo "::error::$out 下没有可执行文件"; exit 1; }
+              # Linux 可执行文件本身不带图标，附上图标和加入应用菜单的脚本
+              cp packaging/linux/file-toolkit.png "$out/"
+              install -m 755 packaging/linux/install-desktop-entry.sh "$out/"
               # tar 保留可执行权限，zip 不行
               tar -czf "$GITHUB_WORKSPACE/dist/$PACKAGE.tar.gz" -C "build" --transform "s|^linux|FileToolkit|" linux
               ;;
@@ -223,7 +226,7 @@ jobs:
 
           - **Windows**：解压后运行 \`FileToolkit\` 文件夹里的 \`.exe\`。首次运行若出现 SmartScreen 提示，点「更多信息 → 仍要运行」。
           - **macOS**：解压后把 \`.app\` 拖进「应用程序」。应用未签名，首次打开请右键 → 打开；若提示「已损坏」，对该 .app 执行 \`xattr -dr com.apple.quarantine <路径>\`。音视频功能需要 \`brew install ffmpeg\`。
-          - **Linux**：\`tar -xzf\` 解压后运行 \`FileToolkit/\` 里的可执行文件。
+          - **Linux**：\`tar -xzf\` 解压后运行 \`FileToolkit/\` 里的可执行文件；运行一次 \`./install-desktop-entry.sh\` 可加入应用菜单（带图标）。
 
           Windows / Linux 包内置 FFmpeg（GPL 构建，来自 [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds)）。校验和见 \`SHA256SUMS.txt\`。
           EOF
