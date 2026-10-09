@@ -12,6 +12,7 @@
 - variables: 变量定义列表，每个包含 name, label, type, options, placeholder, required, default
 - default_size: 默认图片尺寸
 - source / author / link / license: 来源信息（内置模板 source="builtin"）
+- reference: 可选，需要参考图的模板写 {"min", "max", "hint"}；生成时把照片一起发给图片编辑接口
 
 提示词正文用英文书写（生图模型对英文描述理解最稳定），变量值可填中文。
 """
@@ -33,13 +34,28 @@ def _select(name: str, label: str, options: list[str], default: str | None = Non
 
 def _tpl(id_: str, name: str, description: str, category: str, icon: str,
          tags: list[str], prompt: str, variables: list[dict],
-         size: str = "1024x1024") -> dict:
-    return {
+         size: str = "1024x1024", reference: dict | None = None) -> dict:
+    item = {
         "id": id_, "name": name, "description": description, "category": category,
         "icon": icon, "tags": tags, "prompt_template": prompt, "variables": variables,
         "default_size": size, "source": BUILTIN_SOURCE, "author": "", "link": "",
         "license": "",
     }
+    if reference:
+        item["reference"] = reference
+    return item
+
+
+def _ref(min_: int, max_: int, hint: str) -> dict:
+    return {"min": min_, "max": max_, "hint": hint}
+
+
+# 参考图类模板共用的人像保真要求
+_KEEP_IDENTITY = (
+    "Keep every person's identity exactly as in the reference photos: same face shape, "
+    "facial features, skin tone, hairstyle, age and body proportions. Do not blend, swap "
+    "or beautify faces beyond natural retouching."
+)
 
 
 TEMPLATES: list[dict] = [
@@ -580,6 +596,92 @@ TEMPLATES: list[dict] = [
         ],
         "1536x1024",
     ),
+    # ── 照片合成（需要上传参考图）─────────────────────────────────────────
+    _tpl(
+        "ref_couple_photo", "双人合照", "两张单人照合成一张自然的合影",
+        "照片合成", "PEOPLE", ["热门", "参考图", "合照"],
+        "Create one natural photograph of the two people from the reference images "
+        "together: the person in the first image and the person in the second image. "
+        + _KEEP_IDENTITY + " Scene: {scene}. Pose: {pose}. Style: {style}. Matching "
+        "lighting, color temperature, perspective and scale for both people, natural "
+        "contact shadows, realistic skin texture, both faces clearly visible and in sharp "
+        "focus, no extra people.",
+        [
+            _text("scene", "场景", "如：海边日落、咖啡馆窗边、樱花树下"),
+            _select("pose", "姿势", ["standing side by side, smiling at the camera",
+                                    "arm in arm, walking toward the camera",
+                                    "sitting close together, leaning toward each other",
+                                    "taking a selfie together"]),
+            _select("style", "风格", ["natural candid photography",
+                                     "film photography, Kodak Portra 400",
+                                     "Japanese fresh style", "Studio portrait"]),
+        ],
+        "1536x1024",
+        reference=_ref(2, 2, "上传两张照片，各有一个人（正脸、清晰为佳）"),
+    ),
+    _tpl(
+        "ref_wedding_photo", "婚纱照", "用两人的照片拍一组婚纱照",
+        "照片合成", "FAVORITE", ["热门", "参考图", "婚纱"],
+        "Create a high-end wedding photograph of the couple from the reference images "
+        "(either one photo of the couple, or one photo of each person). "
+        + _KEEP_IDENTITY + " The bride wears {dress}, the groom wears {suit}. "
+        "Location: {location}. Mood and style: {style}. Tender, natural interaction between "
+        "the couple, professional wedding photography, flattering soft light, elegant "
+        "composition, fine fabric detail, realistic skin texture.",
+        [
+            _select("dress", "新娘服装", ["a white lace wedding gown with a long veil",
+                                         "a minimalist satin wedding dress",
+                                         "a red Chinese xiuhe wedding dress with gold embroidery",
+                                         "an off-shoulder tulle ball gown"]),
+            _select("suit", "新郎服装", ["a classic black tuxedo", "a light grey three-piece suit",
+                                        "a red Chinese wedding robe with gold embroidery",
+                                        "a navy blue slim suit"]),
+            _text("location", "拍摄地点", "如：海边礁石、欧式教堂、草原日落、古镇庭院"),
+            _select("style", "风格", ["romantic and dreamy", "Korean studio wedding style",
+                                     "cinematic golden hour", "classic black and white",
+                                     "traditional Chinese style"]),
+        ],
+        "1024x1536",
+        reference=_ref(1, 2, "上传两人合照 1 张，或两人各 1 张单人照"),
+    ),
+    _tpl(
+        "ref_group_photo", "集体合照", "把多个人的照片合成一张集体照 / 全家福",
+        "照片合成", "GROUPS", ["参考图", "合照", "全家福"],
+        "Create one group photograph that includes every person from the reference images "
+        "(one person per image unless an image already shows several people), and no one "
+        "else. " + _KEEP_IDENTITY + " Occasion: {occasion}. Arrangement: {arrangement}. "
+        "Setting: {setting}. Everyone's face fully visible, nobody cropped or hidden, "
+        "consistent lighting and natural relative heights, warm genuine expressions, "
+        "sharp focus across the whole group.",
+        [
+            _text("occasion", "场合", "如：全家福、毕业合影、公司年会、闺蜜聚会"),
+            _select("arrangement", "站位", ["two rows, front row seated",
+                                           "standing in one row, shoulder to shoulder",
+                                           "casual cluster, laughing together",
+                                           "around a dining table"]),
+            _text("setting", "场景", "如：客厅沙发前、校园草坪、影棚纯色背景"),
+        ],
+        "1536x1024",
+        reference=_ref(2, 8, "上传 2–8 张照片，每张一个人效果最好"),
+    ),
+    _tpl(
+        "ref_headshot", "职业形象照", "一张生活照变成正式的职业头像",
+        "照片合成", "BADGE", ["参考图", "证件", "头像"],
+        "Turn the person in the reference photo into a professional headshot. "
+        + _KEEP_IDENTITY + " Attire: {attire}. Background: {background}. Head and "
+        "shoulders framing, slight smile, confident posture, soft studio key light with "
+        "gentle fill, crisp focus on the eyes, LinkedIn-ready corporate portrait.",
+        [
+            _select("attire", "着装", ["a dark business suit with a white shirt",
+                                      "a smart casual blazer", "a white shirt",
+                                      "a turtleneck sweater"]),
+            _select("background", "背景", ["plain light grey studio backdrop",
+                                          "solid blue ID photo background",
+                                          "blurred modern office", "solid white"]),
+        ],
+        "1024x1536",
+        reference=_ref(1, 1, "上传 1 张清晰的正脸照片"),
+    ),
     # ── 自由创作 ───────────────────────────────────────────────────────
     _tpl(
         "custom", "自由创作", "完全自定义你的生图提示词",
@@ -642,3 +744,35 @@ def assemble_prompt(template: dict, values: dict) -> str:
     # 可选字段留空后可能剩下 `""`、连续空格、孤立句点
     prompt = prompt.replace('""', "").replace("  ", " ").replace(" .", ".")
     return prompt.strip()
+
+
+# ── 参考图 ───────────────────────────────────────────────────────────────
+MAX_REFERENCE_IMAGES = 8
+
+# 导入的提示词里出现这些词，基本是在说"拿用户的照片来改 / 合成"
+_REFERENCE_HINTS = (
+    "上传", "参考图", "参考照片", "所附", "附件中", "附件里", "这张照片", "该照片", "照片中的",
+    "照片里的", "原图", "原照片", "uploaded", "upload ", "reference image", "reference photo",
+    "attached", "this photo", "input image", "provided image", "provided photo",
+    "identity reference", "the image provided", "the original photo",
+)
+
+
+def reference_spec(template: dict | None) -> dict | None:
+    """模板对参考图的要求：{"min", "max", "hint", "inferred"}；不需要参考图返回 None。
+
+    内置模板显式声明；导入 / 自定义模板按提示词里的关键词推断（inferred=True，只做提示，
+    不强制要求上传）。
+    """
+    if not template:
+        return None
+    ref = template.get("reference")
+    if isinstance(ref, dict):
+        return {"min": int(ref.get("min", 1)), "max": int(ref.get("max", MAX_REFERENCE_IMAGES)),
+                "hint": ref.get("hint", ""), "inferred": False}
+    text = (template.get("prompt_template") or "").lower()
+    if any(k in text for k in _REFERENCE_HINTS):
+        return {"min": 0, "max": MAX_REFERENCE_IMAGES,
+                "hint": "这个提示词提到了照片 / 参考图，建议上传后再生成", "inferred": True}
+    return None
+

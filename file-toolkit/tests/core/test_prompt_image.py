@@ -118,3 +118,28 @@ def test_select_options_have_chinese_labels():
                for o in v["options"] if o not in OPTION_LABELS
                and not o.isdigit() and not o.startswith(("Kodak", "Fujifilm", "CineStill"))]
     assert missing == []
+
+
+def test_reference_templates_declare_photo_requirements():
+    from core.prompt_image.templates import TEMPLATES, reference_spec
+    refs = {t["id"]: reference_spec(t) for t in TEMPLATES if t.get("reference")}
+    assert {"ref_couple_photo", "ref_wedding_photo", "ref_group_photo"} <= set(refs)
+    assert refs["ref_couple_photo"]["min"] == 2 and not refs["ref_couple_photo"]["inferred"]
+    assert reference_spec(tpl.get_template_by_id("poster_minimal")) is None
+
+
+def test_reference_spec_is_inferred_from_imported_prompt():
+    from core.prompt_image.templates import reference_spec
+    spec = reference_spec({"prompt_template": "将这张照片变成一个摇头娃娃"})
+    assert spec["inferred"] and spec["min"] == 0
+    assert reference_spec({"prompt_template": "A red apple on a table"}) is None
+
+
+def test_section_headers_are_not_variables():
+    from core.prompt_image import sources
+    prompt = "Make a poster.\n\n{PROJECT CARD}\nTITLE: X\nA {main color} cup in {CITY}"
+    _, variables = sources.detect_variables(prompt)
+    assert [v["name"] for v in variables] == ["main color", "CITY"]
+    stale = {"prompt_template": prompt, "variables": [{"name": "PROJECT CARD"},
+                                                      {"name": "main color"}]}
+    assert [v["name"] for v in sources.drop_section_markers(stale)["variables"]] == ["main color"]

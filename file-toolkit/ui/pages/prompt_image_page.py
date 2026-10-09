@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
@@ -36,6 +37,8 @@ _HISTORY_THUMBS = 12
 _KEY_LAST_SOURCE = "prompt_image_last_source"
 _KEY_LAST_TEMPLATE = "prompt_image_last_template"
 _KEY_MODIFIERS = "prompt_image_modifiers"
+_REF_EXTS = ("png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff")
+_REF_TEMP_DIR = Path(tempfile.gettempdir()) / "file-toolkit-refs"
 _FONT = s.FONT
 
 
@@ -100,6 +103,10 @@ class PromptImagePage(ft.Column):
         self._last_bytes: bytes | None = None
         self._last_path: Path | None = None
         self._last_prompt = ""
+        self._ref_images: list[Path] = []
+        self._refresh_seq = 0
+        self._gen_job: asyncio.Future | None = None
+        self._gen_loop: asyncio.AbstractEventLoop | None = None
 
         # ── 左栏控件 ────────────────────────────────────────────────────
         self._source_dd = _dropdown(
@@ -118,6 +125,12 @@ class PromptImagePage(ft.Column):
         # ── 中栏控件 ────────────────────────────────────────────────────
         self._tpl_header = ft.Column(spacing=6)
         self._form_area = ft.Column(spacing=12)
+        self._ref_title = s.text("参考图", "title", size=14)
+        self._ref_badge = _txt("", 11, "ink-3")
+        self._ref_hint = _txt("", 11.5, "ink-3")
+        self._ref_row = ft.Row(spacing=8, run_spacing=8, wrap=True)
+        self._ref_clear = s.button("清空", self._on_clear_refs, kind="ghost", height=26,
+                                   visible=False)
         self._modifier_area = ft.Column(spacing=10, visible=bool(self._modifiers))
         self._modifier_toggle_icon = ft.Icon(
             ft.Icons.EXPAND_LESS_OUTLINED if self._modifiers else ft.Icons.EXPAND_MORE_OUTLINED,
@@ -126,7 +139,7 @@ class PromptImagePage(ft.Column):
         self._modifier_count = _txt("", 11, "ink-3")
         self._negative = _field(
             hint="避免出现的内容（可选），如：文字水印、多余手指、模糊",
-            on_change=lambda _e: self._refresh_prompt(),
+            on_change=lambda _e: self._schedule_refresh(),
         )
         self._prompt_state = _txt("自动生成", 11, "ink-3")
         self._restore_btn = s.button("恢复自动", self._on_restore_prompt, kind="ghost",
@@ -240,6 +253,8 @@ class PromptImagePage(ft.Column):
                 self._divider(),
                 self._section_title("填写内容", ft.Icons.EDIT_OUTLINED),
                 self._form_area,
+                self._divider(),
+                self._build_ref_section(),
                 self._divider(),
                 ft.Container(
                     content=ft.Row(
@@ -520,6 +535,7 @@ class PromptImagePage(ft.Column):
             self._size_dd.value = size
         self._render_template_header()
         self._render_form()
+        self._render_refs()
         self._render_modifiers()
         self._render_list()
         self._refresh_prompt()
@@ -627,7 +643,7 @@ class PromptImagePage(ft.Column):
                     value=default, hint=var.get("placeholder", ""),
                     multiline=multiline, min_lines=4 if multiline else None,
                     max_lines=10 if multiline else 1,
-                    on_change=lambda _e: self._refresh_prompt(),
+                    on_change=lambda _e: self._schedule_refresh(),
                 )
             self._var_controls[name] = ctrl
             label = var.get("label") or name
@@ -640,6 +656,161 @@ class PromptImagePage(ft.Column):
                 spacing=4,
             ))
         self._update(self._form_area)
+
+    # ── 参考图 ───────────────────────────────────────────────────────
+    def _build_ref_section(self) -> ft.Control:
+        return ft.Container(
+            key="refs",
+            content=ft.Column(
+                controls=[
+                    ft.Row(
+                        controls=[
+                            ft.Icon(ft.Icons.ADD_PHOTO_ALTERNATE_OUTLINED, size=16,
+                                    color=c("ink-2", "fg")),
+                            self._ref_title,
+                            self._ref_badge,
+                            ft.Container(expand=True),
+                            self._ref_clear,
+                        ],
+                        spacing=6,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    self._ref_hint,
+                    self._ref_row,
+                ],
+                spacing=8,
+            ),
+        )
+
+    def _render_refs(self) -> None:
+        spec = tpl.reference_spec(self._current)
+        required = bool(spec and not spec["inferred"])
+        limit = spec["max"] if required else tpl.MAX_REFERENCE_IMAGES
+        count = len(self._ref_images)
+        self._ref_title.value = "参考图" if required else "参考图（可选）"
+        self._ref_badge.value = f"{count} / {limit}" if count or required else ""
+        self._ref_badge.color = c("danger" if required and count < spec["min"] else "ink-3", "fg")
+        if required:
+            self._ref_hint.value = spec["hint"]
+            self._ref_hint.color = c("ink-2", "fg")
+        elif spec:
+            self._ref_hint.value = spec["hint"]
+            self._ref_hint.color = c("accent", "fg")
+        else:
+            self._ref_hint.value = "上传照片后，AI 会参考其中的人物 / 物体来生成，例如两张单人照合成合照"
+            self._ref_hint.color = c("ink-3", "fg")
+        tiles: list[ft.Control] = [self._ref_thumb(i, p) for i, p in enumerate(self._ref_images)]
+        if count < limit:
+            tiles.append(self._ref_add_tile())
+        self._ref_row.controls = tiles
+        self._ref_clear.visible = count > 1
+        self._update(self._ref_title, self._ref_badge, self._ref_hint, self._ref_row,
+                     self._ref_clear)
+
+    def _ref_thumb(self, index: int, path: Path) -> ft.Control:
+        return ft.Stack(
+            controls=[
+                ft.Container(
+                    content=ft.Image(src=self._thumb_source(path), width=76, height=76,
+                                     fit=ft.BoxFit.COVER, border_radius=s.R_INPUT,
+                                     cache_width=152,
+                                     error_content=ft.Icon(ft.Icons.BROKEN_IMAGE_OUTLINED,
+                                                           size=18, color=c("danger", "fg"))),
+                    width=76, height=76, border_radius=s.R_INPUT, bgcolor=c("surface-2"),
+                    border=ft.border.all(1, c("line")),
+                    tooltip=path.name,
+                ),
+                ft.Container(
+                    content=_txt(f"{index + 1}", 10, "on-ink", weight=ft.FontWeight.W_500),
+                    bgcolor=ft.Colors.with_opacity(0.72, c("ink")), border_radius=999,
+                    padding=ft.padding.symmetric(horizontal=6, vertical=1), left=5, bottom=5,
+                ),
+                ft.Container(
+                    content=ft.Icon(ft.Icons.CLOSE_ROUNDED, size=12, color=c("on-ink", "fg")),
+                    width=20, height=20, border_radius=10, alignment=ft.Alignment(0, 0),
+                    bgcolor=ft.Colors.with_opacity(0.72, c("ink")), right=4, top=4,
+                    tooltip="移除", on_click=lambda _e, i=index: self._on_remove_ref(i),
+                ),
+            ],
+            width=76, height=76,
+        )
+
+    def _ref_add_tile(self) -> ft.Control:
+        tile = ft.Container(
+            content=ft.Column(
+                controls=[ft.Icon(ft.Icons.ADD_OUTLINED, size=18, color=c("ink-2", "fg")),
+                          _txt("添加照片", 11, "ink-2")],
+                spacing=2, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            width=76, height=76, border_radius=s.R_INPUT, alignment=ft.Alignment(0, 0),
+            bgcolor=c("surface"), border=ft.border.all(1, c("line-strong")),
+            on_click=self._on_add_refs, animate=s.snappy(),
+        )
+
+        def _hover(e: ft.ControlEvent) -> None:
+            tile.bgcolor = c("surface-2") if e.data in (True, "true") else c("surface")
+            tile.update()
+
+        tile.on_hover = _hover
+        return tile
+
+    def _on_add_refs(self, _e=None) -> None:
+        self._page.run_task(self._pick_refs_async)
+
+    async def _pick_refs_async(self) -> None:
+        if not hasattr(self, "_ref_picker"):
+            self._ref_picker = ft.FilePicker()
+        try:
+            picked = await self._ref_picker.pick_files(
+                dialog_title="选择参考照片", file_type=ft.FilePickerFileType.CUSTOM,
+                allowed_extensions=list(_REF_EXTS), allow_multiple=True,
+                with_data=bool(self._page.web),
+            )
+        except Exception as e:
+            show_toast(self._page, f"无法打开文件选择器：{e}", kind="error")
+            return
+        self._add_refs(picked or [])
+
+    def _add_refs(self, picked: list) -> None:
+        """把选中的文件加入参考图（Web 端没有本地路径，先把字节存到临时目录）。"""
+        spec = tpl.reference_spec(self._current)
+        limit = spec["max"] if spec and not spec["inferred"] else tpl.MAX_REFERENCE_IMAGES
+        added = skipped = 0
+        for f in picked:
+            path = Path(f.path) if getattr(f, "path", None) else None
+            if path is None and getattr(f, "bytes", None):
+                path = _REF_TEMP_DIR / f"{int(time.time() * 1000)}_{f.name}"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(f.bytes)
+            if path is None or not path.exists():
+                continue
+            if path in self._ref_images:
+                continue
+            if len(self._ref_images) >= limit:
+                skipped += 1
+                continue
+            self._ref_images.append(path)
+            added += 1
+        if skipped:
+            show_toast(self._page, f"这个模板最多 {limit} 张参考图，多出的 {skipped} 张没有添加",
+                       kind="warning")
+        if added:
+            self._render_refs()
+
+    def _on_remove_ref(self, index: int) -> None:
+        if 0 <= index < len(self._ref_images):
+            self._ref_images.pop(index)
+            self._render_refs()
+
+    def _on_clear_refs(self, _e=None) -> None:
+        self._ref_images.clear()
+        self._render_refs()
+
+    async def _scroll_editor_to_refs(self) -> None:
+        try:
+            await self._editor_scroll.scroll_to(scroll_key="refs", duration=200)
+        except Exception:
+            pass
 
     def _collect_values(self) -> dict:
         values = {}
@@ -687,14 +858,36 @@ class PromptImagePage(ft.Column):
         base = tpl.assemble_prompt(self._current, self._collect_values())
         return mods.apply_modifiers(base, self._modifiers, self._negative.value or "")
 
+    def _schedule_refresh(self) -> None:
+        """输入框每敲一个字都会触发 on_change。长提示词（导入源里有上万字的）每次都整段
+        重发给界面、重新排版，Windows 上连续输入或输入法组字时会明显卡住；
+        这里合并成停顿 250ms 后刷新一次。"""
+        self._refresh_seq += 1
+        if not self._mounted:
+            self._refresh_prompt()
+            return
+        self._page.run_task(self._debounced_refresh, self._refresh_seq)
+
+    async def _debounced_refresh(self, seq: int) -> None:
+        await asyncio.sleep(0.25)
+        if seq == self._refresh_seq:
+            self._refresh_prompt()
+
     def _refresh_prompt(self) -> None:
         """变量 / 增强项变化后刷新最终提示词（用户手改过则不覆盖）。"""
         if self._manual_prompt:
-            self._prompt_state.value = "已手动修改，上方改动不会自动同步"
-            self._update(self._prompt_state)
+            state = "已手动修改，上方改动不会自动同步"
+            if self._prompt_state.value != state:
+                self._prompt_state.value = state
+                self._update(self._prompt_state)
             return
-        self._prompt_field.value = self._build_prompt()
-        self._prompt_state.value = "根据上方内容自动生成，可直接修改"
+        prompt = self._build_prompt()
+        state = "根据上方内容自动生成，可直接修改"
+        if (prompt == self._prompt_field.value and self._prompt_state.value == state
+                and not self._restore_btn.visible):
+            return
+        self._prompt_field.value = prompt
+        self._prompt_state.value = state
         self._restore_btn.visible = False
         self._update(self._prompt_field, self._prompt_state, self._restore_btn)
 
@@ -778,6 +971,8 @@ class PromptImagePage(ft.Column):
             if missing:
                 show_toast(self._page, f"请填写：{'、'.join(missing)}", kind="error")
                 return
+        self._refresh_seq += 1  # 丢弃还没执行的延迟刷新
+        if not self._manual_prompt:
             self._refresh_prompt()
         prompt = (self._prompt_field.value or "").strip()
         if not prompt:
@@ -789,20 +984,42 @@ class PromptImagePage(ft.Column):
             show_toast(self._page, "请先在设置中配置 AI 生图 API Key", kind="warning")
             return
 
+        spec = tpl.reference_spec(self._current)
+        refs = [p for p in self._ref_images if p.exists()]
+        if spec and len(refs) < spec["min"]:
+            show_toast(self._page, f"这个模板需要至少 {spec['min']} 张参考图，请先在「参考图」里添加",
+                       kind="warning", duration=3500)
+            self._page.run_task(self._scroll_editor_to_refs)
+            return
+
         size = self._size_dd.value or "1024x1024"
         quality = self._quality_dd.value or "high"
         self._set_generating(True)
-        self._page.run_task(self._generate_task, prompt, size, quality)
+        self._page.run_task(self._generate_task, prompt, size, quality, refs)
 
-    async def _generate_task(self, prompt: str, size: str, quality: str) -> None:
+    async def _generate_task(self, prompt: str, size: str, quality: str,
+                             refs: list[Path] | None = None) -> None:
+        refs = refs or []
         self._gen_started = time.time()
-        self._show_loading(prompt)
+        self._show_loading(prompt, len(refs))
         self._page.run_task(self._tick_loading)
+        if refs:
+            call = prompt_image_service.edit_image(prompt=prompt, images=refs, size=size,
+                                                   quality=quality)
+        else:
+            call = prompt_image_service.generate_image(prompt=prompt, size=size, quality=quality)
+        self._gen_loop = asyncio.get_running_loop()
+        self._gen_job = asyncio.ensure_future(call)
         try:
-            result = await prompt_image_service.generate_image(prompt=prompt, size=size,
-                                                               quality=quality)
+            result = await self._gen_job
+        except asyncio.CancelledError:
+            self._gen_job = None
+            self._set_generating(False)
+            self._show_cancelled()
+            return
         except Exception as e:  # 服务层已兜底，这里防御未知异常，避免界面卡在生成中
             result = {"success": False, "error": str(e)}
+        self._gen_job = None
         elapsed = time.time() - self._gen_started
         self._set_generating(False)
 
@@ -823,6 +1040,8 @@ class PromptImagePage(ft.Column):
         self._last_path = saved_path
         self._last_prompt = prompt
         meta = [f"{size}", f"耗时 {elapsed:.1f}s"]
+        if refs:
+            meta.insert(1, f"参考图 {len(refs)} 张")
         if saved_path:
             meta.append(str(saved_path))
         self._show_image(image_bytes, saved_path, "  ·  ".join(meta))
@@ -834,6 +1053,22 @@ class PromptImagePage(ft.Column):
                 self._preview.data.value = f"已等待 {int(time.time() - self._gen_started)} 秒"
                 self._update(self._preview.data)
             await asyncio.sleep(1)
+
+    def _on_cancel_generate(self, _e=None) -> None:
+        """取消生成：服务端可能仍在出图，但界面立即恢复可用。"""
+        job, loop = self._gen_job, self._gen_loop
+        if job is None or loop is None or job.done():
+            return
+        loop.call_soon_threadsafe(job.cancel)
+
+    def _show_cancelled(self) -> None:
+        self._preview.data = None
+        self._preview.on_click = None
+        self._preview.content = self._preview_state(
+            ft.Icons.STOP_CIRCLE_OUTLINED, "已取消生成", "可以调整提示词后重新生成")
+        self._result_meta.value = ""
+        self._result_actions.visible = False
+        self._update(self._preview, self._result_actions, self._result_meta)
 
     def _set_generating(self, on: bool) -> None:
         self._generating = on
@@ -874,7 +1109,7 @@ class PromptImagePage(ft.Column):
         self._result_meta.value = ""
         self._update(self._preview, self._result_actions, self._result_meta)
 
-    def _show_loading(self, prompt: str) -> None:
+    def _show_loading(self, prompt: str, ref_count: int = 0) -> None:
         waited = s.text("已等待 0 秒", "mono", "ink-3", size=11)
         self._preview.data = waited
         self._preview.on_click = None
@@ -882,18 +1117,22 @@ class PromptImagePage(ft.Column):
             controls=[
                 ft.ProgressRing(width=28, height=28, stroke_width=2, color=c("ink", "fg"),
                                 bgcolor=c("surface-3")),
-                s.text("AI 正在创作中…", "label"),
+                s.text(f"AI 正在参考 {ref_count} 张图创作中…" if ref_count else "AI 正在创作中…",
+                       "label"),
                 waited,
                 ft.Container(
                     content=_txt(prompt, 11, "ink-3", max_lines=4,
                                  overflow=ft.TextOverflow.ELLIPSIS, text_align=ft.TextAlign.CENTER),
                     padding=ft.padding.symmetric(horizontal=16),
                 ),
+                s.button("取消", self._on_cancel_generate, kind="secondary", height=30,
+                         icon=ft.Icons.CLOSE_OUTLINED),
             ],
             spacing=10, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         )
         self._result_actions.visible = False
-        self._result_meta.value = "高质量通常需要 20–60 秒"
+        self._result_meta.value = ("带参考图通常需要 30–120 秒" if ref_count
+                                   else "高质量通常需要 20–60 秒")
         self._update(self._preview, self._result_actions, self._result_meta)
 
     def _show_error(self, error: str) -> None:
