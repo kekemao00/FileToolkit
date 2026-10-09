@@ -43,6 +43,7 @@ TOKENS: dict[str, tuple[str, str]] = {
     "danger":      ("#D93B2B", "#E5574A"),
     "danger-soft": ("#FCEBE8", "#3A201C"),
     "scrim":       ("#1A1814", "#000000"),
+    "viewer-bg":   ("#EFEEEA", "#0C0C0B"),   # 全窗口看图器的底（比 canvas 更沉，让图片成为主角）
     "shadow":      ("#000000", "#000000"),
 }
 

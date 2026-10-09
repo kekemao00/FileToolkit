@@ -28,6 +28,7 @@ from core.prompt_image.option_labels import option_label
 from services import prompt_image_service, settings_service
 from services import prompt_library_service as lib
 from ui import style as s
+from ui.components.image_viewer import ImageViewer, ViewerItem
 from ui.palette import c
 from ui.utils import open_folder, show_toast
 
@@ -1064,6 +1065,8 @@ class PromptImagePage(ft.Column):
     def _show_cancelled(self) -> None:
         self._preview.data = None
         self._preview.on_click = None
+        self._preview.on_hover = None
+        self._set_preview_frame(True)
         self._preview.content = self._preview_state(
             ft.Icons.STOP_CIRCLE_OUTLINED, "已取消生成", "可以调整提示词后重新生成")
         self._result_meta.value = ""
@@ -1102,6 +1105,8 @@ class PromptImagePage(ft.Column):
     def _show_empty(self) -> None:
         self._preview.data = None
         self._preview.on_click = None
+        self._preview.on_hover = None
+        self._set_preview_frame(True)
         self._preview.content = self._preview_state(
             ft.Icons.AUTO_FIX_HIGH_OUTLINED, "生成的图片会显示在这里",
             "选好模板、填写内容后点「生成图片」")
@@ -1113,6 +1118,8 @@ class PromptImagePage(ft.Column):
         waited = s.text("已等待 0 秒", "mono", "ink-3", size=11)
         self._preview.data = waited
         self._preview.on_click = None
+        self._preview.on_hover = None
+        self._set_preview_frame(True)
         self._preview.content = ft.Column(
             controls=[
                 ft.ProgressRing(width=28, height=28, stroke_width=2, color=c("ink", "fg"),
@@ -1138,6 +1145,8 @@ class PromptImagePage(ft.Column):
     def _show_error(self, error: str) -> None:
         self._preview.data = None
         self._preview.on_click = None
+        self._preview.on_hover = None
+        self._set_preview_frame(True)
         self._preview.content = self._preview_state(
             ft.Icons.ERROR_OUTLINE, "生成失败", error[:300], color="danger",
             extra=self._small_button("重试", ft.Icons.REFRESH_OUTLINED, self._on_generate, primary=True),
@@ -1166,20 +1175,41 @@ class PromptImagePage(ft.Column):
             **kw,
         )
 
+    def _set_preview_frame(self, on: bool) -> None:
+        """空态 / 生成中 / 出错时显示灰底描边框；出图后去掉，只留图片本身。"""
+        self._preview.bgcolor = c("surface-2") if on else None
+        self._preview.border = ft.border.all(1, c("line")) if on else None
+        self._preview.padding = 8 if on else 0
+
     def _show_image(self, image_bytes: bytes | None, path: Path | None, meta: str) -> None:
         self._preview.data = None
-        self._preview.content = ft.Stack(
-            controls=[
-                ft.Container(self._image_control(image_bytes, path), alignment=ft.Alignment(0, 0),
-                             expand=True),
-                ft.Container(
-                    content=ft.Icon(ft.Icons.ZOOM_OUT_MAP_OUTLINED, size=15, color=c("on-ink", "fg")),
-                    bgcolor=ft.Colors.with_opacity(0.72, c("ink")), border_radius=8, padding=6,
-                    right=6, top=6, tooltip="查看大图",
-                ),
-            ],
-            expand=True,
+        # 出图后去掉灰底和描边，只显示按原比例缩放的圆角图片；徽标跟着图片右上角走
+        image = ft.Container(
+            self._image_control(image_bytes, path), border_radius=10,
+            clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+            shadow=ft.BoxShadow(blur_radius=18, offset=ft.Offset(0, 6), spread_radius=-8,
+                                color=ft.Colors.with_opacity(0.28, c("shadow"))),
+            scale=1, animate_scale=s.default(),
         )
+        badge = ft.Container(
+            content=ft.Row([ft.Icon(ft.Icons.ZOOM_OUT_MAP_OUTLINED, size=14, color=c("on-ink", "fg")),
+                            _txt("查看大图", 11.5, "on-ink", weight=ft.FontWeight.W_500)],
+                           spacing=5, tight=True),
+            bgcolor=ft.Colors.with_opacity(0.72, c("ink")), border_radius=999,
+            padding=ft.padding.only(left=8, right=10, top=5, bottom=5),
+            right=8, top=8, opacity=0.0, offset=ft.Offset(0, -0.2),
+            animate_opacity=s.snappy(), animate_offset=s.default(),
+        )
+
+        def _hover(e: ft.ControlEvent) -> None:
+            on = e.data in (True, "true")
+            image.scale = 1.015 if on else 1
+            badge.opacity, badge.offset = (1, ft.Offset(0, 0)) if on else (0, ft.Offset(0, -0.2))
+            self._update(image, badge)
+
+        self._set_preview_frame(False)
+        self._preview.content = ft.Stack(controls=[image, badge])
+        self._preview.on_hover = _hover
         self._preview.on_click = lambda _e: self._open_lightbox()
         self._result_meta.value = meta
         self._result_actions.controls = [
@@ -1252,22 +1282,26 @@ class PromptImagePage(ft.Column):
         return None
 
     def _open_lightbox(self) -> None:
+        """全窗口看图器：当前结果 + 最近作品，可缩放到原图像素、左右切换。"""
         if not (self._last_path or self._last_bytes):
             return
-        width = (self._page.width or 1280) * 0.82
-        height = (self._page.height or 800) * 0.78
-        dlg = ft.AlertDialog(
-            content=ft.Container(
-                self._image_control(self._last_bytes, self._last_path),
-                width=width, height=height, alignment=ft.Alignment(0, 0),
-            ),
-            content_padding=12,
-            actions=[
-                ft.TextButton("打开目录", on_click=self._on_open_dir),
-                ft.TextButton("关闭", on_click=lambda _e: self._page.pop_dialog()),
-            ],
-        )
-        self._page.show_dialog(dlg)
+        items, index = [], -1
+        for h in lib.list_history():
+            path = Path(h["path"])
+            stamp = datetime.fromtimestamp(h.get("created_at", 0)).strftime("%Y-%m-%d %H:%M")
+            if self._last_path is not None and path == self._last_path:
+                index = len(items)
+            items.append(ViewerItem(path=path, title=h.get("template") or "", meta=stamp))
+        if index < 0:
+            # 结果没进最近作品（如 Web 端只有字节）时单独放在最前
+            items.insert(0, ViewerItem(path=self._last_path, data=self._last_bytes,
+                                       title=(self._current or {}).get("name", "")))
+            index = 0
+        ImageViewer(
+            self._page, items, index,
+            on_save=lambda it: self._page.run_task(self._download_async, it),
+            on_reveal=lambda it: it.path and open_folder(it.path.parent),
+        ).open()
 
     def _on_open_image(self, _e) -> None:
         if self._last_path and self._last_path.exists():
@@ -1290,13 +1324,18 @@ class PromptImagePage(ft.Column):
     def _on_download(self, _e) -> None:
         self._page.run_task(self._download_async)
 
-    async def _download_async(self) -> None:
-        data = self._current_image_bytes()
+    async def _download_async(self, item: ViewerItem | None = None) -> None:
+        """另存为；item 来自看图器（可能是最近作品里的另一张），不传则存当前结果。"""
+        if item is None:
+            data, path = self._current_image_bytes(), self._last_path
+        else:
+            path = item.path
+            data = item.data or (path.read_bytes() if path and path.exists() else None)
         if not data:
             return
         if not hasattr(self, "_save_picker"):
             self._save_picker = ft.FilePicker()
-        ext = self._last_path.suffix.lstrip(".") if self._last_path else "png"
+        ext = path.suffix.lstrip(".") if path else "png"
         try:
             target = await self._save_picker.save_file(
                 dialog_title="保存图片",
