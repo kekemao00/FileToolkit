@@ -148,6 +148,10 @@ def show_toast(
         island = _islands.get(id(page))
         if island is None or island.host not in page.overlay:
             island = _islands[id(page)] = _Island(page)
+        elif page.overlay[-1] is not island.host:
+            # 之后打开的浮层（如看图器）会盖住通知，挪回最上层
+            page.overlay.remove(island.host)
+            page.overlay.append(island.host)
         page.run_task(island.show, message, kind, duration)
     except Exception:
         pass
