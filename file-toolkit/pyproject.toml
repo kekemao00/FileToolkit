@@ -1,6 +1,6 @@
 [project]
 name = "file-toolkit"
-version = "1.4.0-beta.1"
+version = "1.4.0-beta.2"
 description = "File Toolkit — Local file processing desktop application"
 readme = { text = "File Toolkit — Local file processing desktop application", content-type = "text/plain" }
 requires-python = ">=3.11"
