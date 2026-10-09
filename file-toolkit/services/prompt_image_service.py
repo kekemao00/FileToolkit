@@ -55,13 +55,8 @@ async def generate_image(
     """
     config = get_api_config()
     if not config["api_key"]:
-        return {"success": False, "error": "未配置 AI 生图 API Key，请在设置中配置",
-                "image_bytes": None, "image_url": None}
+        return _fail("未配置 AI 生图 API Key，请在设置中配置")
 
-    headers = {
-        "Authorization": f"Bearer {config['api_key']}",
-        "Content-Type": "application/json",
-    }
     payload = {
         "model": config["model"],
         "prompt": prompt,
@@ -71,43 +66,126 @@ async def generate_image(
         "output_format": output_format,
     }
     url = f"{config['base_url'].rstrip('/')}/images/generations"
+    return await _request(url, config["api_key"], json=payload)
 
+
+async def edit_image(
+    prompt: str,
+    images: list[Path],
+    size: str = "1024x1024",
+    quality: str = "high",
+    output_format: str = "png",
+    n: int = 1,
+) -> dict:
+    """带参考图生成（OpenAI Images 的 /images/edits 接口，gpt-image 系列支持多张参考图）。
+
+    参考图以 multipart 上传：一张时字段名 image，多张时 image[]。返回值同 generate_image。
+    """
+    config = get_api_config()
+    if not config["api_key"]:
+        return _fail("未配置 AI 生图 API Key，请在设置中配置")
+    if not images:
+        return _fail("没有参考图")
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(url, json=payload, headers=headers)
+        files = [("image[]" if len(images) > 1 else "image", _image_part(Path(p)))
+                 for p in images]
+    except (OSError, ValueError) as e:
+        return _fail(f"参考图读取失败：{e}")
+
+    data = {
+        "model": config["model"],
+        "prompt": prompt,
+        "n": str(n),
+        "size": size,
+        "quality": quality,
+        "output_format": output_format,
+    }
+    url = f"{config['base_url'].rstrip('/')}/images/edits"
+    result = await _request(url, config["api_key"], data=data, files=files)
+    if not result["success"] and result.get("status") in (404, 405, 501):
+        result["error"] = ("当前接口不支持参考图（/images/edits 不可用）。请在设置里换成支持图片编辑的"
+                           f"服务商或模型（如 gpt-image-2）。原始信息：{result['error']}")
+    elif not result["success"] and result.get("status") == 400 and _looks_unsupported(result["error"]):
+        result["error"] = (f"当前模型不支持参考图生成，请在设置里换成支持图片编辑的模型（如 gpt-image-2）。"
+                           f"原始信息：{result['error']}")
+    return result
+
+
+# 接口直接接受的格式；其他格式（bmp / tiff 等）先转成 PNG
+_DIRECT_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                 ".webp": "image/webp"}
+MAX_REFERENCE_BYTES = 25 * 1024 * 1024
+_MAX_REFERENCE_SIDE = 2048
+
+
+def _image_part(path: Path) -> tuple[str, bytes, str]:
+    """读一张参考图，返回 multipart 文件三元组；超大或非常见格式压成 PNG / JPEG。"""
+    raw = path.read_bytes()
+    mime = _DIRECT_TYPES.get(path.suffix.lower())
+    if mime and len(raw) <= MAX_REFERENCE_BYTES:
+        return path.name, raw, mime
+    import io
+
+    from PIL import Image, ImageOps
+    with Image.open(io.BytesIO(raw)) as im:
+        im = ImageOps.exif_transpose(im)
+        im.thumbnail((_MAX_REFERENCE_SIDE, _MAX_REFERENCE_SIDE))
+        buf = io.BytesIO()
+        if im.mode in ("RGBA", "LA", "P"):
+            im.convert("RGBA").save(buf, "PNG", optimize=True)
+            return f"{path.stem}.png", buf.getvalue(), "image/png"
+        im.convert("RGB").save(buf, "JPEG", quality=92)
+        return f"{path.stem}.jpg", buf.getvalue(), "image/jpeg"
+
+
+def _looks_unsupported(error: str) -> bool:
+    low = error.lower()
+    return any(k in low for k in ("not supported", "unsupported", "does not support",
+                                  "invalid model", "only supports", "不支持"))
+
+
+def _fail(error: str, status: int | None = None) -> dict:
+    return {"success": False, "error": error, "image_bytes": None, "image_url": None,
+            "status": status}
+
+
+# 生图（尤其是高质量 + 参考图）经常要 1–3 分钟，读超时放宽；连接超时保持较短，断网时尽快报错
+_TIMEOUT = httpx.Timeout(connect=20.0, read=300.0, write=120.0, pool=20.0)
+
+
+async def _request(url: str, api_key: str, **kwargs) -> dict:
+    headers = {"Authorization": f"Bearer {api_key}"}
+    try:
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            resp = await client.post(url, headers=headers, **kwargs)
             resp.raise_for_status()
             data = resp.json()
 
             items = data.get("data") or []
             if not items:
-                return {"success": False, "error": "API 返回数据格式异常：data 为空",
-                        "image_bytes": None, "image_url": None}
+                return _fail("API 返回数据格式异常：data 为空")
 
             item = items[0]
             if "b64_json" in item and item["b64_json"]:
                 image_bytes = base64.b64decode(item["b64_json"])
                 return {"success": True, "image_bytes": image_bytes,
-                        "image_url": None, "error": ""}
+                        "image_url": None, "error": "", "status": resp.status_code}
 
             if "url" in item and item["url"]:
                 img_resp = await client.get(item["url"])
                 img_resp.raise_for_status()
                 return {"success": True, "image_bytes": img_resp.content,
-                        "image_url": item["url"], "error": ""}
+                        "image_url": item["url"], "error": "", "status": resp.status_code}
 
-            return {"success": False, "error": "API 返回数据未包含 b64_json / url",
-                    "image_bytes": None, "image_url": None}
+            return _fail("API 返回数据未包含 b64_json / url")
 
     except httpx.HTTPStatusError as e:
-        body = e.response.text[:200] if e.response is not None else ""
-        return {"success": False, "error": f"API 请求失败 ({e.response.status_code}): {body}",
-                "image_bytes": None, "image_url": None}
+        body = e.response.text[:300] if e.response is not None else ""
+        return _fail(f"API 请求失败 ({e.response.status_code}): {body}", e.response.status_code)
     except httpx.TimeoutException:
-        return {"success": False, "error": "请求超时，请稍后重试",
-                "image_bytes": None, "image_url": None}
+        return _fail("请求超时：服务器长时间没有返回，请稍后重试，或把质量调低")
     except Exception as e:
-        return {"success": False, "error": f"生成失败: {e}",
-                "image_bytes": None, "image_url": None}
+        return _fail(f"生成失败: {e}")
 
 
 def default_output_dir() -> Path:

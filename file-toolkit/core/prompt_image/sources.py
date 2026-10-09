@@ -96,7 +96,8 @@ def detect_variables(prompt: str, *, include_brackets: bool = False) -> tuple[st
     prompt = _ARG_RE.sub(repl_arg, prompt)
 
     for m in _CURLY_RE.finditer(prompt):
-        add(m.group(1))
+        if not _is_section_marker(prompt, m.start(), m.end(), m.group(1)):
+            add(m.group(1))
 
     if include_brackets:
         def repl_bracket(m: re.Match) -> str:
@@ -105,6 +106,33 @@ def detect_variables(prompt: str, *, include_brackets: bool = False) -> tuple[st
 
     # 只保留真正被识别为变量的花括号，其余保持原样（assemble 时不会替换）
     return prompt, variables
+
+
+def _is_section_marker(prompt: str, start: int, end: int, label: str) -> bool:
+    """独占一行的全大写 `{PROJECT CARD}` 是长提示词里的分段标题，不是待填写的变量。"""
+    label = label.strip()
+    if " " not in label or label != label.upper() or not any(ch.isalpha() for ch in label):
+        return False
+    line_start = prompt.rfind("\n", 0, start) + 1
+    line_end = prompt.find("\n", end)
+    line = prompt[line_start:line_end if line_end != -1 else len(prompt)]
+    return line.strip() == prompt[start:end]
+
+
+def drop_section_markers(template: dict) -> dict:
+    """旧版本导入的缓存里，分段标题被误识别成了必填变量，读取时去掉。"""
+    prompt = template.get("prompt_template") or ""
+    variables = template.get("variables") or []
+
+    def is_marker(var: dict) -> bool:
+        token = "{" + var["name"] + "}"
+        pos = prompt.find(token)
+        return pos != -1 and _is_section_marker(prompt, pos, pos + len(token), var["name"])
+
+    kept = [v for v in variables if not is_marker(v)]
+    if len(kept) != len(variables):
+        template = {**template, "variables": kept}
+    return template
 
 
 def guess_size(text: str) -> str:

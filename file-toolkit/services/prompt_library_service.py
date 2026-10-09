@@ -97,9 +97,13 @@ def templates_for(source_key: str) -> list[dict]:
         result = list_custom() + list(tpl.TEMPLATES)
         for s in list_sources():
             if s.get("enabled", True):
-                result.extend(_load(_KEY_CACHE + s["id"], []))
+                result.extend(_cached(s["id"]))
         return result
-    return _load(_KEY_CACHE + source_key, [])
+    return _cached(source_key)
+
+
+def _cached(source_id: str) -> list[dict]:
+    return [src.drop_section_markers(t) for t in _load(_KEY_CACHE + source_id, [])]
 
 
 def categories_for(templates: list[dict]) -> list[str]:
