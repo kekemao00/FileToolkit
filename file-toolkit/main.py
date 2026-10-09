@@ -45,6 +45,8 @@ def main(page: ft.Page) -> None:
     page.window.height = 800
     page.window.min_width = 1024
     page.window.min_height = 640
+    # 打包后的 exe 自带图标；开发模式下由这里给 Windows 窗口设图标（其它平台忽略）
+    page.window.icon = str(Path(__file__).parent / "assets" / "icons" / "app.ico")
 
     # 字体注册（Geist + Geist Mono，SIL OFL，从 assets/fonts/ 加载）；
     # 中文字形不在 Geist 里，由系统字体自动回落

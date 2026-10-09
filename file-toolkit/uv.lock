@@ -507,7 +507,7 @@ wheels = [
 
 [[package]]
 name = "file-toolkit"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "." }
 dependencies = [
     { name = "ffmpeg-python" },
