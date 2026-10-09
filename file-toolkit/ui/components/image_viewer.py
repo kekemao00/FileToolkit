@@ -7,6 +7,7 @@
     滚轮 / 触控板捏合   以指针为中心缩放（最高到原图像素的 4 倍）
     拖动               平移
     双击图片            在「适应窗口」和「1:1 原始像素」之间切换
+    右键图片 / Ctrl+C   复制到剪贴板（直接粘贴到聊天窗口分享）
     ← / →             切换最近作品
     + / - / 0 / 1      放大 / 缩小 / 适应窗口 / 原始像素
     Esc / 点空白处      关闭
@@ -19,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import tempfile
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -26,8 +28,10 @@ from pathlib import Path
 
 import flet as ft
 
+from services import clipboard_service
 from ui import style as s
 from ui.palette import c, is_dark
+from ui.utils import show_toast
 
 INSET = 16                 # 图片与窗口边缘的距离（适应窗口时）
 _IDLE_HIDE = 2.6           # 鼠标静止多少秒后隐藏工具条
@@ -107,6 +111,7 @@ class ImageViewer:
         self._gesture = False
         self._g_scale = 1.0
         self._zoom_busy = False
+        self._copying = False
         self._last_move = time.monotonic()
         self._chrome_on = True
         self._over_chrome = False
@@ -135,6 +140,7 @@ class ImageViewer:
                                      padding=INSET, expand=True),
                 on_hover=self._on_content_hover, hover_interval=30,
                 on_tap=self._on_stage_tap,
+                on_secondary_tap_down=self._on_secondary_tap,
                 on_double_tap=lambda _e: self._run(self._toggle_actual),
                 expand=True,
             ),
@@ -189,15 +195,15 @@ class ImageViewer:
             self._one_btn,
             self._tool(ft.Icons.ADD_ROUNDED, "放大（+）", lambda _e: self._run(self._zoom_by, _ZOOM_STEP)),
         ]
-        extra = []
+        extra = [self._tool(ft.Icons.CONTENT_COPY_OUTLINED, "复制图片（右键 / Ctrl+C）",
+                            lambda _e: self._run(self._copy))]
         if self._on_save:
             extra.append(self._tool(ft.Icons.DOWNLOAD_OUTLINED, "另存为",
                                     lambda _e: self._on_save(self._item)))
         if self._on_reveal:
             extra.append(self._tool(ft.Icons.FOLDER_OPEN_OUTLINED, "打开所在文件夹",
                                     lambda _e: self._on_reveal(self._item)))
-        if extra:
-            tools += [self._sep(), *extra]
+        tools += [self._sep(), *extra]
         self._toolbar = ft.Container(
             content=self._glass(ft.Row(tools, spacing=2, tight=True), padding=5),
             left=0, right=0, bottom=INSET + 12, alignment=ft.Alignment(0, 1),
@@ -205,7 +211,7 @@ class ImageViewer:
             animate_offset=s.smooth(), animate_opacity=s.default(),
         )
         self._hint = ft.Container(
-            content=s.text("滚轮缩放 · 拖动平移 · 双击切换原图 · ← → 切换作品", "small", "ink-2", size=11.5),
+            content=s.text("滚轮缩放 · 拖动平移 · 双击切换原图 · 右键复制 · ← → 切换作品", "small", "ink-2", size=11.5),
             bgcolor=ft.Colors.with_opacity(0.78, c("surface")), border_radius=999,
             padding=ft.padding.symmetric(horizontal=12, vertical=6),
         )
@@ -304,12 +310,14 @@ class ImageViewer:
             error_content=s.empty_state(ft.Icons.BROKEN_IMAGE_OUTLINED, "图片加载失败",
                                         "文件可能已被移动或删除"),
         )
-        return ft.Container(
+        self._frame = ft.Container(
             content=image, border_radius=6, clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
             shadow=ft.BoxShadow(blur_radius=48, offset=ft.Offset(0, 18), spread_radius=-12,
                                 color=ft.Colors.with_opacity(0.35, c("shadow"))),
+            scale=1, animate_scale=s.snappy(),
             key=f"img-{self._index}",
         )
+        return self._frame
 
     # ── 尺寸计算 ─────────────────────────────────────────────────────
     @property
@@ -334,13 +342,58 @@ class ImageViewer:
         dw, dh = size[0] * r, size[1] * r
         return (w - dw) / 2, (h - dh) / 2, dw, dh
 
+    def _hit_image(self, pos) -> bool:
+        x, y, w, h = self._image_rect()
+        return pos is not None and x <= pos.x <= x + w and y <= pos.y <= y + h
+
+    def _on_secondary_tap(self, e) -> None:
+        """右键点图片任意位置：复制到剪贴板。"""
+        if self._hit_image(getattr(e, "local_position", None)):
+            self._run(self._copy)
+
+    async def _copy(self) -> None:
+        if self._copying:
+            return
+        self._copying = True
+        item = self._item
+        # 按压回弹，给「已复制」一个触感反馈
+        self._frame.scale = 0.97
+        self._safe_update(self._frame)
+        await asyncio.sleep(0.12)
+        self._frame.scale = 1
+        self._safe_update(self._frame)
+        try:
+            ok = await self._copy_item(item)
+        except Exception:
+            ok = False
+        finally:
+            self._copying = False
+        if ok:
+            show_toast(self._page, "图片已复制，可直接粘贴发送", kind="success")
+        else:
+            show_toast(self._page, "复制失败，可用「另存为」保存后发送", kind="error")
+
+    async def _copy_item(self, item: ViewerItem) -> bool:
+        page = self._page
+        web_like = page.web or page.platform.is_mobile()
+        if web_like:
+            data = item.data or (item.path.read_bytes() if item.path and item.path.exists() else None)
+            if not data:
+                return False
+            await ft.Clipboard().set_image(data)
+            return True
+        path = item.path if item.path and item.path.exists() else None
+        if path is None and item.data:
+            path = Path(tempfile.gettempdir()) / f"file-toolkit-clip-{int(time.time())}.png"
+            path.write_bytes(item.data)
+        if path is None:
+            return False
+        return await asyncio.to_thread(clipboard_service.copy_image_file, path)
+
     def _on_stage_tap(self, e) -> None:
         """点图片以外的空白处关闭；点图片本身不响应。"""
         pos = getattr(e, "local_position", None)
-        if pos is None:
-            return
-        x, y, w, h = self._image_rect()
-        if not (x <= pos.x <= x + w and y <= pos.y <= y + h):
+        if pos is not None and not self._hit_image(pos):
             self._close_click()
 
     def _max_scale(self) -> float:
@@ -553,6 +606,9 @@ class ImageViewer:
     # ── 键盘 ─────────────────────────────────────────────────────────
     def _on_key(self, e: ft.KeyboardEvent) -> None:
         key = e.key
+        if (e.ctrl or getattr(e, "meta", False)) and key.upper() == "C":
+            self._run(self._copy)
+            return
         actions = {
             "Escape": (self.close,),
             "Arrow Left": (self._go, -1),

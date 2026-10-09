@@ -65,6 +65,21 @@ def test_tap_outside_image_closes(tmp_path: Path):
     assert closed
 
 
+def test_right_click_on_image_copies(tmp_path: Path):
+    viewer = iv.ImageViewer(_FakePage(), [iv.ViewerItem(path=_png(tmp_path / "a.png"))])
+    copied = []
+    viewer._run = lambda fn, *a: copied.append(fn)
+    x, y, w, h = viewer._image_rect()
+
+    class _Ev:
+        def __init__(self, px, py):
+            self.local_position = type("P", (), {"x": px, "y": py})()
+
+    viewer._on_secondary_tap(_Ev(x + 5, y + 5))
+    viewer._on_secondary_tap(_Ev(x - 5, y + 5))
+    assert copied == [viewer._copy]
+
+
 def test_meta_shows_pixels_and_size(tmp_path: Path):
     item = iv.ViewerItem(path=_png(tmp_path / "a.png"), title="海报", meta="10-09")
     viewer = iv.ImageViewer(_FakePage(), [item])

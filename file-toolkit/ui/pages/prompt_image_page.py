@@ -1066,6 +1066,7 @@ class PromptImagePage(ft.Column):
         self._preview.data = None
         self._preview.on_click = None
         self._preview.on_hover = None
+        self._set_preview_frame(True)
         self._preview.content = self._preview_state(
             ft.Icons.STOP_CIRCLE_OUTLINED, "已取消生成", "可以调整提示词后重新生成")
         self._result_meta.value = ""
@@ -1105,6 +1106,7 @@ class PromptImagePage(ft.Column):
         self._preview.data = None
         self._preview.on_click = None
         self._preview.on_hover = None
+        self._set_preview_frame(True)
         self._preview.content = self._preview_state(
             ft.Icons.AUTO_FIX_HIGH_OUTLINED, "生成的图片会显示在这里",
             "选好模板、填写内容后点「生成图片」")
@@ -1117,6 +1119,7 @@ class PromptImagePage(ft.Column):
         self._preview.data = waited
         self._preview.on_click = None
         self._preview.on_hover = None
+        self._set_preview_frame(True)
         self._preview.content = ft.Column(
             controls=[
                 ft.ProgressRing(width=28, height=28, stroke_width=2, color=c("ink", "fg"),
@@ -1143,6 +1146,7 @@ class PromptImagePage(ft.Column):
         self._preview.data = None
         self._preview.on_click = None
         self._preview.on_hover = None
+        self._set_preview_frame(True)
         self._preview.content = self._preview_state(
             ft.Icons.ERROR_OUTLINE, "生成失败", error[:300], color="danger",
             extra=self._small_button("重试", ft.Icons.REFRESH_OUTLINED, self._on_generate, primary=True),
@@ -1171,10 +1175,22 @@ class PromptImagePage(ft.Column):
             **kw,
         )
 
+    def _set_preview_frame(self, on: bool) -> None:
+        """空态 / 生成中 / 出错时显示灰底描边框；出图后去掉，只留图片本身。"""
+        self._preview.bgcolor = c("surface-2") if on else None
+        self._preview.border = ft.border.all(1, c("line")) if on else None
+        self._preview.padding = 8 if on else 0
+
     def _show_image(self, image_bytes: bytes | None, path: Path | None, meta: str) -> None:
         self._preview.data = None
-        image = ft.Container(self._image_control(image_bytes, path), alignment=ft.Alignment(0, 0),
-                             expand=True, scale=1, animate_scale=s.default())
+        # 出图后去掉灰底和描边，只显示按原比例缩放的圆角图片；徽标跟着图片右上角走
+        image = ft.Container(
+            self._image_control(image_bytes, path), border_radius=10,
+            clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+            shadow=ft.BoxShadow(blur_radius=18, offset=ft.Offset(0, 6), spread_radius=-8,
+                                color=ft.Colors.with_opacity(0.28, c("shadow"))),
+            scale=1, animate_scale=s.default(),
+        )
         badge = ft.Container(
             content=ft.Row([ft.Icon(ft.Icons.ZOOM_OUT_MAP_OUTLINED, size=14, color=c("on-ink", "fg")),
                             _txt("查看大图", 11.5, "on-ink", weight=ft.FontWeight.W_500)],
@@ -1191,7 +1207,8 @@ class PromptImagePage(ft.Column):
             badge.opacity, badge.offset = (1, ft.Offset(0, 0)) if on else (0, ft.Offset(0, -0.2))
             self._update(image, badge)
 
-        self._preview.content = ft.Stack(controls=[image, badge], expand=True)
+        self._set_preview_frame(False)
+        self._preview.content = ft.Stack(controls=[image, badge])
         self._preview.on_hover = _hover
         self._preview.on_click = lambda _e: self._open_lightbox()
         self._result_meta.value = meta
