@@ -33,7 +33,7 @@ def test_restores_executable_bit(fake_bin):
 def test_falls_back_to_system_path(fake_bin, monkeypatch):
     monkeypatch.setattr(plat.shutil, "which", lambda name: f"/usr/bin/{name}")
     assert plat.get_ffmpeg_path().name == plat._exe_name("ffmpeg")
-    assert str(plat.get_ffmpeg_path()).startswith("/usr/bin")
+    assert plat.get_ffmpeg_path().parent == plat.Path("/usr/bin")
 
 
 def test_returns_bare_name_when_missing(fake_bin):
