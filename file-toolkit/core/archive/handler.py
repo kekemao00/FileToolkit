@@ -1,6 +1,7 @@
 """压缩解压统一处理模块"""
 import logging
 import os
+import re
 import tarfile
 import time
 import zipfile
@@ -48,6 +49,8 @@ def compress(
     output_dir: Path,
     format: str = "zip",
     progress_callback: ProgressCallback | None = None,
+    password: str = "",
+    archive_name: str = "",
 ) -> TaskResult:
     """
     压缩文件或文件夹。
@@ -57,16 +60,21 @@ def compress(
         output_dir: 输出目录
         format: 压缩格式 zip / 7z / tar.gz
         progress_callback: 可选进度回调
+        password: 7z 的打开密码（同时加密文件名）；ZIP / TAR.GZ 不支持，传了会报错
+        archive_name: 压缩包名（不含扩展名）；默认单个文件用其名字，多个文件用第一个的名字
     """
     t0 = time.time()
     try:
         if not input_files:
             return TaskResult(status=TaskStatus.FAILED, error_message="未选择任何文件")
 
+        if password and format != "7z":
+            return TaskResult(status=TaskStatus.FAILED, error_message="只有 7Z 格式支持设置密码")
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # 生成输出文件名（同名压缩包已存在时追加 _1，不覆盖）
-        base_name = input_files[0].stem if len(input_files) == 1 else "archive"
+        first = input_files[0]
+        base_name = _clean_name(archive_name) or (first.name if first.is_dir() else first.stem)
         ext_map = {"zip": ".zip", "7z": ".7z", "tar.gz": ".tar.gz"}
         ext = ext_map.get(format, ".zip")
         output_file = unique_path(output_dir / f"{base_name}{ext}")
@@ -91,7 +99,7 @@ def compress(
         if format == "zip":
             _compress_zip(output_file, file_entries, total, progress_callback)
         elif format == "7z":
-            _compress_7z(output_file, file_entries, total, progress_callback)
+            _compress_7z(output_file, file_entries, total, progress_callback, password)
         elif format == "tar.gz":
             _compress_tar(output_file, file_entries, total, progress_callback)
         else:
@@ -116,6 +124,15 @@ def compress(
         )
 
 
+def _clean_name(name: str) -> str:
+    """去掉用户输入名里的路径分隔符、非法字符和压缩扩展名。"""
+    name = re.sub(r'[\\/:*?"<>|]', "_", name.strip())
+    for ext in (".tar.gz", ".zip", ".7z"):
+        if name.lower().endswith(ext):
+            name = name[: -len(ext)]
+    return name.strip(" .")
+
+
 def _compress_zip(
     output_file: Path,
     entries: list[tuple[Path, str]],
@@ -135,8 +152,10 @@ def _compress_7z(
     entries: list[tuple[Path, str]],
     total: int,
     cb: ProgressCallback | None,
+    password: str = "",
 ) -> None:
-    with py7zr.SevenZipFile(str(output_file), "w") as sz:
+    kwargs = {"password": password, "header_encryption": True} if password else {}
+    with py7zr.SevenZipFile(str(output_file), "w", **kwargs) as sz:
         for i, (full_path, arcname) in enumerate(entries, start=1):
             check_cancelled()
             sz.write(full_path, arcname)
@@ -162,6 +181,7 @@ def extract(
     input_file: Path,
     output_dir: Path,
     progress_callback: ProgressCallback | None = None,
+    password: str = "",
 ) -> TaskResult:
     """
     解压归档文件。
@@ -175,9 +195,9 @@ def extract(
         suffix = input_file.name.lower()
 
         if suffix.endswith(".zip"):
-            _extract_zip(input_file, output_dir, progress_callback)
+            _extract_zip(input_file, output_dir, progress_callback, password)
         elif suffix.endswith(".7z"):
-            _extract_7z(input_file, output_dir, progress_callback)
+            _extract_7z(input_file, output_dir, progress_callback, password)
         elif suffix.endswith(".rar"):
             _extract_rar(input_file, output_dir, progress_callback)
         elif suffix.endswith((".tar.gz", ".tgz", ".tar.bz2", ".tar.xz", ".tar")):
@@ -229,13 +249,16 @@ def zip_member_name(info: zipfile.ZipInfo) -> str:
     return name
 
 
-def _extract_zip(src: Path, dst: Path, cb: ProgressCallback | None) -> None:
+def _extract_zip(src: Path, dst: Path, cb: ProgressCallback | None, password: str = "") -> None:
     import shutil
 
     with zipfile.ZipFile(src, "r") as zf:
         infos = zf.infolist()
-        if any(i.flag_bits & 0x1 for i in infos):
-            raise RuntimeError("压缩包有密码保护，暂不支持解压加密的 ZIP")
+        encrypted = any(i.flag_bits & 0x1 for i in infos)
+        if encrypted and not password:
+            raise RuntimeError("压缩包有密码，请填写解压密码")
+        if encrypted:
+            zf.setpassword(password.encode("utf-8"))
         total = len(infos)
         for i, info in enumerate(infos, start=1):
             check_cancelled()
@@ -249,15 +272,30 @@ def _extract_zip(src: Path, dst: Path, cb: ProgressCallback | None) -> None:
                 target.mkdir(parents=True, exist_ok=True)
             else:
                 target.parent.mkdir(parents=True, exist_ok=True)
-                with zf.open(info) as fsrc, open(target, "wb") as fdst:
-                    shutil.copyfileobj(fsrc, fdst, 1024 * 1024)
+                try:
+                    with zf.open(info) as fsrc, open(target, "wb") as fdst:
+                        shutil.copyfileobj(fsrc, fdst, 1024 * 1024)
+                except RuntimeError as exc:
+                    target.unlink(missing_ok=True)
+                    if "password" in str(exc).lower():
+                        raise RuntimeError("解压密码不正确") from exc
+                    raise
+                except NotImplementedError as exc:
+                    target.unlink(missing_ok=True)
+                    raise RuntimeError("这个 ZIP 用了 AES 加密，暂不支持，可用 7-Zip 解压") from exc
             if cb:
                 cb(i, total, f"解压中：{name} ({i}/{total})")
 
 
-def _extract_7z(src: Path, dst: Path, cb: ProgressCallback | None) -> None:
+def _extract_7z(src: Path, dst: Path, cb: ProgressCallback | None, password: str = "") -> None:
     # py7zr 的 extractall 一次性处理，先过滤非法成员再解压
-    with py7zr.SevenZipFile(str(src), "r") as sz:
+    try:
+        sz_ctx = py7zr.SevenZipFile(str(src), "r", password=password or None)
+    except py7zr.exceptions.PasswordRequired as exc:
+        raise RuntimeError("压缩包有密码，请填写解压密码") from exc
+    with sz_ctx as sz:
+        if sz.needs_password() and not password:
+            raise RuntimeError("压缩包有密码，请填写解压密码")
         names = sz.getnames()
         safe_names: list[str] = []
         for n in names:
@@ -265,12 +303,17 @@ def _extract_7z(src: Path, dst: Path, cb: ProgressCallback | None) -> None:
                 safe_names.append(n)
         if cb:
             cb(1, 1, "正在解压 7z 文件...")
-        if len(safe_names) == len(names):
-            sz.extractall(path=str(dst))
-        elif safe_names:
-            # 有成员被拒绝时逐个取出过滤后的部分
-            sz.reset()
-            sz.extract(path=str(dst), targets=safe_names)
+        try:
+            if len(safe_names) == len(names):
+                sz.extractall(path=str(dst))
+            elif safe_names:
+                # 有成员被拒绝时逐个取出过滤后的部分
+                sz.reset()
+                sz.extract(path=str(dst), targets=safe_names)
+        except Exception as exc:
+            if password:
+                raise RuntimeError("解压密码不正确，或压缩包已损坏") from exc
+            raise
         if cb:
             cb(1, 1, "解压完成")
 
@@ -321,13 +364,14 @@ def extract_many(
     input_files: list[Path],
     output_dir: Path,
     progress_callback: ProgressCallback | None = None,
+    password: str = "",
 ) -> TaskResult:
     """批量解压：每个压缩包解到输出目录下以包名命名的子文件夹（重名追加 _1），互不混在一起。"""
     from core.batch import run_batch
 
     def one(path: Path) -> Path:
         dest = unique_path(output_dir / archive_stem(path))
-        res = extract(path, dest)
+        res = extract(path, dest, password=password)
         if res.status != TaskStatus.SUCCESS:
             if res.status == TaskStatus.CANCELLED:
                 raise TaskCancelled()

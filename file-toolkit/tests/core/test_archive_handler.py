@@ -85,3 +85,23 @@ class TestExtractNames:
         first = compress([f], tmp_path / "o", "zip").output_files[0]
         second = compress([f], tmp_path / "o", "zip").output_files[0]
         assert first != second and first.exists() and second.exists()
+
+
+class TestPassword:
+    def test_7z_password_roundtrip(self, tmp_path: Path) -> None:
+        f = _make_file(tmp_path / "secret.txt", "s3cret")
+        res = compress([f], tmp_path / "o", "7z", password="pw")
+        assert res.status == TaskStatus.SUCCESS
+        archive = res.output_files[0]
+
+        assert extract(archive, tmp_path / "x").status == TaskStatus.FAILED
+        wrong = extract(archive, tmp_path / "y", password="nope")
+        assert wrong.status == TaskStatus.FAILED
+        ok = extract(archive, tmp_path / "z", password="pw")
+        assert ok.status == TaskStatus.SUCCESS
+        assert (tmp_path / "z" / "secret.txt").read_text() == "s3cret"
+
+    def test_zip_password_rejected(self, tmp_path: Path) -> None:
+        f = _make_file(tmp_path / "a.txt")
+        res = compress([f], tmp_path / "o", "zip", password="pw")
+        assert res.status == TaskStatus.FAILED
