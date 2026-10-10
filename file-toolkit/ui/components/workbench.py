@@ -30,6 +30,7 @@ from services import history_service, settings_service
 from services.task_service import run_task
 from ui import style as s
 from ui.components.top_bar import TopBar
+from ui.handoff import pop_pending_files
 from ui.palette import c
 from ui.utils import notify_task_done, open_folder, show_toast
 
@@ -261,6 +262,9 @@ class Workbench(ft.Column):
         self._render_params()
         self._render_files()
         self._render_out_dir()
+        handed_over = pop_pending_files()
+        if handed_over:
+            self.add_files(handed_over, update=False)
 
         self.controls = [TopBar(page), ft.Container()]
         self._apply_responsive_layout(update=False)

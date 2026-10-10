@@ -35,11 +35,11 @@ FEATURES: list[Feature] = [
     Feature("PDF 拆分", "/pdf?func=split", ft.Icons.CONTENT_CUT_OUTLINED, "PDF", ("拆分", "分割", "split", "页码")),
     Feature("PDF 压缩", "/pdf?func=compress", ft.Icons.COMPRESS_OUTLINED, "PDF", ("压缩", "减小", "compress")),
     Feature("PDF 转 Word / Excel / PPT", "/pdf?func=to_office", ft.Icons.DESCRIPTION_OUTLINED, "PDF",
-            ("转换", "word", "docx", "excel", "xlsx", "ppt", "pptx", "office")),
+            ("转换", "word", "docx", "excel", "xlsx", "ppt", "pptx", "office", "转word", "转excel", "转ppt")),
     Feature("PDF 转图片", "/pdf?func=to_images", ft.Icons.IMAGE_OUTLINED, "PDF",
             ("转图片", "导出图片", "png", "jpg", "截图", "每页")),
     Feature("Office 转 PDF", "/pdf?func=from_office", ft.Icons.PICTURE_AS_PDF_OUTLINED, "PDF",
-            ("转换", "word", "excel", "ppt", "docx", "office", "libreoffice")),
+            ("转换", "word", "excel", "ppt", "docx", "office", "libreoffice", "转pdf")),
     Feature("PDF 加密 / 水印", "/pdf?func=protect", ft.Icons.LOCK_OUTLINED, "PDF",
             ("加密", "密码", "水印", "保护", "watermark")),
     # 图片

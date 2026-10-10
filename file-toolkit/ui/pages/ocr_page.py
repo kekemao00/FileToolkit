@@ -15,6 +15,7 @@ from services import history_service, settings_service
 from services.task_service import run_task
 from ui import style as s
 from ui.components.top_bar import TopBar
+from ui.handoff import pop_pending_files
 from ui.palette import c
 from ui.utils import show_toast
 
@@ -94,6 +95,9 @@ class OcrPage(ft.Column):
 
         self.controls = [self._topbar, self._body_container]
         self._apply_responsive_layout(update=False)
+        handed_over = [p for p in pop_pending_files() if p.suffix.lower().lstrip(".") in _INPUT_EXTS]
+        if handed_over:
+            self._set_input(handed_over[0])
 
         self._prev_on_resize = None
 
@@ -421,12 +425,15 @@ class OcrPage(ft.Column):
             return
         paths = [Path(f.path) for f in files if f.path]
         if paths:
-            self._input_file = paths[0]
-            self._file_name.value = self._input_file.name
-            self._file_info_container.visible = True
-            self._run_btn.set_label("开始识别", enabled=True)
-            self._drop_zone_wrapper.height = 120
+            self._set_input(paths[0])
         self._page.update()
+
+    def _set_input(self, path: Path) -> None:
+        self._input_file = path
+        self._file_name.value = path.name
+        self._file_info_container.visible = True
+        self._run_btn.set_label("开始识别", enabled=True)
+        self._drop_zone_wrapper.height = 120
 
     def _remove_file(self, _) -> None:
         self._input_file = None

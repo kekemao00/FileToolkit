@@ -1,15 +1,17 @@
-"""AI 智能任务页 — 暖灰黑白风格
+"""AI 智能任务页 — 一句话找到工具的智能入口
 
 布局：居中的一列 —— 墨黑图标块 + 标题 + 副标题、建议任务、输入框（白卡片）、
-附件、三条能力说明。无渐变、无光晕、无阴影；只有发送按钮是墨黑实心。
-AI 服务未配置时给出明确提示，不使用"即将上线"。
+附件、拆出来的步骤、三条能力说明。无渐变、无光晕、无阴影；只有发送按钮是墨黑实心。
+需求在本地按功能目录匹配（ui/intent.py），不联网；点"打开"带着附件进入对应工作台。
 """
 from pathlib import Path
 
 import flet as ft
 
-from services import settings_service
 from ui import style as s
+from ui.features import Feature
+from ui.handoff import set_pending_files
+from ui.intent import plan_steps
 from ui.palette import c
 from ui.utils import show_toast
 
@@ -24,7 +26,7 @@ _PROMPT_SUGGESTIONS = [
 _STATUS_INDICATORS = [
     "支持 50+ 种格式",
     "本地处理，文件不上传",
-    "自动编排多步流程",
+    "一句话找到对应工具",
 ]
 
 _MAX_WIDTH = 680
@@ -54,6 +56,8 @@ class AiTaskPage(ft.Column):
             on_focus=lambda e: self._focus_console(True),
             on_blur=lambda e: self._focus_console(False),
         )
+
+        self._plan = ft.Column(spacing=0, visible=False)
 
         self._attach_list = ft.Row(
             controls=[],
@@ -85,6 +89,7 @@ class AiTaskPage(ft.Column):
                             ft.Container(height=12),
                             self._build_input_console(),
                             ft.Container(content=self._attach_list, padding=ft.padding.only(top=10)),
+                            ft.Container(content=self._plan, padding=ft.padding.only(top=16)),
                             ft.Container(height=20),
                             self._build_status_indicators(),
                         ],
@@ -105,26 +110,11 @@ class AiTaskPage(ft.Column):
                     content=ft.Icon(ft.Icons.AUTO_AWESOME_OUTLINED, color=c("on-ink", "fg"), size=22),
                 ),
                 ft.Container(height=20),
-                s.text("你好，我是文件全能王 AI 助手", "headline", size=24,
-                       text_align=ft.TextAlign.CENTER),
+                s.text("想对文件做什么？", "headline", size=24, text_align=ft.TextAlign.CENTER),
                 ft.Container(height=8),
                 s.text(
-                    "告诉我您的需求，我会把它拆成步骤，调用本机的 PDF、图片、音视频等工具自动完成。",
+                    "用一句话描述需求，我会拆成步骤并找到对应的工具，带着你的文件直接打开。",
                     "body", "ink-2", size=14, text_align=ft.TextAlign.CENTER,
-                ),
-                ft.Container(height=12),
-                ft.Container(
-                    content=ft.Row(
-                        controls=[
-                            ft.Container(width=6, height=6, border_radius=3, bgcolor=c("line-strong")),
-                            s.text("功能开发中，配置 API Key 后可试用", "caption", "ink-2"),
-                        ],
-                        spacing=7, tight=True,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    ),
-                    padding=ft.padding.symmetric(horizontal=10, vertical=4),
-                    border=ft.border.all(1, c("line")),
-                    border_radius=999,
                 ),
             ],
         )
@@ -189,7 +179,6 @@ class AiTaskPage(ft.Column):
                         spacing=2,
                         controls=[
                             s.icon_button(ft.Icons.ATTACH_FILE_OUTLINED, self._on_attach, "附加文件"),
-                            s.icon_button(ft.Icons.MIC_NONE_OUTLINED, self._on_mic, "语音输入"),
                             ft.Container(expand=True),
                             send_btn,
                         ],
@@ -239,26 +228,66 @@ class AiTaskPage(ft.Column):
     def _use_suggestion(self, label: str) -> None:
         self._input_field.value = label
         self._input_field.update()
+        self._on_submit(None)
 
     def _on_submit(self, _) -> None:
         text = (self._input_field.value or "").strip()
         if not text:
             self._show_snack("请先输入任务描述", kind="info")
             return
+        steps = plan_steps(text, self._attached_files)
+        self._render_plan(steps)
+        self._page.update()
 
-        # 检查 AI 服务配置
-        api_key = settings_service.get_ai_api_key() if hasattr(
-            settings_service, "get_ai_api_key") else None
-        if not api_key:
-            self._show_snack(
-                "AI 服务配置中，请在「设置」中配置 API Key 后使用",
-                kind="warning",
-                duration=3000,
-            )
+    # ── 步骤列表 ──────────────────────────────────────
+    def _render_plan(self, steps: list[Feature]) -> None:
+        self._plan.visible = True
+        if not steps:
+            self._plan.controls = [s.card(ft.Column(spacing=6, controls=[
+                s.text("没找到对应的工具", "title"),
+                s.text("换个说法试试，比如「PDF 转 Word」「压缩视频」「图片加水印」，"
+                       "或用顶部搜索框按功能名查找。", "small"),
+            ]), padding=ft.padding.all(16))]
             return
+        rows = [self._step_row(i, f, first=i == 0) for i, f in enumerate(steps)]
+        note = ("点「打开」进入对应工具，附加的文件会一起带过去。"
+                if len(steps) == 1 else
+                "按顺序逐步完成：第一步会带上附加的文件，之后每一步选上一步生成的文件。")
+        self._plan.controls = [s.card(ft.Column(spacing=0, controls=[
+            s.text("我理解的步骤", "title"),
+            ft.Container(height=8),
+            *rows,
+            ft.Container(height=10),
+            s.text(note, "small", "ink-3"),
+        ]), padding=ft.padding.only(left=16, right=16, top=14, bottom=14))]
 
-        # 已配置时的处理入口（后端服务就绪后接入）
-        self._show_snack("正在解析任务…", kind="info")
+    def _step_row(self, index: int, feature: Feature, first: bool) -> ft.Control:
+        return ft.Container(
+            padding=ft.padding.symmetric(vertical=8),
+            border=ft.border.only(top=ft.BorderSide(1, c("line"))) if index else None,
+            content=ft.Row(
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=12,
+                controls=[
+                    ft.Container(
+                        width=22, height=22, border_radius=11, bgcolor=c("surface-3"),
+                        alignment=ft.Alignment(0, 0),
+                        content=s.text(str(index + 1), "caption", "ink-2"),
+                    ),
+                    ft.Icon(feature.icon, color=c("ink-2", "fg"), size=18),
+                    ft.Column(spacing=0, expand=True, controls=[
+                        s.text(feature.title, "label", "ink"),
+                        s.text(feature.group, "caption", "ink-3"),
+                    ]),
+                    s.button("打开", lambda _, f=feature, carry=first: self._open_step(f, carry),
+                             kind="primary" if first else "secondary"),
+                ],
+            ),
+        )
+
+    def _open_step(self, feature: Feature, carry_files: bool) -> None:
+        set_pending_files(self._attached_files if carry_files else [])
+        self._page.go(feature.route)
 
     def _on_attach(self, _) -> None:
         self._page.run_task(self._pick_attach_async)
@@ -315,9 +344,6 @@ class AiTaskPage(ft.Column):
             self._attached_files.remove(path)
         self._rebuild_attach_list()
         self._page.update()
-
-    def _on_mic(self, _) -> None:
-        self._show_snack("语音输入需要系统麦克风权限，请在系统设置中授权后重试")
 
     def _show_snack(self, msg: str, color: str | None = None, duration: int = 2200,
                     kind: str | None = None) -> None:
