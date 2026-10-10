@@ -10,7 +10,7 @@ from pathlib import Path
 
 import flet as ft
 
-from core.ocr.client import recognize
+from core.ocr.client import INSTALL_HINT, find_tesseract, recognize
 from services import history_service, settings_service
 from services.task_service import run_task
 from ui import style as s
@@ -157,12 +157,16 @@ class OcrPage(ft.Column):
         )
 
     def _build_engine_badge(self) -> ft.Control:
-        """本地引擎就绪徽章（Tesseract + pypdf 都走本地）。"""
+        """本地引擎状态：检测到 Tesseract 才显示「就绪」，否则提示只能提取 PDF 文字。"""
+        ready = find_tesseract() is not None
         return ft.Container(
+            tooltip=None if ready else INSTALL_HINT,
             content=ft.Row(
                 controls=[
-                    ft.Container(width=6, height=6, border_radius=3, bgcolor=c("accent")),
-                    s.text("本地引擎就绪", "caption", color="ink-2"),
+                    ft.Container(width=6, height=6, border_radius=3,
+                                 bgcolor=c("accent") if ready else c("ink-3")),
+                    s.text("本地引擎就绪" if ready else "未安装 Tesseract，仅能提取 PDF 文字",
+                           "caption", color="ink-2"),
                 ],
                 spacing=6,
                 tight=True,
@@ -438,11 +442,16 @@ class OcrPage(ft.Column):
         kwargs = {
             "input_file": self._input_file,
             "language": self._language_value,
+            "output_dir": settings_service.resolve_output_dir(self._input_file),
         }
         self._show_processing(self._input_file.name)
+        self._run_seq = getattr(self, "_run_seq", 0) + 1
+        seq = self._run_seq
 
         async def _run():
-            await run_task(recognize, kwargs, self._on_progress, self._on_complete)
+            await run_task(recognize, kwargs,
+                           lambda *a: seq == self._run_seq and self._on_progress(*a),
+                           lambda r: seq == self._run_seq and self._on_complete(r))
         self._task = self._page.run_task(_run)
 
     def _on_progress(self, current, total, desc):
@@ -456,12 +465,13 @@ class OcrPage(ft.Column):
     def _on_complete(self, result):
         from core.models import TaskResult, TaskStatus
 
+        if isinstance(result, TaskResult) and result.status == TaskStatus.CANCELLED:
+            return
         if isinstance(result, TaskResult):
             if result.status == TaskStatus.FAILED:
                 text = ""
-                err = result.error_message or "识别失败"
                 ok = False
-                self._result_title.value = f"识别失败：{err[:60]}"
+                self._result_title.value = "识别失败"
                 self._result_title.color = c("danger", "fg")
                 self._sum_status.value = "失败"
                 self._sum_status.color = c("danger", "fg")
@@ -474,9 +484,6 @@ class OcrPage(ft.Column):
                         text = self._output_file.read_text(encoding="utf-8")
                     except (OSError, UnicodeDecodeError):
                         text = ""
-                if not text and result.error_message:
-                    # 客户端将文本存在 error_message 供 UI 读取（已在 client 约定）
-                    text = result.error_message
                 ok = True
                 self._result_title.value = "识别完成"
                 self._result_title.color = c("ink", "fg")
@@ -497,7 +504,8 @@ class OcrPage(ft.Column):
         self._last_ok = ok
 
         self._result_text_value = text
-        self._result_text.value = text
+        # 失败时把完整原因（含安装指引）放进结果框，方便阅读和复制链接
+        self._result_text.value = text if ok else (result.error_message or "识别失败")
 
         # 摘要
         lang_label = next((lg["label"] for lg in _LANGUAGES
@@ -513,6 +521,7 @@ class OcrPage(ft.Column):
         self._show_complete()
 
     def _cancel(self) -> None:
+        self._run_seq = getattr(self, "_run_seq", 0) + 1
         if self._task and not self._task.done():
             self._task.cancel()
         self._reset_to_workspace()
@@ -569,8 +578,9 @@ class OcrPage(ft.Column):
             self._show_snack("无可保存的识别结果")
             return
         out_dir = settings_service.resolve_output_dir(self._input_file)
-        out_path = out_dir / f"{self._input_file.stem}_ocr.txt"
+        out_path = self._output_file or out_dir / f"{self._input_file.stem}_ocr.txt"
         try:
+            out_path.parent.mkdir(parents=True, exist_ok=True)
             out_path.write_text(self._result_text.value, encoding="utf-8")
             self._output_file = out_path
             self._show_snack(f"已保存到 {out_path}", kind="success")
