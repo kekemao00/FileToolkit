@@ -1,0 +1,51 @@
+name: ✨ 功能建议
+description: 想要新功能，或者希望现有功能改得更好用
+title: "[建议] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢建议！比起「加一个 XX 功能」，更希望你讲讲**你想完成什么事、现在卡在哪**，这样更容易找到合适的做法。
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 相关模块
+      options:
+        - PDF
+        - 图片
+        - 音视频
+        - 压缩解压
+        - 文字识别
+        - AI / 提示词出图
+        - 设置 / 更新 / 记录等应用整体
+        - 新的模块
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你想解决什么问题？
+      description: 描述使用场景，以及现在的做法哪里不方便。
+      placeholder: 我经常要把手机拍的几十张发票合成 PDF，但现在每张都要手动旋转……
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 希望的做法
+      description: 你期望在哪个页面、通过什么操作来完成，结果是什么样。
+      placeholder: 在「图片 → 合成 PDF」里加一个「自动摆正方向」开关
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 其他参考（可选）
+      description: 有没有别的软件做得好的例子、截图或草图，或者你考虑过的其他方案。
+    validations:
+      required: false

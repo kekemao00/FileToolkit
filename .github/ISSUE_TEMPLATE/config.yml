@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 使用说明与外部依赖
+    url: https://github.com/kekemao00/FileToolkit#外部依赖
+    about: Office 转 PDF、文字识别、解压 RAR、提示词出图需要先安装对应程序或填写 API Key，提问前可以先看看这里
+  - name: ⬇️ 下载最新版本
+    url: https://github.com/kekemao00/FileToolkit/releases/latest
+    about: 遇到问题可以先升级到最新版本试试，也可以在应用「设置 → 关于 → 检查更新」直接更新
