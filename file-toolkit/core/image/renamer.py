@@ -5,6 +5,7 @@ from datetime import date
 from pathlib import Path
 
 from core.models import ProgressCallback, TaskResult, TaskStatus
+from core.paths import unique_path
 
 
 def _sanitize_filename(name: str) -> str:
@@ -92,11 +93,11 @@ def batch_rename(
             new_name = new_stem + path.suffix
             new_path = path.parent / new_name
 
-            # 冲突检测：目标文件已存在且不是自身
-            if new_path.exists() and new_path != path:
-                new_stem_dedup = f"{new_stem}_{n}"
-                new_name = new_stem_dedup + path.suffix
-                new_path = path.parent / new_name
+            # 冲突检测：目标已存在（且不是自身）时追加 _1、_2…；
+            # macOS / Linux 上 rename 会直接覆盖已有文件，必须先避开
+            if new_path != path:
+                new_path = unique_path(new_path)
+                new_name = new_path.name
 
             path.rename(new_path)
             output_files.append(new_path)

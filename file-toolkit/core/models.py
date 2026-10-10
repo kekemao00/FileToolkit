@@ -25,6 +25,8 @@ class TaskResult:
     output_dir: Path | None = None
     error_message: str | None = None
     duration_seconds: float = 0.0
+    # 批处理中个别文件失败时的说明（如 "a.png：无法识别的图片"），整体仍算成功
+    warnings: list[str] = field(default_factory=list)
 
     @property
     def succeeded(self) -> bool:

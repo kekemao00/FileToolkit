@@ -1,26 +1,18 @@
 """图片水印模块"""
-import time
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
+from core.batch import run_batch
+from core.fonts import pillow_font
+from core.image._common import open_image, to_rgb
 from core.models import ProgressCallback, TaskResult, TaskStatus
+from core.paths import reserve
 
 
-def _get_font(font_size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    """尝试加载系统字体，失败则用默认字体。"""
-    candidates = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-        "C:/Windows/Fonts/msyh.ttc",
-        "C:/Windows/Fonts/arial.ttf",
-    ]
-    for path in candidates:
-        try:
-            return ImageFont.truetype(path, font_size)
-        except OSError:
-            continue
-    return ImageFont.load_default()
+def _get_font(font_size: int):
+    """能显示中文的系统字体（Windows 微软雅黑 / macOS 黑体 / Linux 文泉驿等）。"""
+    return pillow_font(font_size)
 
 
 def _calc_position(
@@ -70,78 +62,48 @@ def add_text_watermark(
         font_size: 字号
         progress_callback: 可选进度回调
     """
-    t0 = time.time()
-    try:
-        if not input_files:
-            return TaskResult(status=TaskStatus.FAILED, error_message="未选择任何文件")
-        if not text:
-            return TaskResult(status=TaskStatus.FAILED, error_message="水印文字不能为空")
+    if not text:
+        return TaskResult(status=TaskStatus.FAILED, error_message="水印文字不能为空")
+    alpha = int(255 * opacity / 100)
+    font = _get_font(font_size)
+    fill = (255, 255, 255, alpha)
+    claimed: set[Path] = set()
 
-        output_dir.mkdir(parents=True, exist_ok=True)
-        alpha = int(255 * opacity / 100)
-        font = _get_font(font_size)
+    def one(path: Path) -> Path:
+        img = open_image(path).convert("RGBA")
+        layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(layer)
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_w, text_h = bbox[2] - bbox[0], bbox[3] - bbox[1]
 
-        output_files: list[Path] = []
-        total = len(input_files)
+        if position == "tile":
+            spacing_x, spacing_y = text_w + 80, text_h + 80
+            for y in range(0, img.height, spacing_y):
+                for x in range(0, img.width, spacing_x):
+                    draw.text((x, y), text, font=font, fill=fill)
+        else:
+            x, y = _calc_position(img.width, img.height, text_w, text_h, position)
+            draw.text((x - bbox[0], y - bbox[1]), text, font=font, fill=fill)
 
-        for i, path in enumerate(input_files, start=1):
-            img = Image.open(path).convert("RGBA")
+        return _save_like(Image.alpha_composite(img, layer), path, output_dir, claimed, input_files)
 
-            # 创建水印层
-            watermark_layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
-            draw = ImageDraw.Draw(watermark_layer)
+    return run_batch(input_files, output_dir, one, progress_callback, "已添加水印")
 
-            bbox = draw.textbbox((0, 0), text, font=font)
-            text_w = bbox[2] - bbox[0]
-            text_h = bbox[3] - bbox[1]
 
-            fill = (255, 255, 255, alpha)
-
-            if position == "tile":
-                # 平铺模式：间隔绘制
-                spacing_x = text_w + 80
-                spacing_y = text_h + 80
-                y = 0
-                while y < img.height:
-                    x = 0
-                    while x < img.width:
-                        draw.text((x, y), text, font=font, fill=fill)
-                        x += spacing_x
-                    y += spacing_y
-            else:
-                x, y = _calc_position(img.width, img.height, text_w, text_h, position)
-                draw.text((x, y), text, font=font, fill=fill)
-
-            result_img = Image.alpha_composite(img, watermark_layer)
-
-            # 保存（保持原格式）
-            ext = path.suffix.lower()
-            out_path = output_dir / f"{path.stem}_watermark{ext}"
-            if ext in (".jpg", ".jpeg"):
-                result_img = result_img.convert("RGB")
-                result_img.save(out_path, format="JPEG", quality=95)
-            elif ext == ".webp":
-                result_img.save(out_path, format="WEBP", quality=95)
-            else:
-                result_img.save(out_path, format="PNG")
-
-            output_files.append(out_path)
-            if progress_callback:
-                progress_callback(i, total, f"已添加水印：{path.name} ({i}/{total})")
-
-        return TaskResult(
-            status=TaskStatus.SUCCESS,
-            output_files=output_files,
-            output_dir=output_dir,
-            duration_seconds=time.time() - t0,
-        )
-
-    except Exception as exc:
-        return TaskResult(
-            status=TaskStatus.FAILED,
-            error_message=str(exc),
-            duration_seconds=time.time() - t0,
-        )
+def _save_like(img: Image.Image, src: Path, output_dir: Path, claimed: set[Path],
+               inputs: list[Path]) -> Path:
+    """按原格式保存（JPG / WebP 保持，其他存 PNG 以保留透明度）。"""
+    ext = src.suffix.lower()
+    if ext in (".jpg", ".jpeg"):
+        out = reserve(output_dir / f"{src.stem}_watermark{ext}", claimed, inputs)
+        to_rgb(img).save(out, format="JPEG", quality=95)
+    elif ext == ".webp":
+        out = reserve(output_dir / f"{src.stem}_watermark.webp", claimed, inputs)
+        img.save(out, format="WEBP", quality=95)
+    else:
+        out = reserve(output_dir / f"{src.stem}_watermark.png", claimed, inputs)
+        img.save(out, format="PNG")
+    return out
 
 
 def add_image_watermark(
@@ -154,60 +116,21 @@ def add_image_watermark(
     progress_callback: ProgressCallback | None = None,
 ) -> TaskResult:
     """在图片上叠加图片水印。"""
-    t0 = time.time()
     try:
-        if not input_files:
-            return TaskResult(status=TaskStatus.FAILED, error_message="未选择任何文件")
-
-        output_dir.mkdir(parents=True, exist_ok=True)
-        wm = Image.open(watermark_image).convert("RGBA")
-
-        output_files: list[Path] = []
-        total = len(input_files)
-
-        for i, path in enumerate(input_files, start=1):
-            img = Image.open(path).convert("RGBA")
-
-            # 缩放水印
-            wm_w = int(img.width * scale)
-            wm_h = int(wm.height * (wm_w / wm.width))
-            wm_resized = wm.resize((wm_w, wm_h), Image.LANCZOS)
-
-            # 调整透明度
-            alpha_channel = wm_resized.split()[3]
-            alpha_channel = alpha_channel.point(lambda p: int(p * opacity))
-            wm_resized.putalpha(alpha_channel)
-
-            # 计算位置
-            x, y = _calc_position(img.width, img.height, wm_w, wm_h, position)
-
-            # 合成
-            layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
-            layer.paste(wm_resized, (x, y))
-            result_img = Image.alpha_composite(img, layer)
-
-            ext = path.suffix.lower()
-            out_path = output_dir / f"{path.stem}_watermark{ext}"
-            if ext in (".jpg", ".jpeg"):
-                result_img = result_img.convert("RGB")
-                result_img.save(out_path, format="JPEG", quality=95)
-            else:
-                result_img.save(out_path, format="PNG")
-
-            output_files.append(out_path)
-            if progress_callback:
-                progress_callback(i, total, f"已添加水印：{path.name} ({i}/{total})")
-
-        return TaskResult(
-            status=TaskStatus.SUCCESS,
-            output_files=output_files,
-            output_dir=output_dir,
-            duration_seconds=time.time() - t0,
-        )
-
+        wm = open_image(watermark_image).convert("RGBA")
     except Exception as exc:
-        return TaskResult(
-            status=TaskStatus.FAILED,
-            error_message=str(exc),
-            duration_seconds=time.time() - t0,
-        )
+        return TaskResult(status=TaskStatus.FAILED, error_message=f"水印图片无法打开：{exc}")
+    claimed: set[Path] = set()
+
+    def one(path: Path) -> Path:
+        img = open_image(path).convert("RGBA")
+        wm_w = max(1, int(img.width * scale))
+        wm_h = max(1, int(wm.height * (wm_w / wm.width)))
+        wm_resized = wm.resize((wm_w, wm_h), Image.Resampling.LANCZOS)
+        wm_resized.putalpha(wm_resized.getchannel("A").point(lambda p: int(p * opacity)))
+        x, y = _calc_position(img.width, img.height, wm_w, wm_h, position)
+        layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        layer.paste(wm_resized, (x, y))
+        return _save_like(Image.alpha_composite(img, layer), path, output_dir, claimed, input_files)
+
+    return run_batch(input_files, output_dir, one, progress_callback, "已添加水印")
