@@ -16,14 +16,16 @@
 """
 import asyncio
 import functools
-import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 import flet as ft
 
+from core.batch import run_batch
 from core.models import TaskResult, TaskStatus
+from core.paths import unique_path  # noqa: F401  页面从这里引用
+from core.task_control import TaskCancelled
 from services import history_service, settings_service
 from services.task_service import run_task
 from ui import style as s
@@ -42,6 +44,17 @@ class WorkbenchFunction:
     min_files: int = 1
     orderable: bool = False      # 文件顺序有意义（如 PDF 合并），列表显示上下移动按钮
     uses_output_dir: bool = True  # 原地处理的功能（如重命名）隐藏输出位置
+    accepts_folders: bool = False  # 可以添加整个文件夹（如压缩）
+    show_size: bool = False       # 完成后显示体积变化（压缩类功能）
+
+    @property
+    def any_file(self) -> bool:
+        return "*" in self.extensions
+
+    def accepts(self, path: Path) -> bool:
+        if path.is_dir():
+            return self.accepts_folders
+        return self.any_file or path.suffix.lower().lstrip(".") in self.extensions
 
 
 def run_for_each(
@@ -50,43 +63,33 @@ def run_for_each(
     make_kwargs: Callable[[Path], dict],
     progress_callback=None,
 ) -> TaskResult:
-    """把单文件 core 函数逐个应用到多个文件，汇总输出；任一失败即停止并返回失败。"""
-    t0 = time.time()
-    outputs: list[Path] = []
-    out_dir: Path | None = None
+    """把单文件 core 函数逐个应用到多个文件，汇总输出。
+
+    单个文件失败不中断整批，失败原因记入 warnings；全部失败才算任务失败。
+    """
+    extra_warnings: list[str] = []
     total = len(input_files)
-    for i, path in enumerate(input_files, start=1):
-        if progress_callback:
-            progress_callback(i - 1, total, f"正在处理：{path.name}")
-        res = fn(**make_kwargs(path))
+
+    def one(path: Path) -> list[Path]:
+        kwargs = make_kwargs(path)
+        if progress_callback and "progress_callback" not in kwargs:
+            i = input_files.index(path)
+
+            def sub(cur: int, tot: int, desc: str) -> None:
+                frac = min(1.0, cur / tot) if tot else 0.0
+                progress_callback(int((i + frac) * 1000), total * 1000, f"{path.name}：{desc}")
+            kwargs["progress_callback"] = sub
+        res = fn(**kwargs)
+        if res.status == TaskStatus.CANCELLED:
+            raise TaskCancelled()
         if res.status != TaskStatus.SUCCESS:
-            return TaskResult(
-                status=TaskStatus.FAILED,
-                output_files=outputs,
-                output_dir=out_dir,
-                error_message=f"{path.name}：{res.error_message or '处理失败'}",
-                duration_seconds=time.time() - t0,
-            )
-        outputs.extend(res.output_files or [])
-        out_dir = out_dir or res.output_dir or (res.output_files[0].parent if res.output_files else None)
-        if progress_callback:
-            progress_callback(i, total, f"已完成：{path.name}")
-    return TaskResult(
-        status=TaskStatus.SUCCESS,
-        output_files=outputs,
-        output_dir=out_dir,
-        duration_seconds=time.time() - t0,
-    )
+            raise RuntimeError(res.error_message or "处理失败")
+        extra_warnings.extend(res.warnings)
+        return list(res.output_files)
 
-
-def unique_path(path: Path) -> Path:
-    """目标已存在时追加 _1、_2…，避免覆盖用户之前的结果。"""
-    if not path.exists():
-        return path
-    i = 1
-    while (candidate := path.with_name(f"{path.stem}_{i}{path.suffix}")).exists():
-        i += 1
-    return candidate
+    result = run_batch(input_files, None, one, progress_callback, "已完成")
+    result.warnings = extra_warnings + result.warnings
+    return result
 
 
 def is_mounted(control: ft.Control) -> bool:
@@ -97,14 +100,40 @@ def is_mounted(control: ft.Control) -> bool:
         return False
 
 
-def _size_str(path: Path) -> str:
-    try:
-        size = path.stat().st_size
-    except OSError:
-        return "?"
+def _bytes_str(size: int) -> str:
     if size < 1024 * 1024:
         return f"{size / 1024:.1f} KB"
-    return f"{size / 1024 / 1024:.1f} MB"
+    if size < 1024 ** 3:
+        return f"{size / 1024 / 1024:.1f} MB"
+    return f"{size / 1024 ** 3:.2f} GB"
+
+
+def _total_size(path: Path) -> int:
+    """文件大小；文件夹则累加其中所有文件。"""
+    try:
+        if path.is_dir():
+            return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+        return path.stat().st_size
+    except OSError:
+        return 0
+
+
+def _size_str(path: Path) -> str:
+    if path.is_dir():
+        return "文件夹"
+    try:
+        return _bytes_str(path.stat().st_size)
+    except OSError:
+        return "?"
+
+
+def describe_inputs(files: list[Path], noun: str = "个文件") -> str:
+    """历史记录里的输入描述：「a.pdf」或「a.pdf 等 3 个文件」。"""
+    if not files:
+        return ""
+    if len(files) == 1:
+        return files[0].name
+    return f"{files[0].name} 等 {len(files)} {noun}"
 
 
 class ChoiceGroup(ft.Row):
@@ -201,6 +230,7 @@ class Workbench(ft.Column):
         keys = [f.key for f in self.FUNCTIONS]
         self._func_key = initial_func if initial_func in keys else keys[0]
         self._task: asyncio.Task | None = None
+        self._run_seq = 0
         self._custom_out_dir: Path | None = None
         self._result_dir: Path | None = None
         self._is_narrow: bool | None = None
@@ -260,6 +290,9 @@ class Workbench(ft.Column):
         return s.text_field(value, hint, **kwargs)
 
     def _build_workspace_view(self) -> ft.Control:
+        self._folder_btn = s.button("添加文件夹", self._pick_folder, kind="ghost", height=30,
+                                    icon=ft.Icons.CREATE_NEW_FOLDER_OUTLINED,
+                                    visible=self.func.accepts_folders)
         self._pick_icon = ft.Container(
             content=ft.Icon(self.PICK_ICON, color=c("ink-2", "fg"), size=20),
             width=44, height=44, border_radius=22, alignment=ft.Alignment(0, 0),
@@ -271,6 +304,7 @@ class Workbench(ft.Column):
                     self._pick_icon,
                     s.text(self.PICK_LABEL, "title", text_align=ft.TextAlign.CENTER),
                     s.text(self._accept_hint(), "small", text_align=ft.TextAlign.CENTER),
+                    self._folder_btn,
                 ],
                 spacing=8,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -318,6 +352,8 @@ class Workbench(ft.Column):
         )
 
     def _accept_hint(self) -> str:
+        if self.func.any_file:
+            return "支持任意文件，也可以添加文件夹" if self.func.accepts_folders else "支持任意文件，可多选"
         exts = " / ".join(e.upper() for e in self.func.extensions[:8])
         more = " 等" if len(self.func.extensions) > 8 else ""
         return f"支持 {exts}{more}，可多选"
@@ -424,14 +460,14 @@ class Workbench(ft.Column):
         self._render_funcs()
         self._render_params()
         self._pick_hint.value = self._accept_hint()
+        self._folder_btn.visible = self.func.accepts_folders
         self._render_files()
         self.on_func_changed(key)
         self.update()
 
     # ── 文件 ─────────────────────────────────────────────────────────────
     def _applicable(self) -> list[Path]:
-        exts = self.func.extensions
-        return [p for p in self._files if p.suffix.lower().lstrip(".") in exts]
+        return [p for p in self._files if self.func.accepts(p)]
 
     def _render_files(self) -> None:
         applicable = set(self._applicable())
@@ -458,7 +494,8 @@ class Workbench(ft.Column):
                 ], spacing=0, width=28))
             controls += [
                 ft.Container(
-                    content=ft.Icon(self.FILE_ICON, color=c("ink-2", "fg"), size=14),
+                    content=ft.Icon(ft.Icons.FOLDER_OUTLINED if path.is_dir() else self.FILE_ICON,
+                                    color=c("ink-2", "fg"), size=14),
                     width=26, height=26, bgcolor=c("surface-3"), border_radius=13,
                     alignment=ft.Alignment(0, 0),
                 ),
@@ -502,24 +539,45 @@ class Workbench(ft.Column):
     async def _pick_files_async(self) -> None:
         if not hasattr(self, "_file_picker"):
             self._file_picker = ft.FilePicker()
+        any_file = self.func.any_file
         try:
             picked = await self._file_picker.pick_files(
                 dialog_title=f"选择用于「{self.func.label}」的文件",
-                file_type=ft.FilePickerFileType.CUSTOM,
-                allowed_extensions=list(self.func.extensions),
+                file_type=ft.FilePickerFileType.ANY if any_file else ft.FilePickerFileType.CUSTOM,
+                allowed_extensions=None if any_file else list(self.func.extensions),
                 allow_multiple=True,
             )
         except RuntimeError:
             show_toast(self._page, "无法打开文件选择器，请检查系统环境", duration=3000)
             picked = None
         if picked:
-            existing = set(self._files)
-            for f in picked:
-                if f.path and Path(f.path) not in existing:
-                    self._files.append(Path(f.path))
-                    existing.add(Path(f.path))
-            self._render_files()
-            self._render_out_dir()
+            self.add_files([Path(f.path) for f in picked if f.path], update=False)
+        self._page.update()
+
+    def add_files(self, paths: list[Path], update: bool = True) -> None:
+        """加入待处理列表（去重）。也供其他页面带着文件跳转过来时调用。"""
+        existing = set(self._files)
+        for path in paths:
+            if path not in existing:
+                self._files.append(path)
+                existing.add(path)
+        self._render_files()
+        self._render_out_dir()
+        if update and is_mounted(self):
+            self.update()
+
+    def _pick_folder(self, _) -> None:
+        self._page.run_task(self._pick_folder_async)
+
+    async def _pick_folder_async(self) -> None:
+        if not hasattr(self, "_folder_picker"):
+            self._folder_picker = ft.FilePicker()
+        try:
+            path = await self._folder_picker.get_directory_path(dialog_title="选择文件夹")
+        except RuntimeError:
+            path = None
+        if path:
+            self.add_files([Path(path)], update=False)
         self._page.update()
 
     def _move_file(self, idx: int, step: int) -> None:
@@ -589,19 +647,24 @@ class Workbench(ft.Column):
         if task is None:
             return
         fn, kwargs = task
+        self._run_seq += 1
+        seq = self._run_seq
         self._running = (f.key, len(files))
         self._running_files = files
         self._show_processing(f"{f.label}：{len(files)} {self.FILE_NOUN}")
 
         async def _run():
-            await run_task(fn, kwargs, self._on_progress, self._on_complete)
+            await run_task(fn, kwargs,
+                           lambda *a: seq == self._run_seq and self._on_progress(*a),
+                           lambda r: seq == self._run_seq and self._on_complete(r))
         self._task = self._page.run_task(_run)
 
     def _on_complete(self, result: TaskResult) -> None:
-        if self._processing_view.visible is False:
-            return  # 已取消
-        key, count = self._running
-        history_service.save_task(self.MODULE, key, result, input_desc=f"{count} {self.FILE_NOUN}")
+        if result.status == TaskStatus.CANCELLED:
+            return
+        key, _ = self._running
+        history_service.save_task(self.MODULE, key, result,
+                                  input_desc=describe_inputs(self._running_files, self.FILE_NOUN))
         self.after_task(key, self._running_files, result)
         self._result_dir = result.output_dir or (result.output_files[0].parent if result.output_files else None)
         self._show_complete(result)
@@ -609,6 +672,7 @@ class Workbench(ft.Column):
             notify_task_done(self._page, self._result_dir)
 
     def _cancel(self) -> None:
+        self._run_seq += 1  # 之后到达的进度和结果都属于已取消的任务，忽略
         if self._task and not self._task.done():
             self._task.cancel()
         self._processing_view.visible = False
@@ -616,7 +680,7 @@ class Workbench(ft.Column):
         self._run_btn.disabled = False
         self.update()
         self._run_btn.morph_idle()
-        show_toast(self._page, "已停止等待；正在进行的单个文件可能仍会在后台完成")
+        show_toast(self._page, "已取消，已经生成的文件会保留")
 
     # ── 处理中 / 完成视图 ────────────────────────────────────────────────
     def _card(self, content: ft.Control) -> ft.Container:
@@ -648,6 +712,8 @@ class Workbench(ft.Column):
                                              border_radius=16, alignment=ft.Alignment(0, 0))
         self._result_title = s.text(kind="title", expand=True)
         self._result_detail = s.text(kind="small", selectable=True)
+        self._result_size = s.text(kind="body-medium", visible=False)
+        self._result_warnings = ft.Column(spacing=4, visible=False)
         self._result_files = ft.Column(spacing=6)
         self._result_open_btn = s.button(
             "打开文件夹", lambda _: self._result_dir and open_folder(self._result_dir),
@@ -656,6 +722,8 @@ class Workbench(ft.Column):
         return self._card(ft.Column(controls=[
             ft.Row(controls=[self._result_icon_box, self._result_title], spacing=12),
             self._result_detail,
+            self._result_size,
+            self._result_warnings,
             self._result_files,
             ft.Row(controls=[
                 s.button("返回继续处理", lambda _: self._back_to_workspace(clear=False), kind="secondary"),
@@ -694,8 +762,15 @@ class Workbench(ft.Column):
         if ok:
             n = len(result.output_files)
             self._result_detail.value = f"生成 {n} 个文件，用时 {result.duration_seconds:.1f} 秒"
+            if result.warnings:
+                self._result_title.value = f"处理完成，{len(result.warnings)} 个未成功"
         else:
             self._result_detail.value = result.error_message or "未知错误"
+        self._render_size_change(result if ok else None)
+        self._result_warnings.controls = [
+            s.text(w, "small", color="danger", selectable=True) for w in result.warnings[:8]
+        ] + ([s.text(f"…共 {len(result.warnings)} 条", "small")] if len(result.warnings) > 8 else [])
+        self._result_warnings.visible = bool(result.warnings)
         self._result_files.controls = [
             ft.Row(controls=[
                 ft.Icon(ft.Icons.INSERT_DRIVE_FILE_OUTLINED, color=c("ink-3", "fg"), size=14),
@@ -712,6 +787,23 @@ class Workbench(ft.Column):
         self._run_btn.disabled = False
         self.update()
         self._run_btn.morph_result(ok, "处理失败" if not ok else "")
+
+    def _render_size_change(self, result: TaskResult | None) -> None:
+        """压缩类功能：原始总大小 → 结果总大小（节省比例）。"""
+        show = bool(result and self.func.show_size and result.output_files)
+        self._result_size.visible = show
+        if not show:
+            return
+        assert result is not None
+        before = sum(_total_size(p) for p in self._running_files)
+        after = sum(_total_size(p) for p in result.output_files)
+        if before <= 0:
+            self._result_size.visible = False
+            return
+        saved = 1 - after / before
+        change = f"减小 {saved:.0%}" if saved > 0.005 else ("增大 " + f"{-saved:.0%}" if saved < -0.005 else "几乎不变")
+        self._result_size.value = f"{_bytes_str(before)} → {_bytes_str(after)}，{change}"
+        self._result_size.color = c("accent-fg" if saved > 0.005 else "ink-2", "fg")
 
     def _back_to_workspace(self, clear: bool) -> None:
         if clear:

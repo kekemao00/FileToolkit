@@ -42,7 +42,8 @@ class ImagePage(Workbench):
     FILE_ICON = ft.Icons.IMAGE_OUTLINED
     FILE_NOUN = "张图片"
     FUNCTIONS = [
-        WorkbenchFunction("compress", "压缩", "减小图片体积", ft.Icons.COMPRESS_OUTLINED, _IMAGES),
+        WorkbenchFunction("compress", "压缩", "减小图片体积", ft.Icons.COMPRESS_OUTLINED, _IMAGES,
+                          show_size=True),
         WorkbenchFunction("convert", "格式转换", "PNG / JPG / WebP / BMP / TIFF", ft.Icons.TRANSFORM_OUTLINED,
                           _IMAGES),
         WorkbenchFunction("resize", "尺寸调整", "按宽高缩放", ft.Icons.PHOTO_SIZE_SELECT_LARGE_OUTLINED,

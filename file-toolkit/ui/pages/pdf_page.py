@@ -71,7 +71,7 @@ class PdfPage(Workbench):
         WorkbenchFunction("split", "拆分", "按页数、页码范围或逐页", ft.Icons.CONTENT_CUT_OUTLINED,
                           _PDF),
         WorkbenchFunction("compress", "压缩", "减小文件体积", ft.Icons.COMPRESS_OUTLINED,
-                          _PDF),
+                          _PDF, show_size=True),
         WorkbenchFunction("to_office", "转 Office", "PDF 转 Word / Excel / PPT", ft.Icons.DESCRIPTION_OUTLINED,
                           _PDF),
         WorkbenchFunction("from_office", "Office 转 PDF", "Word / Excel / PPT 转 PDF", ft.Icons.PICTURE_AS_PDF_OUTLINED,

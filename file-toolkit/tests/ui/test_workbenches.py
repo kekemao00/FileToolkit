@@ -175,7 +175,7 @@ def test_video_cut_validates_time(tmp_path: Path, monkeypatch) -> None:
 
 
 # ── 批处理与路由 ─────────────────────────────────────────────────────────
-def test_run_for_each_stops_at_first_failure(tmp_path: Path) -> None:
+def test_run_for_each_continues_after_failure(tmp_path: Path) -> None:
     from core.models import TaskResult
 
     calls = []
@@ -187,9 +187,14 @@ def test_run_for_each_stops_at_first_failure(tmp_path: Path) -> None:
                           output_files=[input_file] if ok else [], error_message=None if ok else "坏文件")
 
     result = run_for_each(fn, [Path("a"), Path("bad"), Path("c")], lambda p: {"input_file": p})
+    assert result.status == TaskStatus.SUCCESS
+    assert result.output_files == [Path("a"), Path("c")]
+    assert result.warnings == ["bad：坏文件"]
+    assert calls == [Path("a"), Path("bad"), Path("c")]
+
+    result = run_for_each(fn, [Path("bad")], lambda p: {"input_file": p})
     assert result.status == TaskStatus.FAILED
     assert result.error_message == "bad：坏文件"
-    assert calls == [Path("a"), Path("bad")]
 
 
 def test_every_feature_and_legacy_route_resolves() -> None:
