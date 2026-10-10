@@ -32,7 +32,7 @@ from ui import style as s
 from ui.components.top_bar import TopBar
 from ui.handoff import pop_pending_files
 from ui.palette import c
-from ui.utils import notify_task_done, open_folder, show_toast
+from ui.utils import is_mounted, notify_task_done, open_folder, show_toast
 
 
 @dataclass(frozen=True)
@@ -91,14 +91,6 @@ def run_for_each(
     result = run_batch(input_files, None, one, progress_callback, "已完成")
     result.warnings = extra_warnings + result.warnings
     return result
-
-
-def is_mounted(control: ft.Control) -> bool:
-    """Flet 0.84 未挂载时访问 .page 会抛 RuntimeError。"""
-    try:
-        return control.page is not None
-    except RuntimeError:
-        return False
 
 
 def _bytes_str(size: int) -> str:

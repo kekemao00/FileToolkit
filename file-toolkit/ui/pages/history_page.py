@@ -4,8 +4,6 @@
 表格无竖线，只有行间 1px line；行高 46；悬停行变 surface-2。
 """
 import csv
-import subprocess
-import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -15,7 +13,7 @@ from services import history_service
 from ui import style as s
 from ui.features import ACTION_LABELS
 from ui.palette import c
-from ui.utils import show_toast
+from ui.utils import is_mounted, open_folder, show_toast
 
 # ── 模块元数据：(icon, label) ─────────────────────────────────────────
 _MODULE_META: dict[str, tuple[str, str]] = {
@@ -254,7 +252,7 @@ class HistoryPage(ft.Column):
         self._all_tasks = history_service.get_recent_tasks(limit=500)
         self._apply_filter()
         self._refresh_stats()
-        if self._topbar.page:
+        if is_mounted(self._topbar):
             self.update()
 
     def _apply_filter(self) -> None:
@@ -379,7 +377,7 @@ class HistoryPage(ft.Column):
         self._current_page = max(1, min(page_num, total_pages))
         self._render_rows()
         self._render_pagination()
-        if self._topbar.page:
+        if is_mounted(self._topbar):
             self.update()
 
     # ── 单行 ──────────────────────────────────────────────────
@@ -544,7 +542,7 @@ class HistoryPage(ft.Column):
         self._search_keyword = (e.control.value or "")
         self._current_page = 1
         self._apply_filter()
-        if self._topbar.page:
+        if is_mounted(self._topbar):
             self.update()
 
     def _confirm_clear(self, _) -> None:
@@ -579,19 +577,8 @@ class HistoryPage(ft.Column):
     def _open_dir(self, path_str: str) -> None:
         if not path_str:
             return
-        p = Path(path_str)
-        if not p.exists():
+        if not open_folder(path_str):
             show_toast(self._page, "目录不存在或已被移动", kind="error")
-            return
-        try:
-            if sys.platform == "win32":
-                subprocess.Popen(["explorer", str(p)])
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", str(p)])
-            else:
-                subprocess.Popen(["xdg-open", str(p)])
-        except OSError as exc:
-            show_toast(self._page, f"打开失败：{exc}", kind="error")
 
     def _export_history(self, _) -> None:
         """导出当前过滤结果为 CSV。"""

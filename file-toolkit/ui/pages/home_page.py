@@ -5,8 +5,6 @@
   顶部栏 → 标题行（headline + 说明，主操作在最右）→ 常用工具卡片
   → 特性条（一张白卡片四等分）→ 最近操作表格（白卡片，行高 46，悬停 surface-2）
 """
-import subprocess
-import sys
 
 import flet as ft
 
@@ -15,7 +13,7 @@ from ui import style as s
 from ui.components.top_bar import TopBar
 from ui.features import ACTION_LABELS
 from ui.palette import c
-from ui.utils import show_toast
+from ui.utils import open_folder, show_toast
 
 # 工具卡片配置：(title, subtitle, icon, tags, route)
 _TOOL_CARDS = [
@@ -289,17 +287,8 @@ class HomePage(ft.Column):
         icon_name = _MODULE_ICONS.get(module, ft.Icons.DESCRIPTION_OUTLINED)
 
         def _open_dir(_, d=output_dir):
-            if not d:
-                return
-            try:
-                if sys.platform == "win32":
-                    subprocess.Popen(["explorer", d])
-                elif sys.platform == "darwin":
-                    subprocess.Popen(["open", d])
-                else:
-                    subprocess.Popen(["xdg-open", d])
-            except Exception:
-                show_toast(self._page, "无法打开目录", kind="error")
+            if d and not open_folder(d):
+                show_toast(self._page, "目录不存在或已被移动", kind="error")
 
         status_widget = ft.Row(
             controls=[

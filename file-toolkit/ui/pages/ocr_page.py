@@ -4,8 +4,6 @@
 三视图互斥切换，外观与 ui/components/workbench.py 一致。
 """
 import asyncio
-import subprocess
-import sys
 from pathlib import Path
 
 import flet as ft
@@ -17,7 +15,7 @@ from ui import style as s
 from ui.components.top_bar import TopBar
 from ui.handoff import pop_pending_files
 from ui.palette import c
-from ui.utils import show_toast
+from ui.utils import reveal_file, show_toast
 
 # 语言选项（并排按钮）
 _LANGUAGES = [
@@ -599,13 +597,7 @@ class OcrPage(ft.Column):
         if not target or not target.exists():
             self._show_snack("输出文件不存在或尚未保存")
             return
-        folder = target.parent
-        if sys.platform == "win32":
-            subprocess.Popen(["explorer", "/select,", str(target)])
-        elif sys.platform == "darwin":
-            subprocess.Popen(["open", "-R", str(target)])
-        else:
-            subprocess.Popen(["xdg-open", str(folder)])
+        reveal_file(target)
 
     def _show_snack(self, msg: str, color: str | None = None, kind: str | None = None) -> None:
         show_toast(self._page, msg, color=color, kind=kind)
