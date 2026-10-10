@@ -90,3 +90,10 @@ def test_ocr_page_takes_handed_over_image(tmp_path: Path) -> None:
     set_pending_files([tmp_path / "notes.txt", tmp_path / "scan.png"])
     view = _resolve_page("/ocr", _FakePage())
     assert view._input_file == tmp_path / "scan.png"
+
+
+def test_history_search_matches_chinese_labels() -> None:
+    from ui.pages.history_page import HistoryPage
+    task = {"module": "image", "action": "compress", "input_desc": "a.jpg 等 3 个文件"}
+    text = HistoryPage._search_text(task)
+    assert "压缩" in text and "图片" in text and "a.jpg" in text

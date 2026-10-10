@@ -8,6 +8,8 @@
 
 `leading` 可放页面自己的控件（如最近操作页的筛选框），位于搜索框左侧。
 """
+import sys
+
 import flet as ft
 
 from ui import style as s
@@ -27,7 +29,7 @@ class TopBar(ft.Container):
             view_hint_text="输入功能名或关键词，回车打开第一个结果",
             bar_leading=ft.Icon(ft.Icons.SEARCH_OUTLINED, color=c("ink-3", "fg"), size=16),
             bar_trailing=[ft.Container(
-                content=ft.Text("Ctrl K", size=11, color=c("ink-3", "fg"), font_family=s.MONO),
+                content=ft.Text("⌘K" if sys.platform == "darwin" else "Ctrl K", size=11, color=c("ink-3", "fg"), font_family=s.MONO),
                 padding=ft.padding.symmetric(horizontal=6, vertical=2),
                 border=ft.border.all(1, c("line")), border_radius=6,
             )],

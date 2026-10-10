@@ -48,7 +48,7 @@ class HistoryPage(ft.Column):
 
         # ── 统计数据文本 ──
         self._stat_today_value = self._make_stat_value("0")
-        self._stat_today_unit = self._make_stat_unit("个文件")
+        self._stat_today_unit = self._make_stat_unit("个任务")
         self._stat_saved_value = self._make_stat_value("—")
         self._stat_saved_unit = self._make_stat_unit("")
         self._stat_rate_value = self._make_stat_value("0")
@@ -255,17 +255,21 @@ class HistoryPage(ft.Column):
         if is_mounted(self._topbar):
             self.update()
 
+    @staticmethod
+    def _search_text(task: dict) -> str:
+        """可搜索的内容：文件描述、操作和模块的英文键与中文名。"""
+        module = (task.get("module") or "").upper()
+        action = task.get("action") or ""
+        parts = (task.get("input_desc") or "", action, module,
+                 _ACTION_LABELS.get(action, ""), _MODULE_META.get(module, ("", ""))[1])
+        return " ".join(parts).lower()
+
     def _apply_filter(self) -> None:
         kw = self._search_keyword.strip().lower()
         if not kw:
             self._filtered_tasks = list(self._all_tasks)
         else:
-            self._filtered_tasks = [
-                t for t in self._all_tasks
-                if kw in (t.get("input_desc") or "").lower()
-                or kw in (t.get("action") or "").lower()
-                or kw in (t.get("module") or "").lower()
-            ]
+            self._filtered_tasks = [t for t in self._all_tasks if kw in self._search_text(t)]
         total_pages = max(1, (len(self._filtered_tasks) + _PAGE_SIZE - 1) // _PAGE_SIZE)
         if self._current_page > total_pages:
             self._current_page = total_pages
@@ -494,7 +498,7 @@ class HistoryPage(ft.Column):
         failed = sum(1 for t in self._all_tasks if t.get("status") == "failed")
 
         self._stat_today_value.value = str(today_count)
-        self._stat_today_unit.value = "个文件"
+        self._stat_today_unit.value = "个任务"
         self._stat_saved_value.value = str(total)
         self._stat_saved_unit.value = "条"
         self._stat_rate_value.value = f"{rate:.1f}"

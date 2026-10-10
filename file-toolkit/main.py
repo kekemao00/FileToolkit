@@ -2,6 +2,7 @@
 File Toolkit — Flet 应用入口
 """
 import os
+import sys
 from pathlib import Path
 
 import flet as ft
@@ -104,8 +105,10 @@ async def _startup_update_check(page: ft.Page) -> None:
 def main_entry() -> None:
     """pyproject.toml [project.scripts] 入口点"""
     import os
-    # WSL 无 display 时自动降级到浏览器模式
-    if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
+    # Linux / WSL 没有图形界面时自动降级到浏览器模式；Windows / macOS 总有桌面
+    headless = (sys.platform.startswith("linux")
+                and not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"))
+    if headless:
         ft.run(main, assets_dir="assets", view=ft.AppView.WEB_BROWSER)
     else:
         ft.run(main, assets_dir="assets")
