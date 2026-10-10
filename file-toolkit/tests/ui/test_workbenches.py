@@ -200,7 +200,7 @@ def test_run_for_each_continues_after_failure(tmp_path: Path) -> None:
 def test_every_feature_and_legacy_route_resolves() -> None:
     page = _FakePage()
     for route in [f.route for f in FEATURES if not f.route.startswith(("/ai", "/prompt", "/history",
-                                                                          "/settings", "/ocr"))]:
+                                                                          "/settings", "/ocr", "/feedback"))]:
         view = _resolve_page(route, page)
         _, params = _parse_route(route)
         assert view.func.key == params["func"], route

@@ -198,6 +198,12 @@ class SettingsPage(ft.Column):
             self._row("版本", VersionRow(self._page)),
             UpdatePanel(self._page),
             self._row("自动检查更新", ft.Row(controls=[auto_check])),
+            self._row("问题反馈", ft.Row(controls=[
+                s.button("反馈问题", lambda _: self._page.go("/feedback"), kind="secondary",
+                         icon=ft.Icons.FEEDBACK_OUTLINED),
+                s.button("提功能建议", lambda _: self._page.go("/feedback?kind=feature"),
+                         kind="ghost", icon=ft.Icons.LIGHTBULB_OUTLINE),
+            ], spacing=8)),
             self._row("开源协议", s.text(app_license() or "Apache-2.0", "body", color="ink-2")),
             self._row("字体", s.text("Geist / Geist Mono（SIL Open Font License）", "body", color="ink-2")),
         ])

@@ -6,7 +6,7 @@
   品牌区：32px 应用图标，标题 title 字号，副标题 small
   导航项：36 高、圆角 9；选中指示是一块墨黑胶囊，切换时在项之间滑动
           （同一个形状移动，不是每项各自变色），未选中项悬停 surface-3
-  底部：设置入口
+  底部：问题反馈、设置入口
 """
 import flet as ft
 
@@ -149,28 +149,37 @@ class NavRail(ft.Container):
 
     # ── 底部 ─────────────────────────────────────────────────────────────
     def _build_footer(self) -> ft.Control:
-        settings = ft.Container(
+        feedback = self._footer_item(ft.Icons.FEEDBACK_OUTLINED, "问题反馈", "/feedback")
+        settings = self._footer_item(ft.Icons.SETTINGS_OUTLINED, "设置", "/settings",
+                                     trailing=s.text("本地处理", "caption"))
+        return ft.Container(
+            content=ft.Column(controls=[feedback, settings], spacing=_GAP),
+            padding=ft.Padding.only(top=8),
+            border=ft.Border.only(top=ft.BorderSide(1, c("line"))),
+        )
+
+    def _footer_item(self, icon: str, label: str, route: str,
+                     trailing: ft.Control | None = None) -> ft.Container:
+        controls: list[ft.Control] = [
+            ft.Icon(icon, color=c("ink-2", "fg"), size=16),
+            s.text(label, "label", "ink-2", expand=True),
+        ]
+        if trailing is not None:
+            controls.append(trailing)
+        item = ft.Container(
             content=ft.Row(
-                controls=[
-                    ft.Icon(ft.Icons.SETTINGS_OUTLINED, color=c("ink-2", "fg"), size=16),
-                    s.text("设置", "label", "ink-2", expand=True),
-                    s.text("本地处理", "caption"),
-                ],
+                controls=controls,
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             height=_ITEM_H,
             padding=ft.Padding.symmetric(horizontal=12),
             border_radius=s.R_BUTTON,
-            on_click=lambda e: self._on_navigate("/settings"),
+            on_click=lambda e: self._on_navigate(route),
             animate=s.snappy(),
         )
-        settings.on_hover = lambda e: self._footer_hover(settings, e)
-        return ft.Container(
-            content=settings,
-            padding=ft.Padding.only(top=8),
-            border=ft.Border.only(top=ft.BorderSide(1, c("line"))),
-        )
+        item.on_hover = lambda e: self._footer_hover(item, e)
+        return item
 
     @staticmethod
     def _footer_hover(item: ft.Container, e: ft.ControlEvent) -> None:

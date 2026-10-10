@@ -15,6 +15,7 @@ File Toolkit — 路由管理
   /prompt-image    → PromptImagePage
   /history         → HistoryPage
   /settings        → SettingsPage
+  /feedback        → FeedbackPage （?kind=bug|feature）
 旧的独立子页路由（如 /pdf/merge）重定向到对应工作台功能，见 _LEGACY_ROUTES。
 """
 import asyncio
@@ -25,6 +26,7 @@ from ui import style as s
 from ui.components.nav_rail import NavRail
 from ui.pages.ai_task_page import AiTaskPage
 from ui.pages.archive_page import ArchivePage
+from ui.pages.feedback_page import FeedbackPage
 from ui.pages.history_page import HistoryPage
 from ui.pages.home_page import HomePage
 from ui.pages.image_page import ImagePage
@@ -92,6 +94,8 @@ def _resolve_page(route: str, page: ft.Page) -> ft.Control:
         return HistoryPage(page)
     if route == "/settings":
         return SettingsPage(page)
+    if route == "/feedback":
+        return FeedbackPage(page, initial_kind=params.get("kind"))
     return _unknown_route_page(page, route)
 
 

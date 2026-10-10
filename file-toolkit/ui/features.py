@@ -72,6 +72,10 @@ FEATURES: list[Feature] = [
     Feature("OCR 文字识别", "/ocr", ft.Icons.DOCUMENT_SCANNER_OUTLINED, "OCR", ("识别", "文字", "提取文字", "扫描", "ocr")),
     # 其他
     Feature("最近操作", "/history", ft.Icons.HISTORY_OUTLINED, "应用", ("历史", "记录")),
+    Feature("问题反馈", "/feedback", ft.Icons.FEEDBACK_OUTLINED, "应用",
+            ("反馈", "bug", "报错", "提问", "issue", "建议", "github")),
+    Feature("功能建议", "/feedback?kind=feature", ft.Icons.LIGHTBULB_OUTLINE, "应用",
+            ("建议", "需求", "新功能", "feature", "issue")),
     Feature("设置", "/settings", ft.Icons.SETTINGS_OUTLINED, "应用", ("设置", "主题", "输出目录", "api key")),
 ]
 
