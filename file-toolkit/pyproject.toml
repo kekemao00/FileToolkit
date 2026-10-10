@@ -31,7 +31,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "ruff>=0.16.10",
-    "mypy>=1.10",
+    "mypy>=2.4.0",
 ]
 
 [build-system]
@@ -51,7 +51,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "ruff>=0.16.10",
-    "mypy>=1.10",
+    "mypy>=2.4.0",
 ]
 # 打包工具：`uv sync --group build` 后执行 `uv run flet build <平台>`
 build = [
