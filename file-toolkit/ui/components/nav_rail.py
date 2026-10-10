@@ -3,7 +3,7 @@
 
 规格：
   宽度 232，canvas 底色，无阴影；右侧 1px line 分隔
-  品牌区：32px 墨黑方块 + 白色图标，标题 title 字号，副标题 small
+  品牌区：32px 应用图标，标题 title 字号，副标题 small
   导航项：36 高、圆角 9；选中指示是一块墨黑胶囊，切换时在项之间滑动
           （同一个形状移动，不是每项各自变色），未选中项悬停 surface-3
   底部：设置入口
@@ -65,14 +65,9 @@ class NavRail(ft.Container):
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.FOLDER_OUTLINED, color=c("on-ink", "fg"), size=16),
-                        width=32,
-                        height=32,
-                        border_radius=s.R_BUTTON,
-                        bgcolor=c("ink"),
-                        alignment=ft.Alignment(0, 0),
-                    ),
+                    # 应用图标（assets/icon.png，与安装包图标同一张）
+                    ft.Image(src="icon.png", width=32, height=32,
+                             filter_quality=ft.FilterQuality.HIGH),
                     ft.Column(
                         controls=[
                             s.text("文件全能王", "title"),
