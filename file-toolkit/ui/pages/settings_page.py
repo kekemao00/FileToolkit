@@ -1,10 +1,11 @@
 """设置页 — 外观 / 文件 / 网络(OCR) / AI 生图 / 关于，每组一张白卡片。"""
 import flet as ft
 
-from core.version import app_license, app_version
+from core.version import app_license
 from services import settings_service
 from services.prompt_image_service import DEFAULT_BASE_URL, DEFAULT_MODEL
 from ui import style as s
+from ui.components.update_panel import UpdatePanel, VersionRow
 from ui.palette import c
 from ui.theme import apply_theme_mode
 from ui.utils import show_toast
@@ -201,8 +202,15 @@ class SettingsPage(ft.Column):
 
     # ── 关于 ──────────────────────────────────────────────────────────
     def _build_about(self) -> ft.Control:
+        auto_check = s.Segmented(
+            [("1", "启动时检查"), ("0", "仅手动检查")],
+            settings_service.get("auto_check_update", "1"),
+            on_change=lambda v: settings_service.set("auto_check_update", v),
+        )
         return self._card("关于", ft.Icons.INFO_OUTLINED, [
-            self._row("版本", s.text(f"v{app_version()}", "mono")),
+            self._row("版本", VersionRow(self._page)),
+            UpdatePanel(self._page),
+            self._row("自动检查更新", ft.Row(controls=[auto_check])),
             self._row("开源协议", s.text(app_license() or "Apache-2.0", "body", color="ink-2")),
             self._row("字体", s.text("Geist / Geist Mono（SIL Open Font License）", "body", color="ink-2")),
         ])
