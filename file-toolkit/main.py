@@ -6,9 +6,10 @@ from pathlib import Path
 
 import flet as ft
 
-from services import history_service, settings_service
+from services import history_service, settings_service, update_service
 from ui.router import setup_router
 from ui.theme import apply_theme_mode, get_app_theme
+from ui.utils import show_toast
 
 
 def _resolve_data_dir() -> Path:
@@ -75,6 +76,29 @@ def main(page: ft.Page) -> None:
     # 路由初始化
     setup_router(page)
     page.update()
+
+    page.run_task(_startup_update_check, page)
+
+
+async def _startup_update_check(page: ft.Page) -> None:
+    """上次「重启并更新」的结果提示；按设置在启动后静默检查一次新版本。"""
+    import asyncio
+
+    pending = update_service.consume_pending()
+    if pending:
+        result, version = pending
+        if result == "updated":
+            show_toast(page, f"已更新到 v{version}", kind="success")
+        else:
+            show_toast(page, f"更新到 v{version} 未完成，可在设置里重试", kind="warning", duration=4000)
+        await asyncio.sleep(3)
+    if not update_service.auto_check_enabled():
+        return
+    # 等界面稳定、不和首屏渲染抢网络
+    await asyncio.sleep(3)
+    st = await update_service.check()
+    if st.status == "available" and st.release:
+        show_toast(page, f"发现新版本 v{st.release.version}，可在「设置 → 关于」中更新", duration=5000)
 
 
 def main_entry() -> None:
