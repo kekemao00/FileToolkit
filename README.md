@@ -57,8 +57,9 @@
 | | 解压 RAR | 🔧 unrar |
 | **文字识别** | 从图片、扫描版 PDF 识别文字（中文 / 英文 / 日文） | 🔧 Tesseract |
 | | 提取 PDF 内嵌文字 | ✅ |
-| **AI** | 提示词出图（OpenAI Images 兼容接口），生成结果在页面内直接预览，保留最近生成记录 | 🔧 API Key |
-| | 12 类 31 个内置模板；风格增强词与反向提示词；「我的模板」支持 `{变量}`、收藏与导出 | 🔧 API Key |
+| **AI** | 提示词出图（OpenAI Images 兼容接口），可附最多 8 张参考图生成合照、婚纱照、集体照；保留最近作品 | 🔧 API Key |
+| | 全窗口看图器：滚轮缩放、拖动平移、双击切换 1:1 原图像素，左右键切换作品，右键复制图片 | 🔧 API Key |
+| | 13 类 35 个内置模板；风格增强词与反向提示词；「我的模板」支持 `{变量}`、收藏与导出 | 🔧 API Key |
 | | 一键导入开源提示词库（Awesome GPT-4o Images、Awesome GPT Image 2 Prompts，注明出处），或从网址 / JSON / CSV / Markdown 导入 | 🔧 API Key |
 | | 智能入口：一句话描述需求（如「图片转 PDF 再加水印」），拆成步骤并带着文件打开对应工具 | ✅ |
 | **应用** | 全局功能搜索、最近操作记录、偏好设置；批量处理中某个文件失败不影响其余文件，输出不会覆盖已有文件 | ✅ |
@@ -83,10 +84,20 @@
 |---|---|
 | <img src="docs/screenshots/home-light.png" alt="首页（浅色）"> | <img src="docs/screenshots/home-dark.png" alt="首页（深色）"> |
 | <img src="docs/screenshots/prompt-image-light.png" alt="提示词出图（浅色）"> | <img src="docs/screenshots/prompt-image-dark.png" alt="提示词出图（深色）"> |
+| <img src="docs/screenshots/viewer-light.png" alt="看图器（浅色）"> | <img src="docs/screenshots/viewer-dark.png" alt="看图器（深色）"> |
 
-| PDF 工作台 | 操作记录 | 设置 |
+| PDF 工作台 | 操作记录 | 设置与检查更新 |
 |---|---|---|
-| <img src="docs/screenshots/pdf.png" alt="PDF 工作台"> | <img src="docs/screenshots/history.png" alt="操作记录"> | <img src="docs/screenshots/settings.png" alt="设置"> |
+| <img src="docs/screenshots/pdf.png" alt="PDF 工作台"> | <img src="docs/screenshots/history.png" alt="操作记录"> | <img src="docs/screenshots/settings.png" alt="设置与检查更新"> |
+
+<details>
+<summary>应用内更新</summary>
+
+| 发现新版本 | 下载中 | 重启并更新 |
+|---|---|---|
+| <img src="docs/screenshots/update/available-light.jpg" alt="发现新版本"> | <img src="docs/screenshots/update/downloading-light.jpg" alt="下载中"> | <img src="docs/screenshots/update/ready-dark.jpg" alt="重启并更新"> |
+
+</details>
 
 ## 从源码运行
 
