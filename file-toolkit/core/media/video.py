@@ -1,10 +1,10 @@
 """视频处理模块 — 格式转换、压缩、剪切"""
-import subprocess
-import time
 from pathlib import Path
 
+from core.batch import run_batch
+from core.media._ffmpeg import FileProgress, run_ffmpeg
 from core.models import ProgressCallback, TaskResult, TaskStatus
-from core.platform import get_ffmpeg_path
+from core.paths import reserve, unique_path
 
 _CRF_MAP = {
     "low": 28,
@@ -26,7 +26,7 @@ def convert_video(
     progress_callback: ProgressCallback | None = None,
 ) -> TaskResult:
     """
-    批量视频格式转换。
+    批量视频格式转换（编码器由 FFmpeg 按目标格式选默认值）。
 
     Args:
         input_files: 输入视频列表
@@ -34,42 +34,15 @@ def convert_video(
         target_format: 目标格式 (mp4/avi/mkv/mov/webm)
         progress_callback: 可选进度回调
     """
-    t0 = time.time()
-    try:
-        if not input_files:
-            return TaskResult(status=TaskStatus.FAILED, error_message="未选择任何文件")
+    claimed: set[Path] = set()
+    progress = FileProgress(input_files, progress_callback)
 
-        output_dir.mkdir(parents=True, exist_ok=True)
-        ffmpeg = str(get_ffmpeg_path())
-        output_files: list[Path] = []
-        total = len(input_files)
+    def one(path: Path) -> Path:
+        out = reserve(output_dir / f"{path.stem}.{target_format}", claimed, input_files)
+        run_ffmpeg(["-i", str(path), "-y", str(out)], progress.start(path))
+        return out
 
-        for i, path in enumerate(input_files, start=1):
-            out_path = output_dir / f"{path.stem}.{target_format}"
-            cmd = [
-                ffmpeg, "-i", str(path),
-                "-y",
-                str(out_path),
-            ]
-            _run_ffmpeg(cmd)
-            output_files.append(out_path)
-
-            if progress_callback:
-                progress_callback(i, total, f"已转换：{path.name} ({i}/{total})")
-
-        return TaskResult(
-            status=TaskStatus.SUCCESS,
-            output_files=output_files,
-            output_dir=output_dir,
-            duration_seconds=time.time() - t0,
-        )
-
-    except Exception as exc:
-        return TaskResult(
-            status=TaskStatus.FAILED,
-            error_message=str(exc),
-            duration_seconds=time.time() - t0,
-        )
+    return run_batch(input_files, output_dir, one, progress_callback, "已转换")
 
 
 def compress_video(
@@ -80,61 +53,39 @@ def compress_video(
     progress_callback: ProgressCallback | None = None,
 ) -> TaskResult:
     """
-    批量视频压缩（CRF 恒定质量模式）。
+    批量视频压缩（H.264 CRF 恒定质量）。
 
     Args:
         input_files: 输入视频列表
         output_dir: 输出目录
-        quality: low(轻度/质量优先)/medium(标准)/high(极限/体积优先)
+        quality: high(画质优先, CRF 18) / medium(均衡, 23) / low(体积优先, 28)
         resolution: original/1080p/720p/480p
         progress_callback: 可选进度回调
     """
-    t0 = time.time()
-    try:
-        if not input_files:
-            return TaskResult(status=TaskStatus.FAILED, error_message="未选择任何文件")
+    crf = _CRF_MAP.get(quality, 23)
+    claimed: set[Path] = set()
+    progress = FileProgress(input_files, progress_callback)
 
-        output_dir.mkdir(parents=True, exist_ok=True)
-        ffmpeg = str(get_ffmpeg_path())
-        crf = _CRF_MAP.get(quality, 23)
-        output_files: list[Path] = []
-        total = len(input_files)
+    def one(path: Path) -> Path:
+        out = reserve(output_dir / f"{path.stem}_compressed.mp4", claimed, input_files)
+        args = ["-i", str(path), "-c:v", "libx264", "-crf", str(crf), "-preset", "medium",
+                "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart"]
+        if resolution in _RESOLUTION_MAP:
+            # 只缩小不放大；宽高取偶数（libx264 要求）
+            args += ["-vf", f"scale={_RESOLUTION_MAP[resolution]}:force_original_aspect_ratio=decrease"
+                            ":force_divisible_by=2"]
+        run_ffmpeg([*args, "-y", str(out)], progress.start(path))
+        return out
 
-        for i, path in enumerate(input_files, start=1):
-            out_path = output_dir / f"{path.stem}_compressed.mp4"
-            cmd = [
-                ffmpeg, "-i", str(path),
-                "-c:v", "libx264",
-                "-crf", str(crf),
-                "-preset", "medium",
-                "-c:a", "aac",
-                "-b:a", "128k",
-            ]
+    return run_batch(input_files, output_dir, one, progress_callback, "已压缩")
 
-            if resolution != "original" and resolution in _RESOLUTION_MAP:
-                scale = _RESOLUTION_MAP[resolution]
-                cmd.extend(["-vf", f"scale={scale}:force_original_aspect_ratio=decrease"])
 
-            cmd.extend(["-y", str(out_path)])
-            _run_ffmpeg(cmd)
-            output_files.append(out_path)
-
-            if progress_callback:
-                progress_callback(i, total, f"已压缩：{path.name} ({i}/{total})")
-
-        return TaskResult(
-            status=TaskStatus.SUCCESS,
-            output_files=output_files,
-            output_dir=output_dir,
-            duration_seconds=time.time() - t0,
-        )
-
-    except Exception as exc:
-        return TaskResult(
-            status=TaskStatus.FAILED,
-            error_message=str(exc),
-            duration_seconds=time.time() - t0,
-        )
+def _seconds(t: str) -> float:
+    parts = [float(p) for p in t.strip().split(":")]
+    total = 0.0
+    for p in parts:
+        total = total * 60 + p
+    return total
 
 
 def cut_video(
@@ -145,7 +96,7 @@ def cut_video(
     progress_callback: ProgressCallback | None = None,
 ) -> TaskResult:
     """
-    视频剪切。
+    视频剪切（流复制，不重新编码；起点会对齐到最近的关键帧）。
 
     Args:
         input_file: 输入视频路径
@@ -154,52 +105,21 @@ def cut_video(
         end_time: 结束时间 "HH:MM:SS"
         progress_callback: 可选进度回调
     """
-    t0 = time.time()
-    try:
+    length = _seconds(end_time) - _seconds(start_time)
+    if length <= 0:
+        return TaskResult(status=TaskStatus.FAILED, error_message="结束时间必须晚于开始时间")
+
+    def one(path: Path) -> Path:
         output_dir.mkdir(parents=True, exist_ok=True)
-        ffmpeg = str(get_ffmpeg_path())
-        out_path = output_dir / f"{input_file.stem}_cut{input_file.suffix}"
+        out = unique_path(output_dir / f"{path.stem}_cut{path.suffix}", [path])
 
-        if progress_callback:
-            progress_callback(0, 1, "正在剪辑...")
+        def frac(f: float) -> None:
+            if progress_callback:
+                progress_callback(int(f * 1000), 1000, f"正在剪辑  {int(f * 100)}%")
 
-        cmd = [
-            ffmpeg,
-            "-ss", start_time,
-            "-to", end_time,
-            "-i", str(input_file),
-            "-c", "copy",
-            "-y",
-            str(out_path),
-        ]
-        _run_ffmpeg(cmd)
+        run_ffmpeg(["-ss", start_time, "-i", str(path), "-t", f"{length:.3f}",
+                    "-c", "copy", "-avoid_negative_ts", "make_zero", "-y", str(out)],
+                   frac, duration=length)
+        return out
 
-        if progress_callback:
-            progress_callback(1, 1, "剪辑完成")
-
-        return TaskResult(
-            status=TaskStatus.SUCCESS,
-            output_files=[out_path],
-            output_dir=output_dir,
-            duration_seconds=time.time() - t0,
-        )
-
-    except Exception as exc:
-        return TaskResult(
-            status=TaskStatus.FAILED,
-            error_message=str(exc),
-            duration_seconds=time.time() - t0,
-        )
-
-
-def _run_ffmpeg(cmd: list[str]) -> None:
-    """执行 ffmpeg 命令，失败时抛出异常。"""
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=3600,
-    )
-    if result.returncode != 0:
-        stderr = result.stderr[-500:] if result.stderr else "未知错误"
-        raise RuntimeError(f"FFmpeg 执行失败: {stderr}")
+    return run_batch([input_file], output_dir, one, progress_callback, "剪辑完成")

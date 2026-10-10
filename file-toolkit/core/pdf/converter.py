@@ -1,10 +1,13 @@
 """PDF↔Office 转换模块"""
-import subprocess
+import shutil
+import tempfile
 import time
 from pathlib import Path
 
 from core.models import ProgressCallback, TaskResult, TaskStatus
+from core.paths import unique_path
 from core.platform import get_libreoffice_path
+from core.task_control import TaskCancelled, run_process
 
 
 def pdf_to_docx(
@@ -23,7 +26,7 @@ def pdf_to_docx(
         from pdf2docx import Converter
 
         output_dir.mkdir(parents=True, exist_ok=True)
-        out_path = output_dir / f"{input_file.stem}.docx"
+        out_path = unique_path(output_dir / f"{input_file.stem}.docx")
 
         if progress_callback:
             progress_callback(0, 1, "正在转换 PDF → Word...")
@@ -63,7 +66,7 @@ def pdf_to_xlsx(
         from openpyxl import Workbook
 
         output_dir.mkdir(parents=True, exist_ok=True)
-        out_path = output_dir / f"{input_file.stem}.xlsx"
+        out_path = unique_path(output_dir / f"{input_file.stem}.xlsx")
 
         if progress_callback:
             progress_callback(0, 1, "正在提取表格...")
@@ -131,7 +134,7 @@ def pdf_to_pptx(
         from pptx.util import Inches
 
         output_dir.mkdir(parents=True, exist_ok=True)
-        out_path = output_dir / f"{input_file.stem}.pptx"
+        out_path = unique_path(output_dir / f"{input_file.stem}.pptx")
 
         if progress_callback:
             progress_callback(0, 1, "正在转换 PDF → PPT...")
@@ -195,53 +198,58 @@ def office_to_pdf(
     """
     Office 文件转 PDF（依赖 LibreOffice CLI）。
 
-    若 LibreOffice 未安装，返回 TaskResult(FAILED) 并提示安装。
+    LibreOffice 已经开着时，命令行转换会因为用户配置被占用而静默不出文件（退出码仍为 0），
+    所以每次用一个临时的独立配置目录，并以「是否真的生成了 PDF」判断成败。
     """
     t0 = time.time()
+    soffice = get_libreoffice_path()
+    if soffice is None:
+        return TaskResult(
+            status=TaskStatus.FAILED,
+            error_message="未检测到 LibreOffice。请安装 LibreOffice 后重试。\n"
+                          "下载地址：https://www.libreoffice.org/download/",
+            duration_seconds=time.time() - t0,
+        )
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
-        soffice = get_libreoffice_path()
-
-        if soffice is None:
-            return TaskResult(
-                status=TaskStatus.FAILED,
-                error_message="未检测到 LibreOffice。请安装 LibreOffice 后重试。\n"
-                              "下载地址：https://www.libreoffice.org/download/",
-                duration_seconds=time.time() - t0,
-            )
-
         if progress_callback:
             progress_callback(0, 1, "正在转换 Office → PDF...")
-
-        cmd = [
-            str(soffice),
-            "--headless",
-            "--convert-to", "pdf",
-            "--outdir", str(output_dir),
-            str(input_file),
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-
-        if result.returncode != 0:
-            stderr = result.stderr[-500:] if result.stderr else "未知错误"
-            return TaskResult(
-                status=TaskStatus.FAILED,
-                error_message=f"LibreOffice 转换失败: {stderr}",
-                duration_seconds=time.time() - t0,
-            )
-
-        out_path = output_dir / f"{input_file.stem}.pdf"
+        target = unique_path(output_dir / f"{input_file.stem}.pdf", [input_file])
+        with tempfile.TemporaryDirectory(prefix="ftk-lo-") as tmp:
+            tmp_dir = Path(tmp)
+            out_dir = tmp_dir / "out"
+            cmd = [
+                str(soffice),
+                f"-env:UserInstallation={(tmp_dir / 'profile').as_uri()}",
+                "--headless", "--norestore",
+                "--convert-to", "pdf",
+                "--outdir", str(out_dir),
+                str(input_file),
+            ]
+            code, out, err = run_process(cmd, timeout=600)
+            produced = out_dir / f"{input_file.stem}.pdf"
+            if not produced.is_file():
+                detail = (err or out).strip().splitlines()[-3:]
+                return TaskResult(
+                    status=TaskStatus.FAILED,
+                    error_message="LibreOffice 没有生成 PDF" + (f"：{' '.join(detail)}" if detail else
+                                                               "，文件可能已损坏或受密码保护"),
+                    duration_seconds=time.time() - t0,
+                )
+            shutil.move(str(produced), target)
 
         if progress_callback:
             progress_callback(1, 1, "转换完成")
-
         return TaskResult(
             status=TaskStatus.SUCCESS,
-            output_files=[out_path] if out_path.exists() else [],
+            output_files=[target],
             output_dir=output_dir,
             duration_seconds=time.time() - t0,
         )
 
+    except TaskCancelled:
+        return TaskResult(status=TaskStatus.CANCELLED, error_message="已取消",
+                          duration_seconds=time.time() - t0)
     except Exception as exc:
         return TaskResult(
             status=TaskStatus.FAILED,
