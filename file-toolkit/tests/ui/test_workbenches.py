@@ -249,3 +249,37 @@ def test_archive_extract_only_accepts_archives(tmp_path: Path) -> None:
     page = ArchivePage(_FakePage(), "extract")
     page.add_files([tmp_path / "a.zip", tmp_path / "b.txt"], update=False)
     assert page._applicable() == [tmp_path / "a.zip"]
+
+
+# ── 新增转换 ─────────────────────────────────────────────────────────────
+def test_images_to_pdf_keeps_order_and_a4(tmp_path: Path) -> None:
+    a, b = _img(tmp_path / "a.png", (300, 200)), _img(tmp_path / "b.jpg", (100, 400))
+    page = ImagePage(_FakePage(), "to_pdf")
+    page._pdf_page.value = "a4"
+    result = _run(page, "to_pdf", [b, a], tmp_path / "out")
+    assert result.status == TaskStatus.SUCCESS, result.error_message
+    assert result.output_files == [tmp_path / "out" / "b.pdf"]
+    pages = pypdf.PdfReader(result.output_files[0]).pages
+    assert len(pages) == 2
+    # 竖图放竖向 A4，横图放横向 A4
+    assert float(pages[0].mediabox.height) > float(pages[0].mediabox.width)
+    assert float(pages[1].mediabox.width) > float(pages[1].mediabox.height)
+
+
+def test_pdf_to_images_and_pptx(tmp_path: Path) -> None:
+    from pptx import Presentation
+
+    src = _pdf(tmp_path / "doc.pdf", 3)
+    page = PdfPage(_FakePage(), "to_images")
+    page._image_format.value = "jpg"
+    result = _run(page, "to_images", [src], tmp_path / "out")
+    assert result.status == TaskStatus.SUCCESS, result.error_message
+    assert [p.name for p in result.output_files] == ["第001页.jpg", "第002页.jpg", "第003页.jpg"]
+
+    page = PdfPage(_FakePage(), "to_office")
+    page._office_format.value = "pptx"
+    result = _run(page, "to_office", [src], tmp_path / "out")
+    assert result.status == TaskStatus.SUCCESS, result.error_message
+    prs = Presentation(result.output_files[0])
+    assert len(prs.slides) == 3
+    assert abs(prs.slide_width / prs.slide_height - 595 / 842) < 0.01

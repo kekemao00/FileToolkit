@@ -36,6 +36,8 @@ FEATURES: list[Feature] = [
     Feature("PDF 压缩", "/pdf?func=compress", ft.Icons.COMPRESS_OUTLINED, "PDF", ("压缩", "减小", "compress")),
     Feature("PDF 转 Word / Excel / PPT", "/pdf?func=to_office", ft.Icons.DESCRIPTION_OUTLINED, "PDF",
             ("转换", "word", "docx", "excel", "xlsx", "ppt", "pptx", "office")),
+    Feature("PDF 转图片", "/pdf?func=to_images", ft.Icons.IMAGE_OUTLINED, "PDF",
+            ("转图片", "导出图片", "png", "jpg", "截图", "每页")),
     Feature("Office 转 PDF", "/pdf?func=from_office", ft.Icons.PICTURE_AS_PDF_OUTLINED, "PDF",
             ("转换", "word", "excel", "ppt", "docx", "office", "libreoffice")),
     Feature("PDF 加密 / 水印", "/pdf?func=protect", ft.Icons.LOCK_OUTLINED, "PDF",
@@ -47,6 +49,8 @@ FEATURES: list[Feature] = [
     Feature("图片尺寸调整", "/image?func=resize", ft.Icons.PHOTO_SIZE_SELECT_LARGE_OUTLINED, "图片",
             ("尺寸", "缩放", "分辨率", "resize")),
     Feature("图片加水印", "/image?func=watermark", ft.Icons.WATER_DROP_OUTLINED, "图片", ("水印", "watermark")),
+    Feature("图片转 PDF", "/image?func=to_pdf", ft.Icons.PICTURE_AS_PDF_OUTLINED, "图片",
+            ("转pdf", "合成", "拼接", "扫描", "pdf")),
     Feature("图片批量重命名", "/image?func=rename", ft.Icons.DRIVE_FILE_RENAME_OUTLINE, "图片",
             ("重命名", "改名", "批量", "rename")),
     # 音视频
@@ -75,7 +79,7 @@ FEATURES: list[Feature] = [
 # 历史记录里的 action 键 → 显示名（最近操作页、首页共用）
 ACTION_LABELS: dict[str, str] = {
     "merge": "合并", "split": "拆分", "compress": "压缩", "protect": "加密水印",
-    "to_word": "转 Word", "to_office": "转 Office", "from_office": "Office 转 PDF",
+    "to_word": "转 Word", "to_images": "转图片", "to_pdf": "转 PDF", "to_office": "转 Office", "from_office": "Office 转 PDF",
     "convert": "格式转换", "resize": "尺寸调整", "watermark": "加水印", "rename": "批量重命名",
     "video_convert": "视频转换", "video_compress": "视频压缩", "video_cut": "视频剪辑",
     "audio_extract": "音频提取", "audio_convert": "音频转换",
