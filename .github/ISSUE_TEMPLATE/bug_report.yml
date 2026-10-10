@@ -1,0 +1,119 @@
+name: 🐞 问题反馈
+description: 用着用着出错了、结果不对、或者界面表现和预期不一样
+title: "[问题] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！请尽量把问题**按步骤描述清楚**，让我能在自己电脑上照着做一遍就看到同样的现象。
+
+        参考写法：
+        > **步骤**：打开「PDF → 合并」，点「选择文件」按钮
+        > **期望**：弹出的选文件窗口跟随系统语言，显示中文
+        > **实际**：选文件窗口是英文的
+        > **环境**：macOS 15.1（Apple 芯片），File Toolkit 1.6.0，从 Releases 下载的 macos-arm64.zip
+
+        提交前请先搜一下 [已有的 Issue](https://github.com/kekemao00/FileToolkit/issues?q=is%3Aissue)，避免重复。
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 在哪个页面、点了哪个按钮、选了什么文件（格式 / 大致大小）、改了哪些选项。一步一行。
+      placeholder: |
+        1. 打开「PDF」→「合并」
+        2. 点「选择文件」按钮
+        3. 弹出选文件窗口
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+      description: 你认为应该发生什么？
+      placeholder: 选文件窗口和我电脑的系统语言一致，显示中文
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+      description: 实际发生了什么？有报错提示的话，把提示文字原样贴过来。
+      placeholder: 选文件窗口显示的是英文
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: 出现频率
+      options:
+        - 每次都会出现
+        - 偶尔出现
+        - 只出现过一次
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: 操作系统
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS（Apple 芯片）
+        - macOS（Intel 芯片）
+        - Linux
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: os_version
+    attributes:
+      label: 系统版本与语言
+      description: Windows 在「设置 → 系统 → 系统信息」查看；macOS 在左上角苹果菜单 →「关于本机」查看；Linux 填发行版和版本。
+      placeholder: 例如 macOS 15.1，系统语言简体中文
+    validations:
+      required: true
+
+  - type: input
+    id: app_version
+    attributes:
+      label: File Toolkit 版本
+      description: 在应用「设置 → 关于」里查看
+      placeholder: 例如 1.6.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: 安装方式
+      options:
+        - Releases 下载的 windows-x64.zip
+        - Releases 下载的 macos-arm64.zip
+        - Releases 下载的 linux-x64.tar.gz
+        - 从源码运行（python main.py）
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: attachments
+    attributes:
+      label: 截图 / 录屏 / 日志（可选）
+      description: 直接把图片或视频拖进这个框即可。如果和具体文件有关，方便的话附上能复现问题的示例文件（注意不要上传隐私内容）。
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息（可选）
+      description: 例如是否装了 LibreOffice / Tesseract / unrar，升级前是否正常，其他你觉得有关的线索。
+    validations:
+      required: false
