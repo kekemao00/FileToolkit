@@ -5,8 +5,6 @@
   顶部栏 → 标题行（headline + 说明，主操作在最右）→ 常用工具卡片
   → 特性条（一张白卡片四等分）→ 最近操作表格（白卡片，行高 46，悬停 surface-2）
 """
-import subprocess
-import sys
 
 import flet as ft
 
@@ -15,7 +13,7 @@ from ui import style as s
 from ui.components.top_bar import TopBar
 from ui.features import ACTION_LABELS
 from ui.palette import c
-from ui.utils import show_toast
+from ui.utils import open_folder, show_toast
 
 # 工具卡片配置：(title, subtitle, icon, tags, route)
 _TOOL_CARDS = [
@@ -89,7 +87,7 @@ class HomePage(ft.Column):
                 ],
                 spacing=24,
             ),
-            padding=ft.padding.only(left=s.PAGE_X, right=s.PAGE_X, top=4, bottom=24),
+            padding=ft.Padding.only(left=s.PAGE_X, right=s.PAGE_X, top=4, bottom=24),
             expand=True,
         )
 
@@ -174,9 +172,9 @@ class HomePage(ft.Column):
             content=s.text(label, "caption", color="ink-2"),
             height=20,
             alignment=ft.Alignment(0, 0),
-            border=ft.border.all(1, c("line-strong")),
+            border=ft.Border.all(1, c("line-strong")),
             border_radius=10,
-            padding=ft.padding.symmetric(horizontal=7),
+            padding=ft.Padding.symmetric(horizontal=7),
         )
 
     # ── 特性条 ───────────────────────────────────────────────────────────
@@ -195,8 +193,8 @@ class HomePage(ft.Column):
                     spacing=10,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.symmetric(horizontal=16, vertical=14),
-                border=None if i == 0 else ft.border.only(left=ft.BorderSide(1, c("line"))),
+                padding=ft.Padding.symmetric(horizontal=16, vertical=14),
+                border=None if i == 0 else ft.Border.only(left=ft.BorderSide(1, c("line"))),
                 col={"xs": 6, "md": 3},
             ))
         return s.card(ft.ResponsiveRow(controls=cells, spacing=0, run_spacing=0), padding=0)
@@ -205,7 +203,7 @@ class HomePage(ft.Column):
     def _build_history_section(self) -> ft.Control:
         self._empty_hint = ft.Container(
             content=s.empty_state(ft.Icons.HISTORY_OUTLINED, "暂无历史记录", "完成第一次文件处理后，这里会显示记录"),
-            padding=ft.padding.symmetric(vertical=28),
+            padding=ft.Padding.symmetric(vertical=28),
             alignment=ft.Alignment(0, 0),
         )
 
@@ -222,8 +220,8 @@ class HomePage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             height=40,
-            padding=ft.padding.symmetric(horizontal=16),
-            border=ft.border.only(bottom=ft.BorderSide(1, c("line"))),
+            padding=ft.Padding.symmetric(horizontal=16),
+            border=ft.Border.only(bottom=ft.BorderSide(1, c("line"))),
         )
 
         return ft.Column(
@@ -241,7 +239,7 @@ class HomePage(ft.Column):
                         controls=[header_row, self._history_rows, self._empty_hint],
                         spacing=0,
                     ),
-                    padding=ft.padding.only(bottom=4),
+                    padding=ft.Padding.only(bottom=4),
                 ),
             ],
             spacing=10,
@@ -272,7 +270,7 @@ class HomePage(ft.Column):
         for i, task in enumerate(tasks):
             if i:
                 self._history_rows.controls.append(
-                    ft.Container(height=1, bgcolor=c("line"), margin=ft.margin.symmetric(horizontal=12))
+                    ft.Container(height=1, bgcolor=c("line"), margin=ft.Margin.symmetric(horizontal=12))
                 )
             self._history_rows.controls.append(self._build_history_row(task))
 
@@ -289,17 +287,8 @@ class HomePage(ft.Column):
         icon_name = _MODULE_ICONS.get(module, ft.Icons.DESCRIPTION_OUTLINED)
 
         def _open_dir(_, d=output_dir):
-            if not d:
-                return
-            try:
-                if sys.platform == "win32":
-                    subprocess.Popen(["explorer", d])
-                elif sys.platform == "darwin":
-                    subprocess.Popen(["open", d])
-                else:
-                    subprocess.Popen(["xdg-open", d])
-            except Exception:
-                show_toast(self._page, "无法打开目录", kind="error")
+            if d and not open_folder(d):
+                show_toast(self._page, "目录不存在或已被移动", kind="error")
 
         status_widget = ft.Row(
             controls=[
@@ -348,7 +337,7 @@ class HomePage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             height=s.H_ROW,
-            padding=ft.padding.only(left=16, right=12),
+            padding=ft.Padding.only(left=16, right=12),
             animate=s.snappy(),
         )
         row.on_hover = lambda e, r=row: self._row_hover(r, e)

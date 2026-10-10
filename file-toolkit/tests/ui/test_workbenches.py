@@ -175,7 +175,7 @@ def test_video_cut_validates_time(tmp_path: Path, monkeypatch) -> None:
 
 
 # ── 批处理与路由 ─────────────────────────────────────────────────────────
-def test_run_for_each_stops_at_first_failure(tmp_path: Path) -> None:
+def test_run_for_each_continues_after_failure(tmp_path: Path) -> None:
     from core.models import TaskResult
 
     calls = []
@@ -187,15 +187,20 @@ def test_run_for_each_stops_at_first_failure(tmp_path: Path) -> None:
                           output_files=[input_file] if ok else [], error_message=None if ok else "坏文件")
 
     result = run_for_each(fn, [Path("a"), Path("bad"), Path("c")], lambda p: {"input_file": p})
+    assert result.status == TaskStatus.SUCCESS
+    assert result.output_files == [Path("a"), Path("c")]
+    assert result.warnings == ["bad：坏文件"]
+    assert calls == [Path("a"), Path("bad"), Path("c")]
+
+    result = run_for_each(fn, [Path("bad")], lambda p: {"input_file": p})
     assert result.status == TaskStatus.FAILED
     assert result.error_message == "bad：坏文件"
-    assert calls == [Path("a"), Path("bad")]
 
 
 def test_every_feature_and_legacy_route_resolves() -> None:
     page = _FakePage()
     for route in [f.route for f in FEATURES if not f.route.startswith(("/ai", "/prompt", "/history",
-                                                                          "/settings", "/ocr", "/archive"))]:
+                                                                          "/settings", "/ocr"))]:
         view = _resolve_page(route, page)
         _, params = _parse_route(route)
         assert view.func.key == params["func"], route
@@ -212,3 +217,69 @@ def test_merge_does_not_overwrite_previous_result(tmp_path: Path) -> None:
     second = _run(page, "merge", [a, b], tmp_path / "out")
     assert first.output_files[0].name == "merged.pdf"
     assert second.output_files[0].name == "merged_1.pdf"
+
+
+# ── 压缩解压 ─────────────────────────────────────────────────────────────
+def test_archive_compress_folder_with_7z_password_then_extract(tmp_path: Path) -> None:
+    from ui.pages.archive_page import ArchivePage
+
+    folder = tmp_path / "资料"
+    folder.mkdir()
+    (folder / "a.txt").write_text("A", encoding="utf-8")
+    page = ArchivePage(_FakePage(), "compress_7z")
+    page.add_files([folder], update=False)
+    assert page._applicable() == [folder]
+    page._password.value = "pw"
+    page._name.value = "备份/2026"
+    result = _run(page, "compress_7z", [folder], tmp_path / "out")
+    assert result.status == TaskStatus.SUCCESS, result.error_message
+    archive = result.output_files[0]
+    assert archive.name == "备份_2026.7z"
+
+    page = ArchivePage(_FakePage(), "extract")
+    page._extract_password.value = "pw"
+    result = _run(page, "extract", [archive], tmp_path / "x")
+    assert result.status == TaskStatus.SUCCESS, result.error_message
+    assert (tmp_path / "x" / "备份_2026" / "资料" / "a.txt").read_text(encoding="utf-8") == "A"
+
+
+def test_archive_extract_only_accepts_archives(tmp_path: Path) -> None:
+    from ui.pages.archive_page import ArchivePage
+
+    page = ArchivePage(_FakePage(), "extract")
+    page.add_files([tmp_path / "a.zip", tmp_path / "b.txt"], update=False)
+    assert page._applicable() == [tmp_path / "a.zip"]
+
+
+# ── 新增转换 ─────────────────────────────────────────────────────────────
+def test_images_to_pdf_keeps_order_and_a4(tmp_path: Path) -> None:
+    a, b = _img(tmp_path / "a.png", (300, 200)), _img(tmp_path / "b.jpg", (100, 400))
+    page = ImagePage(_FakePage(), "to_pdf")
+    page._pdf_page.value = "a4"
+    result = _run(page, "to_pdf", [b, a], tmp_path / "out")
+    assert result.status == TaskStatus.SUCCESS, result.error_message
+    assert result.output_files == [tmp_path / "out" / "b.pdf"]
+    pages = pypdf.PdfReader(result.output_files[0]).pages
+    assert len(pages) == 2
+    # 竖图放竖向 A4，横图放横向 A4
+    assert float(pages[0].mediabox.height) > float(pages[0].mediabox.width)
+    assert float(pages[1].mediabox.width) > float(pages[1].mediabox.height)
+
+
+def test_pdf_to_images_and_pptx(tmp_path: Path) -> None:
+    from pptx import Presentation
+
+    src = _pdf(tmp_path / "doc.pdf", 3)
+    page = PdfPage(_FakePage(), "to_images")
+    page._image_format.value = "jpg"
+    result = _run(page, "to_images", [src], tmp_path / "out")
+    assert result.status == TaskStatus.SUCCESS, result.error_message
+    assert [p.name for p in result.output_files] == ["第001页.jpg", "第002页.jpg", "第003页.jpg"]
+
+    page = PdfPage(_FakePage(), "to_office")
+    page._office_format.value = "pptx"
+    result = _run(page, "to_office", [src], tmp_path / "out")
+    assert result.status == TaskStatus.SUCCESS, result.error_message
+    prs = Presentation(result.output_files[0])
+    assert len(prs.slides) == 3
+    assert abs(prs.slide_width / prs.slide_height - 595 / 842) < 0.01

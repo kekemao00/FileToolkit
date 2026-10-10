@@ -52,7 +52,7 @@ def _dropdown(**kw) -> ft.Dropdown:
     opts = s.field_style()
     opts.pop("label_style")
     opts.update(dense=True, text_size=13,
-                content_padding=ft.padding.symmetric(horizontal=12, vertical=9))
+                content_padding=ft.Padding.symmetric(horizontal=12, vertical=9))
     opts.update(kw)
     return ft.Dropdown(**opts)
 
@@ -62,7 +62,7 @@ def _field(**kw) -> ft.TextField:
     kw.setdefault("text_size", 13)
     if kw.get("multiline"):
         kw.setdefault("dense", False)
-        kw.setdefault("content_padding", ft.padding.symmetric(horizontal=12, vertical=10))
+        kw.setdefault("content_padding", ft.Padding.symmetric(horizontal=12, vertical=10))
     return s.text_field(**kw)
 
 
@@ -121,7 +121,7 @@ class PromptImagePage(ft.Column):
         )
         self._category_area = ft.Container()
         self._count_text = _txt("", 11, "ink-3")
-        self._template_list = ft.ListView(expand=True, spacing=6, padding=ft.padding.only(right=6))
+        self._template_list = ft.ListView(expand=True, spacing=6, padding=ft.Padding.only(right=6))
 
         # ── 中栏控件 ────────────────────────────────────────────────────
         self._tpl_header = ft.Column(spacing=6)
@@ -175,7 +175,7 @@ class PromptImagePage(ft.Column):
         # ── 右栏控件 ────────────────────────────────────────────────────
         self._preview = ft.Container(
             expand=True, border_radius=12, bgcolor=c("surface-2"),
-            border=ft.border.all(1, c("line")), alignment=ft.Alignment(0, 0),
+            border=ft.Border.all(1, c("line")), alignment=ft.Alignment(0, 0),
             padding=8, animate=s.snappy(),
         )
         self._result_meta = s.text("", "mono", "ink-3", size=11, max_lines=2,
@@ -210,7 +210,7 @@ class PromptImagePage(ft.Column):
     # ═════════════════════════════════════════════════════════════════
     def _build_header(self) -> ft.Control:
         return ft.Container(
-            padding=ft.padding.only(left=s.PAGE_X - 8, top=16, right=s.PAGE_X, bottom=14),
+            padding=ft.Padding.only(left=s.PAGE_X - 8, top=16, right=s.PAGE_X, bottom=14),
             content=ft.Row(
                 controls=[
                     s.icon_button(ft.Icons.ARROW_BACK_OUTLINED, lambda _e: self._page.go("/"), "返回首页"),
@@ -245,7 +245,7 @@ class PromptImagePage(ft.Column):
                 spacing=10,
                 expand=True,
             ),
-            width=272, padding=ft.padding.only(left=14, top=14, right=8, bottom=8),
+            width=272, padding=ft.Padding.only(left=14, top=14, right=8, bottom=8),
         )
 
         self._editor_scroll = editor_scroll = ft.Column(
@@ -270,7 +270,7 @@ class PromptImagePage(ft.Column):
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
                     on_click=self._toggle_modifiers,
-                    border_radius=8, padding=ft.padding.symmetric(vertical=4),
+                    border_radius=8, padding=ft.Padding.symmetric(vertical=4),
                 ),
                 self._modifier_area,
                 self._negative,
@@ -311,13 +311,13 @@ class PromptImagePage(ft.Column):
                 spacing=10,
                 horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
-            padding=ft.padding.only(top=12),
-            border=ft.border.only(top=ft.BorderSide(1, c("line"))),
+            padding=ft.Padding.only(top=12),
+            border=ft.Border.only(top=ft.BorderSide(1, c("line"))),
         )
         middle = _card(
-            ft.Column([ft.Container(editor_scroll, expand=True, padding=ft.padding.only(right=8)),
+            ft.Column([ft.Container(editor_scroll, expand=True, padding=ft.Padding.only(right=8)),
                        bottom_bar], spacing=0, expand=True),
-            expand=1, padding=ft.padding.only(left=20, top=16, right=12, bottom=16),
+            expand=1, padding=ft.Padding.only(left=20, top=16, right=12, bottom=16),
         )
 
         right = _card(
@@ -348,7 +348,7 @@ class PromptImagePage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.STRETCH,
                 expand=True,
             ),
-            padding=ft.padding.only(left=s.PAGE_X, right=s.PAGE_X, bottom=s.PAGE_X),
+            padding=ft.Padding.only(left=s.PAGE_X, right=s.PAGE_X, bottom=s.PAGE_X),
             expand=True,
         )
 
@@ -368,7 +368,7 @@ class PromptImagePage(ft.Column):
     def _small_button(self, label: str, icon: str, on_click, primary: bool = False) -> ft.Control:
         btn = s.button(label, on_click, kind="primary" if primary else "secondary", icon=icon,
                        height=30)
-        btn.style.padding = ft.padding.symmetric(horizontal=10)
+        btn.style.padding = ft.Padding.symmetric(horizontal=10)
         btn.style.icon_size = 14
         return btn
 
@@ -448,7 +448,7 @@ class PromptImagePage(ft.Column):
                 if self._source == lib.CUSTOM_SOURCE and not self._keyword else "没有匹配的模板"
             self._template_list.controls = [ft.Container(
                 content=_txt(hint, 12, "ink-3", text_align=ft.TextAlign.CENTER),
-                padding=ft.padding.symmetric(vertical=24, horizontal=8),
+                padding=ft.Padding.symmetric(vertical=24, horizontal=8),
                 alignment=ft.Alignment(0, 0),
             )]
         count = f"共 {len(items)} 个模板"
@@ -486,9 +486,9 @@ class PromptImagePage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             bgcolor=c("accent-soft") if selected else None,
-            border=ft.border.all(1, c("accent") if selected else ft.Colors.TRANSPARENT),
+            border=ft.Border.all(1, c("accent") if selected else ft.Colors.TRANSPARENT),
             border_radius=s.R_INPUT,
-            padding=ft.padding.symmetric(horizontal=8, vertical=7),
+            padding=ft.Padding.symmetric(horizontal=8, vertical=7),
             on_click=lambda _e, t=t: self._select_template(t),
             animate=s.snappy(),
         )
@@ -508,16 +508,16 @@ class PromptImagePage(ft.Column):
         chip = ft.Container(
             content=_txt(label, 12, "on-ink" if active else "ink-2", weight=ft.FontWeight.W_500),
             bgcolor=c("ink") if active else c("surface-2"),
-            border=ft.border.all(1, c("ink") if active else c("line")),
+            border=ft.Border.all(1, c("ink") if active else c("line")),
             border_radius=999,
-            padding=ft.padding.symmetric(horizontal=10, vertical=4),
+            padding=ft.Padding.symmetric(horizontal=10, vertical=4),
             on_click=on_click,
             animate=s.snappy(),
         )
         if not active:
             def _hover(e: ft.ControlEvent) -> None:
                 on = e.data in (True, "true")
-                chip.border = ft.border.all(1, c("line-strong") if on else c("line"))
+                chip.border = ft.Border.all(1, c("line-strong") if on else c("line"))
                 chip.content.color = c("ink" if on else "ink-2", "fg")
                 chip.update()
             chip.on_hover = _hover
@@ -584,7 +584,7 @@ class PromptImagePage(ft.Column):
                                 _txt("原文", 11, "ink-2", weight=ft.FontWeight.W_500)],
                                spacing=3, tight=True),
                 on_click=lambda _e, url=t["link"]: self._launch(url), border_radius=6,
-                padding=ft.padding.symmetric(horizontal=5, vertical=2),
+                padding=ft.Padding.symmetric(horizontal=5, vertical=2),
             )
             credit.append(s.hover_surface(link, bg=None, hover_bg="surface-2", border=None))
         self._tpl_header.controls = [
@@ -613,8 +613,8 @@ class PromptImagePage(ft.Column):
     def _badge(self, text: str) -> ft.Control:
         return ft.Container(
             content=_txt(text, 10.5, "ink-2", weight=ft.FontWeight.W_500),
-            bgcolor=c("surface-2"), border=ft.border.all(1, c("line")), border_radius=999,
-            padding=ft.padding.symmetric(horizontal=8, vertical=1),
+            bgcolor=c("surface-2"), border=ft.Border.all(1, c("line")), border_radius=999,
+            padding=ft.Padding.symmetric(horizontal=8, vertical=1),
         )
 
     def _render_form(self) -> None:
@@ -718,13 +718,13 @@ class PromptImagePage(ft.Column):
                                      error_content=ft.Icon(ft.Icons.BROKEN_IMAGE_OUTLINED,
                                                            size=18, color=c("danger", "fg"))),
                     width=76, height=76, border_radius=s.R_INPUT, bgcolor=c("surface-2"),
-                    border=ft.border.all(1, c("line")),
+                    border=ft.Border.all(1, c("line")),
                     tooltip=path.name,
                 ),
                 ft.Container(
                     content=_txt(f"{index + 1}", 10, "on-ink", weight=ft.FontWeight.W_500),
                     bgcolor=ft.Colors.with_opacity(0.72, c("ink")), border_radius=999,
-                    padding=ft.padding.symmetric(horizontal=6, vertical=1), left=5, bottom=5,
+                    padding=ft.Padding.symmetric(horizontal=6, vertical=1), left=5, bottom=5,
                 ),
                 ft.Container(
                     content=ft.Icon(ft.Icons.CLOSE_ROUNDED, size=12, color=c("on-ink", "fg")),
@@ -744,7 +744,7 @@ class PromptImagePage(ft.Column):
                 spacing=2, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             width=76, height=76, border_radius=s.R_INPUT, alignment=ft.Alignment(0, 0),
-            bgcolor=c("surface"), border=ft.border.all(1, c("line-strong")),
+            bgcolor=c("surface"), border=ft.Border.all(1, c("line-strong")),
             on_click=self._on_add_refs, animate=s.snappy(),
         )
 
@@ -956,9 +956,9 @@ class PromptImagePage(ft.Column):
                 spacing=8,
             ),
             bgcolor=c("surface-2"),
-            border=ft.border.all(1, c("line")),
+            border=ft.Border.all(1, c("line")),
             border_radius=s.R_INPUT,
-            padding=ft.padding.only(left=12, right=4, top=4, bottom=4),
+            padding=ft.Padding.only(left=12, right=4, top=4, bottom=4),
             visible=not prompt_image_service.is_configured(),
         )
 
@@ -1091,7 +1091,7 @@ class PromptImagePage(ft.Column):
             ft.Container(
                 content=ft.Icon(icon, size=20, color=c(color, "fg")),
                 width=44, height=44, border_radius=22, bgcolor=c("surface"),
-                border=ft.border.all(1, c("line")), alignment=ft.Alignment(0, 0),
+                border=ft.Border.all(1, c("line")), alignment=ft.Alignment(0, 0),
             ),
             s.text(title, "label", text_align=ft.TextAlign.CENTER),
         ]
@@ -1130,7 +1130,7 @@ class PromptImagePage(ft.Column):
                 ft.Container(
                     content=_txt(prompt, 11, "ink-3", max_lines=4,
                                  overflow=ft.TextOverflow.ELLIPSIS, text_align=ft.TextAlign.CENTER),
-                    padding=ft.padding.symmetric(horizontal=16),
+                    padding=ft.Padding.symmetric(horizontal=16),
                 ),
                 s.button("取消", self._on_cancel_generate, kind="secondary", height=30,
                          icon=ft.Icons.CLOSE_OUTLINED),
@@ -1178,7 +1178,7 @@ class PromptImagePage(ft.Column):
     def _set_preview_frame(self, on: bool) -> None:
         """空态 / 生成中 / 出错时显示灰底描边框；出图后去掉，只留图片本身。"""
         self._preview.bgcolor = c("surface-2") if on else None
-        self._preview.border = ft.border.all(1, c("line")) if on else None
+        self._preview.border = ft.Border.all(1, c("line")) if on else None
         self._preview.padding = 8 if on else 0
 
     def _show_image(self, image_bytes: bytes | None, path: Path | None, meta: str) -> None:
@@ -1196,7 +1196,7 @@ class PromptImagePage(ft.Column):
                             _txt("查看大图", 11.5, "on-ink", weight=ft.FontWeight.W_500)],
                            spacing=5, tight=True),
             bgcolor=ft.Colors.with_opacity(0.72, c("ink")), border_radius=999,
-            padding=ft.padding.only(left=8, right=10, top=5, bottom=5),
+            padding=ft.Padding.only(left=8, right=10, top=5, bottom=5),
             right=8, top=8, opacity=0.0, offset=ft.Offset(0, -0.2),
             animate_opacity=s.snappy(), animate_offset=s.default(),
         )
@@ -1255,7 +1255,7 @@ class PromptImagePage(ft.Column):
                              fit=ft.BoxFit.COVER, border_radius=8, cache_width=112,
                              error_content=ft.Icon(ft.Icons.IMAGE_OUTLINED, size=18)),
             width=60, height=60, border_radius=10, padding=2,
-            border=ft.border.all(2, c("accent") if current else ft.Colors.TRANSPARENT),
+            border=ft.Border.all(2, c("accent") if current else ft.Colors.TRANSPARENT),
             tooltip=f"{h.get('template') or '提示词出图'} · {stamp}",
             on_click=lambda _e, h=h: self._show_history_item(h),
         )
@@ -1513,8 +1513,8 @@ class PromptImagePage(ft.Column):
                     spacing=2,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                bgcolor=c("surface-2"), border=ft.border.all(1, c("line")), border_radius=s.R_INPUT,
-                padding=ft.padding.only(left=12, right=4, top=4, bottom=4),
+                bgcolor=c("surface-2"), border=ft.Border.all(1, c("line")), border_radius=s.R_INPUT,
+                padding=ft.Padding.only(left=12, right=4, top=4, bottom=4),
             ))
 
         body.append(ft.Container(height=4))
@@ -1544,8 +1544,8 @@ class PromptImagePage(ft.Column):
                     spacing=4,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                border=ft.border.all(1, c("line")), border_radius=s.R_INPUT,
-                padding=ft.padding.only(left=12, right=8, top=6, bottom=6),
+                border=ft.Border.all(1, c("line")), border_radius=s.R_INPUT,
+                padding=ft.Padding.only(left=12, right=8, top=6, bottom=6),
             ))
 
         body.append(ft.Container(height=4))

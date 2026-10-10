@@ -1,0 +1,19 @@
+# 每月检查一次依赖更新，同类合成一个 PR，避免刷屏
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: uv
+    directory: /file-toolkit
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      python-minor:
+        update-types: [minor, patch]

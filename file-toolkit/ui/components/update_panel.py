@@ -176,13 +176,13 @@ class UpdatePanel(_Subscriber, ft.Container):
                 tight=True,
             ),
             bgcolor=c("surface-2"),
-            border=ft.border.all(1, c("line")),
+            border=ft.Border.all(1, c("line")),
             border_radius=12,
-            padding=ft.padding.only(left=16, right=12, top=14, bottom=16),
+            padding=ft.Padding.only(left=16, right=12, top=14, bottom=16),
         )
         super().__init__(
             content=inner,
-            padding=ft.padding.only(top=4, bottom=10),
+            padding=ft.Padding.only(top=4, bottom=10),
             opacity=0,
             visible=False,
             offset=ft.Offset(0, -0.02),

@@ -170,7 +170,7 @@ class ImageViewer:
                 controls=[self._counter_chip(), ft.Column([self._title, self._meta], spacing=1, tight=True)],
                 spacing=10, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.only(left=8, right=16, top=8, bottom=8),
+            padding=ft.Padding.only(left=8, right=16, top=8, bottom=8),
         )
         self._top = ft.Container(
             content=ft.Row(
@@ -213,7 +213,7 @@ class ImageViewer:
         self._hint = ft.Container(
             content=s.text("滚轮缩放 · 拖动平移 · 双击切换原图 · 右键复制 · ← → 切换作品", "small", "ink-2", size=11.5),
             bgcolor=ft.Colors.with_opacity(0.78, c("surface")), border_radius=999,
-            padding=ft.padding.symmetric(horizontal=12, vertical=6),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=6),
         )
         self._hint_host = ft.Container(
             content=self._hint, left=0, right=0, bottom=INSET + 72, alignment=ft.Alignment(0, 1),
@@ -243,7 +243,7 @@ class ImageViewer:
             content=content, padding=padding,
             bgcolor=ft.Colors.with_opacity(0.82, c("surface")),
             blur=ft.Blur(18, 18),
-            border=ft.border.all(1, ft.Colors.with_opacity(0.7, c("line"))),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.7, c("line"))),
             border_radius=999,
             shadow=ft.BoxShadow(blur_radius=24, offset=ft.Offset(0, 8), spread_radius=-6,
                                 color=ft.Colors.with_opacity(0.18, c("shadow"))),
@@ -270,12 +270,12 @@ class ImageViewer:
             pass
 
     def _sep(self) -> ft.Control:
-        return ft.Container(width=1, height=18, bgcolor=c("line"), margin=ft.margin.symmetric(horizontal=6))
+        return ft.Container(width=1, height=18, bgcolor=c("line"), margin=ft.Margin.symmetric(horizontal=6))
 
     def _counter_chip(self) -> ft.Control:
         self._counter_box = ft.Container(
             content=self._counter, bgcolor=c("surface-3"), border_radius=999,
-            padding=ft.padding.symmetric(horizontal=8, vertical=3),
+            padding=ft.Padding.symmetric(horizontal=8, vertical=3),
             visible=len(self._items) > 1,
         )
         return self._counter_box

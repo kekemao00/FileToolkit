@@ -91,7 +91,7 @@ def _button_style(bg: str | None, fg: str, border: str | None = None) -> ft.Butt
         elevation=0,
         side=ft.BorderSide(1, border) if border else None,
         shape=ft.RoundedRectangleBorder(radius=s.R_BUTTON),
-        padding=ft.padding.symmetric(horizontal=14, vertical=0),
+        padding=ft.Padding.symmetric(horizontal=14, vertical=0),
         text_style=ft.TextStyle(size=13, weight=ft.FontWeight.W_500, font_family=s.FONT),
         animation_duration=s.DUR_SNAPPY,
     )
@@ -138,7 +138,7 @@ def _build_theme() -> ft.Theme:
         ),
         tooltip_theme=ft.TooltipTheme(
             text_style=ft.TextStyle(size=12, color=t("on-ink"), font_family=s.FONT),
-            padding=ft.padding.symmetric(horizontal=9, vertical=6),
+            padding=ft.Padding.symmetric(horizontal=9, vertical=6),
             wait_duration=450,
             decoration=ft.BoxDecoration(bgcolor=ink, border_radius=8),
         ),

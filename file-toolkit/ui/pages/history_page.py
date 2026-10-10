@@ -4,8 +4,6 @@
 表格无竖线，只有行间 1px line；行高 46；悬停行变 surface-2。
 """
 import csv
-import subprocess
-import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -15,7 +13,7 @@ from services import history_service
 from ui import style as s
 from ui.features import ACTION_LABELS
 from ui.palette import c
-from ui.utils import show_toast
+from ui.utils import is_mounted, open_folder, show_toast
 
 # ── 模块元数据：(icon, label) ─────────────────────────────────────────
 _MODULE_META: dict[str, tuple[str, str]] = {
@@ -50,7 +48,7 @@ class HistoryPage(ft.Column):
 
         # ── 统计数据文本 ──
         self._stat_today_value = self._make_stat_value("0")
-        self._stat_today_unit = self._make_stat_unit("个文件")
+        self._stat_today_unit = self._make_stat_unit("个任务")
         self._stat_saved_value = self._make_stat_value("—")
         self._stat_saved_unit = self._make_stat_unit("")
         self._stat_rate_value = self._make_stat_value("0")
@@ -73,7 +71,7 @@ class HistoryPage(ft.Column):
         self._empty_hint = ft.Container(
             content=s.empty_state(ft.Icons.HISTORY_OUTLINED, "暂无匹配的操作记录",
                                   "调整搜索关键字或完成一次文件处理后再来查看"),
-            padding=ft.padding.symmetric(vertical=48),
+            padding=ft.Padding.symmetric(vertical=48),
             alignment=ft.Alignment(0, 0),
             visible=False,
         )
@@ -107,7 +105,7 @@ class HistoryPage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             height=64,
-            padding=ft.padding.only(left=s.PAGE_X, right=s.PAGE_X - 4),
+            padding=ft.Padding.only(left=s.PAGE_X, right=s.PAGE_X - 4),
         )
 
     # ── 主体 ──────────────────────────────────────────────────
@@ -126,7 +124,7 @@ class HistoryPage(ft.Column):
                             ],
                             spacing=16,
                         ),
-                        padding=ft.padding.only(left=s.PAGE_X, right=s.PAGE_X, top=4, bottom=24),
+                        padding=ft.Padding.only(left=s.PAGE_X, right=s.PAGE_X, top=4, bottom=24),
                     ),
                 ],
                 spacing=0,
@@ -176,8 +174,8 @@ class HistoryPage(ft.Column):
                     spacing=6,
                     tight=True,
                 ),
-                padding=ft.padding.symmetric(horizontal=20, vertical=16),
-                border=None if i == 0 else ft.border.only(left=ft.BorderSide(1, c("line"))),
+                padding=ft.Padding.symmetric(horizontal=20, vertical=16),
+                border=None if i == 0 else ft.Border.only(left=ft.BorderSide(1, c("line"))),
                 expand=True,
             ))
         return s.card(ft.Row(controls=cells, spacing=0), padding=0)
@@ -217,8 +215,8 @@ class HistoryPage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             height=40,
-            padding=ft.padding.symmetric(horizontal=16),
-            border=ft.border.only(bottom=ft.BorderSide(1, c("line"))),
+            padding=ft.Padding.symmetric(horizontal=16),
+            border=ft.Border.only(bottom=ft.BorderSide(1, c("line"))),
         )
 
     # ── 分页器 ───────────────────────────────────────────────
@@ -233,8 +231,8 @@ class HistoryPage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             height=52,
-            padding=ft.padding.symmetric(horizontal=16),
-            border=ft.border.only(top=ft.BorderSide(1, c("line"))),
+            padding=ft.Padding.symmetric(horizontal=16),
+            border=ft.Border.only(top=ft.BorderSide(1, c("line"))),
         )
 
     # ── 提示 ─────────────────────────────────────────────────
@@ -254,20 +252,24 @@ class HistoryPage(ft.Column):
         self._all_tasks = history_service.get_recent_tasks(limit=500)
         self._apply_filter()
         self._refresh_stats()
-        if self._topbar.page:
+        if is_mounted(self._topbar):
             self.update()
+
+    @staticmethod
+    def _search_text(task: dict) -> str:
+        """可搜索的内容：文件描述、操作和模块的英文键与中文名。"""
+        module = (task.get("module") or "").upper()
+        action = task.get("action") or ""
+        parts = (task.get("input_desc") or "", action, module,
+                 _ACTION_LABELS.get(action, ""), _MODULE_META.get(module, ("", ""))[1])
+        return " ".join(parts).lower()
 
     def _apply_filter(self) -> None:
         kw = self._search_keyword.strip().lower()
         if not kw:
             self._filtered_tasks = list(self._all_tasks)
         else:
-            self._filtered_tasks = [
-                t for t in self._all_tasks
-                if kw in (t.get("input_desc") or "").lower()
-                or kw in (t.get("action") or "").lower()
-                or kw in (t.get("module") or "").lower()
-            ]
+            self._filtered_tasks = [t for t in self._all_tasks if kw in self._search_text(t)]
         total_pages = max(1, (len(self._filtered_tasks) + _PAGE_SIZE - 1) // _PAGE_SIZE)
         if self._current_page > total_pages:
             self._current_page = total_pages
@@ -379,7 +381,7 @@ class HistoryPage(ft.Column):
         self._current_page = max(1, min(page_num, total_pages))
         self._render_rows()
         self._render_pagination()
-        if self._topbar.page:
+        if is_mounted(self._topbar):
             self.update()
 
     # ── 单行 ──────────────────────────────────────────────────
@@ -436,14 +438,14 @@ class HistoryPage(ft.Column):
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
                         expand=True,
-                        padding=ft.padding.only(right=12),
+                        padding=ft.Padding.only(right=12),
                     ),
                     ft.Container(
                         content=ft.Container(
                             content=s.text(action_label, "caption", color="ink-2"),
                             height=22, alignment=ft.Alignment(0, 0),
-                            border=ft.border.all(1, c("line-strong")), border_radius=11,
-                            padding=ft.padding.symmetric(horizontal=8),
+                            border=ft.Border.all(1, c("line-strong")), border_radius=11,
+                            padding=ft.Padding.symmetric(horizontal=8),
                         ),
                         width=_COLS["action"], alignment=ft.Alignment(-1, 0),
                     ),
@@ -471,14 +473,14 @@ class HistoryPage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             height=s.H_ROW,
-            padding=ft.padding.only(left=16, right=12),
+            padding=ft.Padding.only(left=16, right=12),
             animate=s.snappy(),
         )
         row.on_hover = lambda e, r=row: self._hover_bg(r, e)
         if is_last:
             return row
         return ft.Column(
-            controls=[row, ft.Container(height=1, bgcolor=c("line"), margin=ft.margin.symmetric(horizontal=12))],
+            controls=[row, ft.Container(height=1, bgcolor=c("line"), margin=ft.Margin.symmetric(horizontal=12))],
             spacing=0,
         )
 
@@ -496,7 +498,7 @@ class HistoryPage(ft.Column):
         failed = sum(1 for t in self._all_tasks if t.get("status") == "failed")
 
         self._stat_today_value.value = str(today_count)
-        self._stat_today_unit.value = "个文件"
+        self._stat_today_unit.value = "个任务"
         self._stat_saved_value.value = str(total)
         self._stat_saved_unit.value = "条"
         self._stat_rate_value.value = f"{rate:.1f}"
@@ -544,7 +546,7 @@ class HistoryPage(ft.Column):
         self._search_keyword = (e.control.value or "")
         self._current_page = 1
         self._apply_filter()
-        if self._topbar.page:
+        if is_mounted(self._topbar):
             self.update()
 
     def _confirm_clear(self, _) -> None:
@@ -579,19 +581,8 @@ class HistoryPage(ft.Column):
     def _open_dir(self, path_str: str) -> None:
         if not path_str:
             return
-        p = Path(path_str)
-        if not p.exists():
+        if not open_folder(path_str):
             show_toast(self._page, "目录不存在或已被移动", kind="error")
-            return
-        try:
-            if sys.platform == "win32":
-                subprocess.Popen(["explorer", str(p)])
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", str(p)])
-            else:
-                subprocess.Popen(["xdg-open", str(p)])
-        except OSError as exc:
-            show_toast(self._page, f"打开失败：{exc}", kind="error")
 
     def _export_history(self, _) -> None:
         """导出当前过滤结果为 CSV。"""

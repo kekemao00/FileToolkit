@@ -7,7 +7,7 @@ import flet as ft
 
 from core.models import TaskResult, TaskStatus
 from core.pdf.compressor import compress_pdf
-from core.pdf.converter import office_to_pdf, pdf_to_docx, pdf_to_pptx, pdf_to_xlsx
+from core.pdf.converter import office_to_pdf, pdf_to_docx, pdf_to_images, pdf_to_pptx, pdf_to_xlsx
 from core.pdf.encryptor import encrypt_pdf
 from core.pdf.merger import merge_pdf
 from core.pdf.splitter import split_pdf
@@ -60,7 +60,7 @@ def _protect_pdf(
 
 class PdfPage(Workbench):
     TITLE = "PDF 工作台"
-    SUBTITLE = "合并、拆分、压缩、格式互转与加密水印"
+    SUBTITLE = "合并、拆分、压缩、转图片、格式互转与加密水印"
     MODULE = "pdf"
     PICK_LABEL = "点击选择文件"
     PICK_ICON = ft.Icons.UPLOAD_FILE_OUTLINED
@@ -71,8 +71,10 @@ class PdfPage(Workbench):
         WorkbenchFunction("split", "拆分", "按页数、页码范围或逐页", ft.Icons.CONTENT_CUT_OUTLINED,
                           _PDF),
         WorkbenchFunction("compress", "压缩", "减小文件体积", ft.Icons.COMPRESS_OUTLINED,
-                          _PDF),
+                          _PDF, show_size=True),
         WorkbenchFunction("to_office", "转 Office", "PDF 转 Word / Excel / PPT", ft.Icons.DESCRIPTION_OUTLINED,
+                          _PDF),
+        WorkbenchFunction("to_images", "转图片", "每页导出为一张 PNG / JPG", ft.Icons.IMAGE_OUTLINED,
                           _PDF),
         WorkbenchFunction("from_office", "Office 转 PDF", "Word / Excel / PPT 转 PDF", ft.Icons.PICTURE_AS_PDF_OUTLINED,
                           _OFFICE),
@@ -100,7 +102,13 @@ class PdfPage(Workbench):
         )
         self._compress_hint = ft.Text(size=11, color=c("ink-2", "fg"))
         # 转 Office
-        self._office_format = ChoiceGroup([("docx", "Word"), ("xlsx", "Excel"), ("pptx", "PPT")], "docx")
+        self._office_format = ChoiceGroup([("docx", "Word"), ("xlsx", "Excel"), ("pptx", "PPT")], "docx",
+                                          on_change=lambda _: self._sync_office_hint())
+        self._office_hint = ft.Text(size=11, color=c("ink-3", "fg"))
+        self._sync_office_hint()
+        # 转图片
+        self._image_format = ChoiceGroup([("png", "PNG"), ("jpg", "JPG")], "png")
+        self._image_dpi = ChoiceGroup([("96", "96 dpi"), ("150", "150 dpi"), ("300", "300 dpi")], "150")
         # 加密水印
         self._wm_text = self.text_field("", "水印文字，留空则不加")
         self._wm_opacity = ft.Slider(min=10, max=80, value=30, divisions=7, label="{value}%",
@@ -128,6 +136,15 @@ class PdfPage(Workbench):
         if is_mounted(self._compress_hint):
             self._compress_hint.update()
 
+    def _sync_office_hint(self) -> None:
+        self._office_hint.value = {
+            "docx": "尽量还原排版，文字可编辑；扫描件需先做 OCR",
+            "xlsx": "提取表格；没有表格的页面按行导出文字",
+            "pptx": "每页一张幻灯片，版式与 PDF 一致（内容为图片，不可编辑文字）",
+        }[self._office_format.value]
+        if is_mounted(self._office_hint):
+            self._office_hint.update()
+
     def build_params(self, key: str) -> list[ft.Control]:
         if key == "merge":
             return [
@@ -147,8 +164,15 @@ class PdfPage(Workbench):
             return [self.section("压缩强度", ft.Column(controls=[self._compress_level, self._compress_hint], spacing=8))]
         if key == "to_office":
             return [
-                self.section("目标格式", self._office_format),
-                ft.Text("扫描件需先做 OCR，转换结果才可编辑", size=11, color=c("ink-3", "fg")),
+                self.section("目标格式", ft.Column(controls=[self._office_format, self._office_hint], spacing=8)),
+            ]
+        if key == "to_images":
+            return [
+                self.section("图片格式", self._image_format),
+                self.section("清晰度", ft.Column(controls=[
+                    self._image_dpi,
+                    ft.Text("150 dpi 适合屏幕查看，300 dpi 适合打印", size=11, color=c("ink-3", "fg")),
+                ], spacing=8)),
             ]
         if key == "from_office":
             return [ft.Text("需要本机安装 LibreOffice。支持 Word、Excel、PowerPoint 及 OpenDocument 文件。",
@@ -194,6 +218,11 @@ class PdfPage(Workbench):
         if key == "to_office":
             fn = {"docx": pdf_to_docx, "xlsx": pdf_to_xlsx, "pptx": pdf_to_pptx}[self._office_format.value]
             return self.each(fn, files, lambda p: {"input_file": p, "output_dir": out_dir})
+
+        if key == "to_images":
+            fmt, dpi = self._image_format.value, int(self._image_dpi.value)
+            return self.each(pdf_to_images, files, lambda p: {
+                "input_file": p, "output_dir": out_dir, "image_format": fmt, "dpi": dpi})
 
         if key == "from_office":
             return self.each(office_to_pdf, files, lambda p: {"input_file": p, "output_dir": out_dir})

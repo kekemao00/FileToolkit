@@ -214,3 +214,34 @@ def save_image(
     output_path = output_dir / filename
     output_path.write_bytes(image_bytes)
     return output_path
+
+
+async def check_connection() -> tuple[bool, str]:
+    """校验 Key 和 Base URL：请求 GET /models（不生成图片、不消耗额度）。
+
+    返回 (是否可用, 给用户看的说明)。有些兼容服务不提供 /models，此时只能确认地址可达。
+    """
+    config = get_api_config()
+    if not config["api_key"]:
+        return False, "请先填写 API Key"
+    url = f"{config['base_url'].rstrip('/')}/models"
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(15.0)) as client:
+            resp = await client.get(url, headers={"Authorization": f"Bearer {config['api_key']}"})
+    except httpx.TimeoutException:
+        return False, "连接超时，请检查 Base URL 和网络"
+    except httpx.HTTPError as e:
+        return False, f"无法连接：{e.__class__.__name__}，请检查 Base URL"
+    if resp.status_code in (401, 403):
+        return False, "API Key 无效或没有权限"
+    if resp.status_code in (404, 405):
+        return True, "地址可以访问（该服务不提供模型列表，Key 需在生成时验证）"
+    if resp.status_code >= 400:
+        return False, f"连接失败（HTTP {resp.status_code}）"
+    try:
+        ids = {m.get("id") for m in resp.json().get("data", []) if isinstance(m, dict)}
+    except ValueError:
+        ids = set()
+    if ids and config["model"] not in ids:
+        return True, f"连接成功，但没有找到模型「{config['model']}」，请确认模型名称"
+    return True, "连接成功，API Key 有效"

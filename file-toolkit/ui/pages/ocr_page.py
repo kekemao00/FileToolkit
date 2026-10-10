@@ -4,19 +4,18 @@
 三视图互斥切换，外观与 ui/components/workbench.py 一致。
 """
 import asyncio
-import subprocess
-import sys
 from pathlib import Path
 
 import flet as ft
 
-from core.ocr.client import recognize
+from core.ocr.client import INSTALL_HINT, find_tesseract, recognize
 from services import history_service, settings_service
 from services.task_service import run_task
 from ui import style as s
 from ui.components.top_bar import TopBar
+from ui.handoff import pop_pending_files
 from ui.palette import c
-from ui.utils import show_toast
+from ui.utils import reveal_file, show_toast
 
 # 语言选项（并排按钮）
 _LANGUAGES = [
@@ -94,6 +93,9 @@ class OcrPage(ft.Column):
 
         self.controls = [self._topbar, self._body_container]
         self._apply_responsive_layout(update=False)
+        handed_over = [p for p in pop_pending_files() if p.suffix.lower().lstrip(".") in _INPUT_EXTS]
+        if handed_over:
+            self._set_input(handed_over[0])
 
         self._prev_on_resize = None
 
@@ -153,16 +155,20 @@ class OcrPage(ft.Column):
                 spacing=16,
                 horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
-            padding=ft.padding.only(left=s.PAGE_X, right=16, top=4, bottom=20),
+            padding=ft.Padding.only(left=s.PAGE_X, right=16, top=4, bottom=20),
         )
 
     def _build_engine_badge(self) -> ft.Control:
-        """本地引擎就绪徽章（Tesseract + pypdf 都走本地）。"""
+        """本地引擎状态：检测到 Tesseract 才显示「就绪」，否则提示只能提取 PDF 文字。"""
+        ready = find_tesseract() is not None
         return ft.Container(
+            tooltip=None if ready else INSTALL_HINT,
             content=ft.Row(
                 controls=[
-                    ft.Container(width=6, height=6, border_radius=3, bgcolor=c("accent")),
-                    s.text("本地引擎就绪", "caption", color="ink-2"),
+                    ft.Container(width=6, height=6, border_radius=3,
+                                 bgcolor=c("accent") if ready else c("ink-3")),
+                    s.text("本地引擎就绪" if ready else "未安装 Tesseract，仅能提取 PDF 文字",
+                           "caption", color="ink-2"),
                 ],
                 spacing=6,
                 tight=True,
@@ -170,9 +176,9 @@ class OcrPage(ft.Column):
             ),
             height=22,
             bgcolor=c("surface"),
-            border=ft.border.all(1, c("line-strong")),
+            border=ft.Border.all(1, c("line-strong")),
             border_radius=11,
-            padding=ft.padding.symmetric(horizontal=9),
+            padding=ft.Padding.symmetric(horizontal=9),
         )
 
     def _build_drop_zone(self) -> ft.Control:
@@ -193,7 +199,7 @@ class OcrPage(ft.Column):
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
             bgcolor=c("surface"),
-            border=ft.border.all(1, c("line")),
+            border=ft.Border.all(1, c("line")),
             border_radius=s.R_PANEL,
             on_click=self._pick_file,
             on_hover=self._on_drop_zone_hover,
@@ -210,7 +216,7 @@ class OcrPage(ft.Column):
     def _on_drop_zone_hover(self, e: ft.ControlEvent) -> None:
         on = e.data in (True, "true")
         self._drop_zone_body.bgcolor = c("surface-2" if on else "surface")
-        self._drop_zone_body.border = ft.border.all(1, c("line-strong" if on else "line"))
+        self._drop_zone_body.border = ft.Border.all(1, c("line-strong" if on else "line"))
         self._drop_icon.bgcolor = c("surface-3" if on else "surface-2")
         self._drop_zone_body.update()
 
@@ -234,7 +240,7 @@ class OcrPage(ft.Column):
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.only(left=14, right=8, top=10, bottom=10),
+                padding=ft.Padding.only(left=14, right=8, top=10, bottom=10),
             ),
         )
         return self._file_info_container
@@ -260,7 +266,7 @@ class OcrPage(ft.Column):
                 expand=True,
             ),
             width=320,
-            margin=ft.margin.only(right=s.PAGE_X, bottom=20, top=4),
+            margin=ft.Margin.only(right=s.PAGE_X, bottom=20, top=4),
         )
         return self._param_panel
 
@@ -283,7 +289,7 @@ class OcrPage(ft.Column):
                             ],
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
-                        padding=ft.padding.only(bottom=8),
+                        padding=ft.Padding.only(bottom=8),
                     ),
                     self._progress_bar,
                     self._progress_desc,
@@ -293,10 +299,10 @@ class OcrPage(ft.Column):
                 spacing=12,
             ),
             bgcolor=c("surface"),
-            border=ft.border.all(1, c("line")),
+            border=ft.Border.all(1, c("line")),
             border_radius=s.R_PANEL,
-            padding=ft.padding.all(24),
-            margin=ft.margin.only(left=s.PAGE_X, right=16, top=4),
+            padding=ft.Padding.all(24),
+            margin=ft.Margin.only(left=s.PAGE_X, right=16, top=4),
         )
 
     def _build_complete_view(self) -> ft.Container:
@@ -350,7 +356,7 @@ class OcrPage(ft.Column):
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.START,
             ),
-            margin=ft.margin.only(left=s.PAGE_X, right=16, top=4),
+            margin=ft.Margin.only(left=s.PAGE_X, right=16, top=4),
         )
 
     def _build_summary_row(self, label: str, value_text: ft.Text, last: bool = False) -> ft.Control:
@@ -358,8 +364,8 @@ class OcrPage(ft.Column):
             content=ft.Row(
                 controls=[s.text(label, "small"), ft.Container(expand=True), value_text],
             ),
-            padding=ft.padding.symmetric(vertical=8),
-            border=None if last else ft.border.only(bottom=ft.BorderSide(1, c("line"))),
+            padding=ft.Padding.symmetric(vertical=8),
+            border=None if last else ft.Border.only(bottom=ft.BorderSide(1, c("line"))),
         )
 
     # ── 响应式 ──────────────────────────────────────────────
@@ -371,7 +377,7 @@ class OcrPage(ft.Column):
         self._is_narrow = narrow
         if narrow:
             self._param_panel.width = None
-            self._param_panel.margin = ft.margin.only(left=s.PAGE_X, right=s.PAGE_X, bottom=20)
+            self._param_panel.margin = ft.Margin.only(left=s.PAGE_X, right=s.PAGE_X, bottom=20)
             self._run_btn.full_width = 320
             new_body = ft.Column(
                 controls=[self._main_content, self._param_panel],
@@ -379,7 +385,7 @@ class OcrPage(ft.Column):
             )
         else:
             self._param_panel.width = 320
-            self._param_panel.margin = ft.margin.only(right=s.PAGE_X, bottom=20, top=4)
+            self._param_panel.margin = ft.Margin.only(right=s.PAGE_X, bottom=20, top=4)
             self._run_btn.full_width = 278
             new_body = ft.Row(
                 controls=[self._main_content, self._param_panel],
@@ -417,12 +423,15 @@ class OcrPage(ft.Column):
             return
         paths = [Path(f.path) for f in files if f.path]
         if paths:
-            self._input_file = paths[0]
-            self._file_name.value = self._input_file.name
-            self._file_info_container.visible = True
-            self._run_btn.set_label("开始识别", enabled=True)
-            self._drop_zone_wrapper.height = 120
+            self._set_input(paths[0])
         self._page.update()
+
+    def _set_input(self, path: Path) -> None:
+        self._input_file = path
+        self._file_name.value = path.name
+        self._file_info_container.visible = True
+        self._run_btn.set_label("开始识别", enabled=True)
+        self._drop_zone_wrapper.height = 120
 
     def _remove_file(self, _) -> None:
         self._input_file = None
@@ -438,11 +447,16 @@ class OcrPage(ft.Column):
         kwargs = {
             "input_file": self._input_file,
             "language": self._language_value,
+            "output_dir": settings_service.resolve_output_dir(self._input_file),
         }
         self._show_processing(self._input_file.name)
+        self._run_seq = getattr(self, "_run_seq", 0) + 1
+        seq = self._run_seq
 
         async def _run():
-            await run_task(recognize, kwargs, self._on_progress, self._on_complete)
+            await run_task(recognize, kwargs,
+                           lambda *a: seq == self._run_seq and self._on_progress(*a),
+                           lambda r: seq == self._run_seq and self._on_complete(r))
         self._task = self._page.run_task(_run)
 
     def _on_progress(self, current, total, desc):
@@ -456,12 +470,13 @@ class OcrPage(ft.Column):
     def _on_complete(self, result):
         from core.models import TaskResult, TaskStatus
 
+        if isinstance(result, TaskResult) and result.status == TaskStatus.CANCELLED:
+            return
         if isinstance(result, TaskResult):
             if result.status == TaskStatus.FAILED:
                 text = ""
-                err = result.error_message or "识别失败"
                 ok = False
-                self._result_title.value = f"识别失败：{err[:60]}"
+                self._result_title.value = "识别失败"
                 self._result_title.color = c("danger", "fg")
                 self._sum_status.value = "失败"
                 self._sum_status.color = c("danger", "fg")
@@ -474,9 +489,6 @@ class OcrPage(ft.Column):
                         text = self._output_file.read_text(encoding="utf-8")
                     except (OSError, UnicodeDecodeError):
                         text = ""
-                if not text and result.error_message:
-                    # 客户端将文本存在 error_message 供 UI 读取（已在 client 约定）
-                    text = result.error_message
                 ok = True
                 self._result_title.value = "识别完成"
                 self._result_title.color = c("ink", "fg")
@@ -497,7 +509,8 @@ class OcrPage(ft.Column):
         self._last_ok = ok
 
         self._result_text_value = text
-        self._result_text.value = text
+        # 失败时把完整原因（含安装指引）放进结果框，方便阅读和复制链接
+        self._result_text.value = text if ok else (result.error_message or "识别失败")
 
         # 摘要
         lang_label = next((lg["label"] for lg in _LANGUAGES
@@ -513,6 +526,7 @@ class OcrPage(ft.Column):
         self._show_complete()
 
     def _cancel(self) -> None:
+        self._run_seq = getattr(self, "_run_seq", 0) + 1
         if self._task and not self._task.done():
             self._task.cancel()
         self._reset_to_workspace()
@@ -569,8 +583,9 @@ class OcrPage(ft.Column):
             self._show_snack("无可保存的识别结果")
             return
         out_dir = settings_service.resolve_output_dir(self._input_file)
-        out_path = out_dir / f"{self._input_file.stem}_ocr.txt"
+        out_path = self._output_file or out_dir / f"{self._input_file.stem}_ocr.txt"
         try:
+            out_path.parent.mkdir(parents=True, exist_ok=True)
             out_path.write_text(self._result_text.value, encoding="utf-8")
             self._output_file = out_path
             self._show_snack(f"已保存到 {out_path}", kind="success")
@@ -582,13 +597,7 @@ class OcrPage(ft.Column):
         if not target or not target.exists():
             self._show_snack("输出文件不存在或尚未保存")
             return
-        folder = target.parent
-        if sys.platform == "win32":
-            subprocess.Popen(["explorer", "/select,", str(target)])
-        elif sys.platform == "darwin":
-            subprocess.Popen(["open", "-R", str(target)])
-        else:
-            subprocess.Popen(["xdg-open", str(folder)])
+        reveal_file(target)
 
     def _show_snack(self, msg: str, color: str | None = None, kind: str | None = None) -> None:
         show_toast(self._page, msg, color=color, kind=kind)

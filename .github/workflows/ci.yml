@@ -38,3 +38,26 @@ jobs:
 
       - name: Pytest
         run: uv run pytest -q
+
+  # 主要用户在 Windows：路径、编码、子进程的问题只有这里能测出来
+  test-windows:
+    name: Test (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: file-toolkit
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+          enable-cache: true
+          cache-dependency-glob: file-toolkit/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --locked --group dev
+
+      - name: Pytest
+        run: uv run pytest -q

@@ -1,26 +1,37 @@
 """PDF 水印模块"""
 import io
-import tempfile
 import time
 from pathlib import Path
 
 import pikepdf
 from reportlab.pdfgen import canvas
 
+from core.fonts import reportlab_font
 from core.models import ProgressCallback, TaskResult, TaskStatus
+from core.task_control import check_cancelled
 
 
-def _overlay_watermark(pdf: pikepdf.Pdf, page: pikepdf.Page, wm_buf: io.BytesIO) -> None:
-    """将 BytesIO 中的水印 PDF 叠加到目标页面（通过临时文件避免 direct object 问题）。"""
-    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
-        f.write(wm_buf.getvalue())
-        tmp_path = f.name
-    try:
-        wm_pdf = pikepdf.open(tmp_path)
-        wm_page = wm_pdf.pages[0]
-        page.add_overlay(wm_page)
-    finally:
-        Path(tmp_path).unlink(missing_ok=True)
+def _overlay_all(pdf: pikepdf.Pdf, make_overlay,
+                 progress_callback: ProgressCallback | None) -> list[pikepdf.Pdf]:
+    """给每页叠加水印。同尺寸页面共用一份水印（水印 PDF 在内存里生成，不落临时文件）。
+
+    返回的水印 Pdf 对象要一直持有到保存结束，否则叠加时复制过来的对象会失效。
+    """
+    cache: dict[tuple[float, float], pikepdf.Page] = {}
+    keep: list[pikepdf.Pdf] = []
+    total = len(pdf.pages)
+    for page_num, page in enumerate(pdf.pages, start=1):
+        check_cancelled()
+        box = page.mediabox
+        size = (round(float(box[2]) - float(box[0]), 2), round(float(box[3]) - float(box[1]), 2))
+        if size not in cache:
+            wm_pdf = pikepdf.open(make_overlay(*size))
+            keep.append(wm_pdf)
+            cache[size] = wm_pdf.pages[0]
+        page.add_overlay(cache[size])
+        if progress_callback:
+            progress_callback(page_num, total, f"水印第 {page_num}/{total} 页")
+    return keep
 
 
 def add_text_watermark(
@@ -42,22 +53,10 @@ def add_text_watermark(
             progress_callback(0, 1, "正在添加水印...")
 
         with pikepdf.open(str(input_file)) as pdf:
-            total_pages = len(pdf.pages)
-
-            for page_num, page in enumerate(pdf.pages, start=1):
-                mediabox = page.mediabox
-                page_w = float(mediabox[2]) - float(mediabox[0])
-                page_h = float(mediabox[3]) - float(mediabox[1])
-
-                wm_buf = _create_text_watermark(
-                    text, page_w, page_h, font_size, opacity, rotation, position,
-                )
-                _overlay_watermark(pdf, page, wm_buf)
-
-                if progress_callback:
-                    progress_callback(page_num, total_pages, f"水印第 {page_num}/{total_pages} 页")
-
+            sources = _overlay_all(pdf, lambda w, h: _create_text_watermark(
+                text, w, h, font_size, opacity, rotation, position), progress_callback)
             pdf.save(str(output_file))
+            del sources
 
         if progress_callback:
             progress_callback(1, 1, "水印添加完成")
@@ -94,22 +93,10 @@ def add_image_watermark(
             progress_callback(0, 1, "正在添加图片水印...")
 
         with pikepdf.open(str(input_file)) as pdf:
-            total_pages = len(pdf.pages)
-
-            for page_num, page in enumerate(pdf.pages, start=1):
-                mediabox = page.mediabox
-                page_w = float(mediabox[2]) - float(mediabox[0])
-                page_h = float(mediabox[3]) - float(mediabox[1])
-
-                wm_buf = _create_image_watermark(
-                    watermark_image, page_w, page_h, opacity, position,
-                )
-                _overlay_watermark(pdf, page, wm_buf)
-
-                if progress_callback:
-                    progress_callback(page_num, total_pages, f"水印第 {page_num}/{total_pages} 页")
-
+            sources = _overlay_all(pdf, lambda w, h: _create_image_watermark(
+                watermark_image, w, h, opacity, position), progress_callback)
             pdf.save(str(output_file))
+            del sources
 
         if progress_callback:
             progress_callback(1, 1, "水印添加完成")
@@ -142,11 +129,12 @@ def _create_text_watermark(
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=(page_w, page_h))
     c.setFillAlpha(opacity)
-    c.setFont("Helvetica", font_size)
+    font = reportlab_font(text)
+    c.setFont(font, font_size)
 
     if position == "tile":
         # 平铺模式
-        text_w = c.stringWidth(text, "Helvetica", font_size)
+        text_w = c.stringWidth(text, font, font_size)
         spacing_x = text_w + 80
         spacing_y = font_size + 80
         c.saveState()

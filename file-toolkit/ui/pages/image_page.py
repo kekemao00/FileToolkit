@@ -7,8 +7,10 @@ from core.image.compressor import compress_images
 from core.image.converter import convert_image
 from core.image.renamer import batch_rename, preview_rename
 from core.image.resizer import resize_images
+from core.image.to_pdf import images_to_pdf
 from core.image.watermark import add_text_watermark
 from core.models import TaskResult, TaskStatus
+from core.paths import unique_path
 from ui.components.workbench import ChoiceGroup, Workbench, WorkbenchFunction, is_mounted
 from ui.palette import c
 from ui.utils import show_toast
@@ -35,20 +37,23 @@ def _labeled(label: str, control: ft.Control) -> ft.Control:
 
 class ImagePage(Workbench):
     TITLE = "图片工作台"
-    SUBTITLE = "批量压缩、格式转换、尺寸调整、水印与重命名"
+    SUBTITLE = "批量压缩、格式转换、尺寸调整、水印、转 PDF 与重命名"
     MODULE = "image"
     PICK_LABEL = "点击选择图片"
     PICK_ICON = ft.Icons.ADD_PHOTO_ALTERNATE_OUTLINED
     FILE_ICON = ft.Icons.IMAGE_OUTLINED
     FILE_NOUN = "张图片"
     FUNCTIONS = [
-        WorkbenchFunction("compress", "压缩", "减小图片体积", ft.Icons.COMPRESS_OUTLINED, _IMAGES),
+        WorkbenchFunction("compress", "压缩", "减小图片体积", ft.Icons.COMPRESS_OUTLINED, _IMAGES,
+                          show_size=True),
         WorkbenchFunction("convert", "格式转换", "PNG / JPG / WebP / BMP / TIFF", ft.Icons.TRANSFORM_OUTLINED,
                           _IMAGES),
         WorkbenchFunction("resize", "尺寸调整", "按宽高缩放", ft.Icons.PHOTO_SIZE_SELECT_LARGE_OUTLINED,
                           _IMAGES),
         WorkbenchFunction("watermark", "水印", "批量添加文字水印", ft.Icons.WATER_DROP_OUTLINED,
                           _IMAGES),
+        WorkbenchFunction("to_pdf", "转 PDF", "多张图片按顺序合成一个 PDF", ft.Icons.PICTURE_AS_PDF_OUTLINED,
+                          _IMAGES, orderable=True),
         WorkbenchFunction("rename", "批量重命名", "按模板原地改名", ft.Icons.DRIVE_FILE_RENAME_OUTLINE,
                           _IMAGES, uses_output_dir=False),
     ]
@@ -69,6 +74,9 @@ class ImagePage(Workbench):
         self._wm_pos = ChoiceGroup(_POSITIONS, "bottom_right")
         self._wm_opacity = _slider(10, 100, 40, 9)
         self._wm_size = _slider(12, 120, 32, 18)
+        # 转 PDF
+        self._pdf_name = self.text_field("", "默认用第一张图片的名字")
+        self._pdf_page = ChoiceGroup([("fit", "跟随图片尺寸"), ("a4", "A4 纸")], "fit")
         # 重命名
         self._template = self.text_field("{name}_{n:03d}", "命名模板", on_change=lambda _: self._refresh_preview())
         self._start_num = self.text_field("1", "起始序号", keyboard_type=ft.KeyboardType.NUMBER, expand=True,
@@ -101,6 +109,12 @@ class ImagePage(Workbench):
                     _labeled("透明度", self._wm_opacity),
                     _labeled("字号", self._wm_size),
                 ], spacing=0)),
+            ]
+        if key == "to_pdf":
+            return [
+                self.section("输出文件名", self._pdf_name),
+                self.section("页面大小", self._pdf_page),
+                ft.Text("在左侧列表用上下箭头调整页面顺序", size=11, color=c("ink-3", "fg")),
             ]
         return [
             self.section("命名规则", ft.Column(controls=[
@@ -161,6 +175,13 @@ class ImagePage(Workbench):
             return add_text_watermark, {"input_files": files, "output_dir": out_dir, "text": text,
                                         "position": self._wm_pos.value, "opacity": int(self._wm_opacity.value),
                                         "font_size": int(self._wm_size.value)}
+        if key == "to_pdf":
+            name = (self._pdf_name.value or "").strip() or files[0].stem
+            if not name.lower().endswith(".pdf"):
+                name += ".pdf"
+            name = name.replace("/", "_").replace("\\", "_")
+            return images_to_pdf, {"input_files": files, "output_file": unique_path(out_dir / name),
+                                   "page_size": self._pdf_page.value}
         return batch_rename, {"input_files": files, "template": self._template.value or "{name}_{n:03d}",
                               "start_number": self._start_number()}
 

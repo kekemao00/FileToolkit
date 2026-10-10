@@ -127,7 +127,7 @@ def button_style(kind: str = "primary", radius: float = R_BUTTON) -> ft.ButtonSt
         elevation=0,
         side=side,
         shape=ft.RoundedRectangleBorder(radius=radius),
-        padding=ft.padding.symmetric(horizontal=14),
+        padding=ft.Padding.symmetric(horizontal=14),
         text_style=ft.TextStyle(size=13, weight=ft.FontWeight.W_500, font_family=FONT),
         animation_duration=DUR_SNAPPY,
     )
@@ -170,7 +170,7 @@ def icon_button(
         width=size,
         height=size,
         style=ft.ButtonStyle(
-            padding=ft.padding.all(0),
+            padding=ft.Padding.all(0),
             shape=ft.RoundedRectangleBorder(radius=R_BUTTON),
             bgcolor={
                 ft.ControlState.HOVERED: ft.Colors.with_opacity(0.75, c("surface-3")),
@@ -187,7 +187,7 @@ def icon_button(
 def card(content: ft.Control | None = None, padding: float | ft.Padding = 20, **kwargs) -> ft.Container:
     """白色主卡片：1px line 描边、圆角 16、无阴影。"""
     kwargs.setdefault("bgcolor", c("surface"))
-    kwargs.setdefault("border", ft.border.all(1, c("line")))
+    kwargs.setdefault("border", ft.Border.all(1, c("line")))
     kwargs.setdefault("border_radius", R_PANEL)
     return ft.Container(content=content, padding=padding, **kwargs)
 
@@ -220,7 +220,7 @@ def hover_surface(
         if bg is not None:
             container.bgcolor = c(hover_bg if on else bg)
         if border is not None:
-            container.border = ft.border.all(1, c(hover_border if on else border))
+            container.border = ft.Border.all(1, c(hover_border if on else border))
         container.update()
 
     container.on_hover = _on_hover
@@ -267,7 +267,7 @@ def field_style() -> dict:
 def text_field(value: str = "", hint: str = "", **kwargs) -> ft.TextField:
     opts = field_style()
     opts.update(
-        content_padding=ft.padding.symmetric(horizontal=12, vertical=13),
+        content_padding=ft.Padding.symmetric(horizontal=12, vertical=13),
         dense=True,
         text_size=13.5,
         cursor_color=c("ink"),
@@ -341,7 +341,7 @@ class Segmented(ft.Container):
             content=ft.Stack(controls=[self._indicator, *tabs], width=total, height=self.HEIGHT),
             width=total + 2, height=self.HEIGHT + 2,
             bgcolor=c("surface"),
-            border=ft.border.all(1, c("line")),
+            border=ft.Border.all(1, c("line")),
             border_radius=(self.HEIGHT + 2) / 2,
         )
 
@@ -597,7 +597,7 @@ def confirm(
             spacing=10,
             tight=True,
         ),
-        padding=ft.padding.only(left=20, right=12, top=12, bottom=16),
+        padding=ft.Padding.only(left=20, right=12, top=12, bottom=16),
         width=380,
         opacity=0, scale=0.96,
         animate_opacity=snappy(), animate_scale=smooth(),

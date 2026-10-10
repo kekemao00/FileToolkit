@@ -37,7 +37,7 @@ class _Island:
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
         self.body_box = ft.Container(content=self.body, opacity=0, animate_opacity=s.snappy(),
-                                     padding=ft.padding.only(left=9, right=16))
+                                     padding=ft.Padding.only(left=9, right=16))
         self.pill = ft.Container(
             content=self.body_box, width=10, height=10, border_radius=5, opacity=0,
             alignment=ft.Alignment(-1, 0), clip_behavior=ft.ClipBehavior.HARD_EDGE,
@@ -157,21 +157,51 @@ def show_toast(
         pass
 
 
-def open_folder(path) -> None:
-    """用系统文件管理器打开目录。"""
-    import subprocess
-    import sys
-
-    target = str(path)
+def is_mounted(control: ft.Control) -> bool:
+    """Flet 0.84 未挂载时访问 .page 会抛 RuntimeError。"""
     try:
-        if sys.platform == "win32":
-            subprocess.Popen(["explorer", target])
-        elif sys.platform == "darwin":
-            subprocess.Popen(["open", target])
-        else:
-            subprocess.Popen(["xdg-open", target])
+        return control.page is not None
+    except RuntimeError:
+        return False
+
+
+def _launch(cmd: list[str]) -> bool:
+    import subprocess
+    try:
+        subprocess.Popen(cmd)
+        return True
     except OSError:
-        pass
+        return False
+
+
+def open_folder(path) -> bool:
+    """用系统文件管理器打开目录；目录不存在或打不开时返回 False。"""
+    import sys
+    from pathlib import Path
+
+    target = Path(path)
+    if not str(path) or not target.exists():
+        return False
+    if sys.platform == "win32":
+        return _launch(["explorer", str(target)])
+    if sys.platform == "darwin":
+        return _launch(["open", str(target)])
+    return _launch(["xdg-open", str(target)])
+
+
+def reveal_file(path) -> bool:
+    """在文件管理器中显示并选中文件（Linux 没有统一的选中方式，打开所在目录）。"""
+    import sys
+    from pathlib import Path
+
+    target = Path(path)
+    if not target.exists():
+        return False
+    if sys.platform == "win32":
+        return _launch(["explorer", "/select,", str(target)])
+    if sys.platform == "darwin":
+        return _launch(["open", "-R", str(target)])
+    return open_folder(target.parent)
 
 
 def notify_task_done(page: ft.Page, output_dir) -> None:

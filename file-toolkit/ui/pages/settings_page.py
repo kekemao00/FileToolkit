@@ -1,6 +1,7 @@
 """设置页 — 外观 / 文件 / 网络(OCR) / AI 生图 / 关于，每组一张白卡片。"""
 import flet as ft
 
+from core.ocr.client import INSTALL_HINT, find_tesseract, installed_languages
 from core.version import app_license
 from services import settings_service
 from services.prompt_image_service import DEFAULT_BASE_URL, DEFAULT_MODEL
@@ -21,7 +22,7 @@ class SettingsPage(ft.Column):
             self._build_header(),
             self._build_appearance(),
             self._build_file(),
-            self._build_network(),
+            self._build_ocr(),
             self._build_ai_image(),
             self._build_about(),
             ft.Container(height=12),
@@ -34,7 +35,7 @@ class SettingsPage(ft.Column):
                 controls=[s.text("设置", "headline"), s.text("个性化配置与系统偏好", "small")],
                 spacing=4,
             ),
-            padding=ft.padding.only(left=s.PAGE_X, top=28, right=s.PAGE_X, bottom=4),
+            padding=ft.Padding.only(left=s.PAGE_X, top=28, right=s.PAGE_X, bottom=4),
         )
 
     # ── 外观 ──────────────────────────────────────────────────────────
@@ -86,7 +87,9 @@ class SettingsPage(ft.Column):
             self._row("默认输出目录", ft.Row(controls=[
                 self._output_dir_text,
                 s.button("更改", self._pick_output_dir, kind="secondary", icon=ft.Icons.FOLDER_OPEN_OUTLINED),
-            ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER)),
+                s.icon_button(ft.Icons.RESTART_ALT_OUTLINED, self._reset_output_dir, tooltip="恢复默认",
+                              size=32, color="ink-3"),
+            ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER)),
             self._row("处理完成后", ft.Row(controls=[self._after_tabs])),
             self._row("保留任务历史", self._history_limit),
         ])
@@ -108,40 +111,31 @@ class SettingsPage(ft.Column):
             self._output_dir_text.update()
         self._page.update()
 
-    # ── 网络（OCR）────────────────────────────────────────────────────
-    def _build_network(self) -> ft.Control:
-        current_provider = settings_service.get("ocr_provider", "baidu")
-        self._ocr_provider = ft.Dropdown(
-            value=current_provider,
-            options=[
-                ft.dropdown.Option("baidu", "百度 OCR"),
-                ft.dropdown.Option("tencent", "腾讯 OCR"),
-            ],
-            width=180, **self._dropdown_style(),
-            on_select=lambda e: settings_service.set("ocr_provider", e.control.value),
-        )
-        self._api_key_field = s.text_field(
-            "", "API Key", password=True, can_reveal_password=True, expand=True,
-        )
-        self._secret_key_field = s.text_field(
-            "", "Secret Key", password=True, can_reveal_password=True, expand=True,
-        )
-        return self._card("网络（OCR 高级功能）", ft.Icons.LANGUAGE_OUTLINED, [
-            self._row("OCR 服务商", self._ocr_provider),
-            self._row("API Key", self._api_key_field),
-            self._row("Secret Key", self._secret_key_field),
-            ft.Container(
-                content=ft.Row(controls=[
-                    s.button("保存 API 配置", self._save_api_keys, icon=ft.Icons.SAVE_OUTLINED),
-                ]),
-                padding=ft.padding.only(left=156, top=12),
-            ),
-        ])
+    def _reset_output_dir(self, _) -> None:
+        settings_service.set("default_output_dir", "")
+        self._output_dir_text.value = "输入文件旁的 output 文件夹"
+        self._output_dir_text.update()
+        show_toast(self._page, "已恢复为输入文件旁的 output 文件夹")
 
-    def _save_api_keys(self, _) -> None:
-        settings_service.set("ocr_api_key", self._api_key_field.value or "")
-        settings_service.set("ocr_secret_key", self._secret_key_field.value or "")
-        show_toast(self._page, "API 配置已保存", kind="success")
+    # ── 文字识别（OCR）────────────────────────────────────────────────
+    def _build_ocr(self) -> ft.Control:
+        """OCR 全部在本地用 Tesseract 识别，这里只显示引擎状态和安装方法。"""
+        tess = find_tesseract()
+        if tess:
+            langs = installed_languages(tess)
+            names = [label for key, label in (("chi_sim", "简体中文"), ("eng", "英文"), ("jpn", "日文"))
+                     if key in langs]
+            status = s.text(f"已就绪 · {'、'.join(names) or '未检测到语言包'}", "body", color="ink-2")
+            location = s.text(str(tess), "small", selectable=True, max_lines=1,
+                              overflow=ft.TextOverflow.ELLIPSIS, expand=True)
+            rows = [self._row("Tesseract", status), self._row("位置", location)]
+        else:
+            rows = [
+                self._row("Tesseract", s.text("未安装，图片识别不可用（PDF 内嵌文字仍可提取）",
+                                              "body", color="ink-2")),
+                self._row("安装方法", s.text(INSTALL_HINT.split("\n", 1)[1], "small", selectable=True)),
+            ]
+        return self._card("文字识别（OCR）", ft.Icons.DOCUMENT_SCANNER_OUTLINED, rows)
 
     # ── AI 生图 ────────────────────────────────────────────────────────
     def _build_ai_image(self) -> ft.Control:
@@ -168,7 +162,7 @@ class SettingsPage(ft.Column):
                     controls=[save_btn, test_btn],
                     spacing=8,
                 ),
-                padding=ft.padding.only(left=156, top=12),
+                padding=ft.Padding.only(left=156, top=12),
             ),
         ])
 
@@ -190,15 +184,8 @@ class SettingsPage(ft.Column):
 
     async def _test_ai_image_connection_async(self) -> None:
         from services import prompt_image_service
-        result = await prompt_image_service.generate_image(
-            prompt="A tiny red apple on a white background, minimal photo",
-            size="1024x1024",
-            quality="low",
-        )
-        if result.get("success"):
-            show_toast(self._page, "连接成功，已成功生成测试图片", kind="success")
-        else:
-            show_toast(self._page, f"连接失败：{result.get('error', '未知错误')}", kind="error", duration=4000)
+        ok, message = await prompt_image_service.check_connection()
+        show_toast(self._page, message, kind="success" if ok else "error", duration=2600 if ok else 4500)
 
     # ── 关于 ──────────────────────────────────────────────────────────
     def _build_about(self) -> ft.Control:
@@ -235,8 +222,8 @@ class SettingsPage(ft.Column):
                 ],
                 spacing=10,
             ),
-            padding=ft.padding.only(left=20, right=20, top=18, bottom=10),
-            margin=ft.margin.symmetric(horizontal=s.PAGE_X),
+            padding=ft.Padding.only(left=20, right=20, top=18, bottom=10),
+            margin=ft.Margin.symmetric(horizontal=s.PAGE_X),
         )
 
     def _row(self, label: str, control: ft.Control) -> ft.Control:
@@ -249,6 +236,6 @@ class SettingsPage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=16,
             ),
-            padding=ft.padding.symmetric(vertical=10),
-            border=ft.border.only(top=ft.BorderSide(1, c("line"))),
+            padding=ft.Padding.symmetric(vertical=10),
+            border=ft.Border.only(top=ft.BorderSide(1, c("line"))),
         )

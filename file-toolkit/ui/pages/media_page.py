@@ -35,7 +35,7 @@ class MediaPage(Workbench):
         WorkbenchFunction("video_convert", "视频转换", "MP4 / MKV / MOV / AVI / WebM", ft.Icons.SWAP_HORIZ_OUTLINED,
                           _VIDEO),
         WorkbenchFunction("video_compress", "视频压缩", "降低码率或分辨率", ft.Icons.COMPRESS_OUTLINED,
-                          _VIDEO),
+                          _VIDEO, show_size=True),
         WorkbenchFunction("video_cut", "视频剪辑", "截取一段时间", ft.Icons.CONTENT_CUT_OUTLINED,
                           _VIDEO),
         WorkbenchFunction("audio_extract", "音频提取", "从视频导出音轨", ft.Icons.MUSIC_NOTE_OUTLINED,

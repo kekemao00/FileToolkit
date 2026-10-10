@@ -44,21 +44,24 @@
 |---|---|:---:|
 | **PDF** | 合并、拆分（按页数 / 范围 / 逐页）、压缩 | ✅ |
 | | 加文字水印、设置打开密码 | ✅ |
-| | PDF 转 Word、Excel（表格提取）、PPT | ✅ |
+| | PDF 转 Word、Excel（表格提取）、PPT（每页保留原版式） | ✅ |
+| | PDF 转图片（PNG / JPG，可选清晰度）；压缩后显示省了多少 | ✅ |
 | | Word / Excel / PPT 转 PDF | 🔧 LibreOffice |
 | **图片** | 格式转换（JPG / PNG / WebP / BMP / TIFF / HEIC） | ✅ |
 | | 批量压缩、尺寸调整、文字水印、批量重命名（`{name}` `{n}` `{date}` `{ext}` 模板） | ✅ |
-| **音视频** | 视频格式转换、压缩（可选分辨率）、按时间段剪辑 | 🔧 FFmpeg |
-| | 从视频提取音频、音频格式转换 | 🔧 FFmpeg |
-| **压缩解压** | 压缩为 ZIP / 7Z / TAR.GZ；解压 ZIP / 7Z / TAR | ✅ |
+| | 多张图片合成一个 PDF（按原尺寸或 A4 排版，可调顺序） | ✅ |
+| **音视频** | 视频格式转换、压缩（可选分辨率）、按时间段剪辑，处理时显示实时进度 | ✅ 内置 FFmpeg |
+| | 从视频提取音频、音频格式转换 | ✅ 内置 FFmpeg |
+| **压缩解压** | 文件和文件夹压缩为 ZIP / 7Z / TAR.GZ，7Z 可设密码 | ✅ |
+| | 批量解压 ZIP / 7Z / TAR（每个包单独一个文件夹，支持带密码的 ZIP / 7Z，Windows 中文文件名不乱码） | ✅ |
 | | 解压 RAR | 🔧 unrar |
-| **文字识别** | 从图片识别文字 | 🔧 Tesseract |
+| **文字识别** | 从图片、扫描版 PDF 识别文字（中文 / 英文 / 日文） | 🔧 Tesseract |
 | | 提取 PDF 内嵌文字 | ✅ |
 | **AI** | 提示词出图（OpenAI Images 兼容接口），生成结果在页面内直接预览，保留最近生成记录 | 🔧 API Key |
 | | 12 类 31 个内置模板；风格增强词与反向提示词；「我的模板」支持 `{变量}`、收藏与导出 | 🔧 API Key |
 | | 一键导入开源提示词库（Awesome GPT-4o Images、Awesome GPT Image 2 Prompts，注明出处），或从网址 / JSON / CSV / Markdown 导入 | 🔧 API Key |
-| | 用自然语言描述任务、自动执行 | 🚧 |
-| **应用** | 全局功能搜索、最近操作记录、偏好设置 | ✅ |
+| | 智能入口：一句话描述需求（如「图片转 PDF 再加水印」），拆成步骤并带着文件打开对应工具 | ✅ |
+| **应用** | 全局功能搜索、最近操作记录、偏好设置；批量处理中某个文件失败不影响其余文件，输出不会覆盖已有文件 | ✅ |
 | | 应用内检查更新：查看更新说明，下载校验后一键重启更新 | ✅ |
 | | 暖灰 / 墨色界面风格（Geist 字体），浅色与深色模式；顶部浮岛式提示，清空记录、删除模板前在窗口内确认 | ✅ |
 
@@ -68,7 +71,7 @@
 
 | 程序 | 用于 | 获取方式 |
 |---|---|---|
-| FFmpeg | 音视频全部功能 | **Windows / Linux 安装包已内置**；macOS：`brew install ffmpeg`；源码运行时放到 `file-toolkit/assets/bin/` 或装到系统 PATH |
+| FFmpeg | 音视频全部功能 | **三个平台的安装包都已内置**；源码运行时放到 `file-toolkit/assets/bin/` 或装到系统 PATH（macOS 可 `brew install ffmpeg`） |
 | LibreOffice | Office 转 PDF | [官网下载](https://www.libreoffice.org/download/)，装在默认位置或 PATH 中即可被识别 |
 | Tesseract | 图片文字识别 | Windows：[UB-Mannheim 安装包](https://github.com/UB-Mannheim/tesseract/wiki)；macOS：`brew install tesseract tesseract-lang`；Linux：`sudo apt install tesseract-ocr tesseract-ocr-chi-sim` |
 | unrar | 解压 RAR | macOS：`brew install rar`；Linux：`sudo apt install unrar`；Windows：安装 [WinRAR](https://www.win-rar.com/) 或 7-Zip 并加入 PATH |
@@ -121,7 +124,7 @@ file-toolkit/
 └── tests/         # pytest 单元测试，目录结构与源码对应
 ```
 
-技术栈：[Flet](https://flet.dev) 0.84（Flutter 渲染）、pypdf / pikepdf / pdf2docx、Pillow、FFmpeg、py7zr。更多设计细节见 [docs/](docs/) 下的需求、技术与设计文档。
+技术栈：[Flet](https://flet.dev) 0.84（Flutter 渲染）、pypdf / pikepdf / pypdfium2 / pdf2docx、Pillow、FFmpeg、Tesseract、py7zr。更多设计细节见 [docs/](docs/) 下的需求、技术与设计文档。
 
 ## 打包与发布
 
@@ -160,6 +163,6 @@ tag 与 `pyproject.toml` 版本不一致、或该版本已经发过时，工作�
 
 本项目基于 [Apache License 2.0](LICENSE) 开源。Copyright © 2026 kekemao00
 
-Windows / Linux 安装包内置的 FFmpeg 来自 [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds)，以 GPL 授权单独分发。
+安装包内置的 FFmpeg（Windows / Linux 来自 [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds)，macOS 来自 [ffmpeg.martin-riedl.de](https://ffmpeg.martin-riedl.de)）以 GPL 授权单独分发。
 
 界面字体 [Geist / Geist Mono](https://github.com/vercel/geist-font) 以 SIL Open Font License 1.1 授权，许可证全文见 `file-toolkit/assets/fonts/Geist-OFL.txt`。

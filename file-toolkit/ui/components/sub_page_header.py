@@ -30,7 +30,7 @@ class SubPageHeader(ft.Container):
         on_back: callable,
     ) -> None:
         super().__init__(
-            padding=ft.padding.only(left=32, top=24, right=32, bottom=16),
+            padding=ft.Padding.only(left=32, top=24, right=32, bottom=16),
             content=ft.Row(
                 controls=[
                     ft.IconButton(
