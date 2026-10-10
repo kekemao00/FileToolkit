@@ -12,7 +12,7 @@ authors = [
 dependencies = [
     "flet==0.84.0",  # 与 flet-cli 版本保持一致；打包时按此版本安装进应用
     "pypdf>=4.0,<5.0",
-    "pikepdf>=9.0,<10.0",
+    "pikepdf>=10.16.0,<11.0",
     "pdf2docx>=0.5.13,<0.6.0",
     "pypdfium2>=5.14.0,<6",  # PDF 渲染（转图片、转 PPT、扫描件 OCR）
     "Pillow>=10.0,<11.0",
