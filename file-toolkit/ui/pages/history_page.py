@@ -71,7 +71,7 @@ class HistoryPage(ft.Column):
         self._empty_hint = ft.Container(
             content=s.empty_state(ft.Icons.HISTORY_OUTLINED, "暂无匹配的操作记录",
                                   "调整搜索关键字或完成一次文件处理后再来查看"),
-            padding=ft.padding.symmetric(vertical=48),
+            padding=ft.Padding.symmetric(vertical=48),
             alignment=ft.Alignment(0, 0),
             visible=False,
         )
@@ -105,7 +105,7 @@ class HistoryPage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             height=64,
-            padding=ft.padding.only(left=s.PAGE_X, right=s.PAGE_X - 4),
+            padding=ft.Padding.only(left=s.PAGE_X, right=s.PAGE_X - 4),
         )
 
     # ── 主体 ──────────────────────────────────────────────────
@@ -124,7 +124,7 @@ class HistoryPage(ft.Column):
                             ],
                             spacing=16,
                         ),
-                        padding=ft.padding.only(left=s.PAGE_X, right=s.PAGE_X, top=4, bottom=24),
+                        padding=ft.Padding.only(left=s.PAGE_X, right=s.PAGE_X, top=4, bottom=24),
                     ),
                 ],
                 spacing=0,
@@ -174,8 +174,8 @@ class HistoryPage(ft.Column):
                     spacing=6,
                     tight=True,
                 ),
-                padding=ft.padding.symmetric(horizontal=20, vertical=16),
-                border=None if i == 0 else ft.border.only(left=ft.BorderSide(1, c("line"))),
+                padding=ft.Padding.symmetric(horizontal=20, vertical=16),
+                border=None if i == 0 else ft.Border.only(left=ft.BorderSide(1, c("line"))),
                 expand=True,
             ))
         return s.card(ft.Row(controls=cells, spacing=0), padding=0)
@@ -215,8 +215,8 @@ class HistoryPage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             height=40,
-            padding=ft.padding.symmetric(horizontal=16),
-            border=ft.border.only(bottom=ft.BorderSide(1, c("line"))),
+            padding=ft.Padding.symmetric(horizontal=16),
+            border=ft.Border.only(bottom=ft.BorderSide(1, c("line"))),
         )
 
     # ── 分页器 ───────────────────────────────────────────────
@@ -231,8 +231,8 @@ class HistoryPage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             height=52,
-            padding=ft.padding.symmetric(horizontal=16),
-            border=ft.border.only(top=ft.BorderSide(1, c("line"))),
+            padding=ft.Padding.symmetric(horizontal=16),
+            border=ft.Border.only(top=ft.BorderSide(1, c("line"))),
         )
 
     # ── 提示 ─────────────────────────────────────────────────
@@ -438,14 +438,14 @@ class HistoryPage(ft.Column):
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
                         expand=True,
-                        padding=ft.padding.only(right=12),
+                        padding=ft.Padding.only(right=12),
                     ),
                     ft.Container(
                         content=ft.Container(
                             content=s.text(action_label, "caption", color="ink-2"),
                             height=22, alignment=ft.Alignment(0, 0),
-                            border=ft.border.all(1, c("line-strong")), border_radius=11,
-                            padding=ft.padding.symmetric(horizontal=8),
+                            border=ft.Border.all(1, c("line-strong")), border_radius=11,
+                            padding=ft.Padding.symmetric(horizontal=8),
                         ),
                         width=_COLS["action"], alignment=ft.Alignment(-1, 0),
                     ),
@@ -473,14 +473,14 @@ class HistoryPage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             height=s.H_ROW,
-            padding=ft.padding.only(left=16, right=12),
+            padding=ft.Padding.only(left=16, right=12),
             animate=s.snappy(),
         )
         row.on_hover = lambda e, r=row: self._hover_bg(r, e)
         if is_last:
             return row
         return ft.Column(
-            controls=[row, ft.Container(height=1, bgcolor=c("line"), margin=ft.margin.symmetric(horizontal=12))],
+            controls=[row, ft.Container(height=1, bgcolor=c("line"), margin=ft.Margin.symmetric(horizontal=12))],
             spacing=0,
         )
 

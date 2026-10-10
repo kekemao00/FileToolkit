@@ -37,7 +37,7 @@ class _Island:
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
         self.body_box = ft.Container(content=self.body, opacity=0, animate_opacity=s.snappy(),
-                                     padding=ft.padding.only(left=9, right=16))
+                                     padding=ft.Padding.only(left=9, right=16))
         self.pill = ft.Container(
             content=self.body_box, width=10, height=10, border_radius=5, opacity=0,
             alignment=ft.Alignment(-1, 0), clip_behavior=ft.ClipBehavior.HARD_EDGE,

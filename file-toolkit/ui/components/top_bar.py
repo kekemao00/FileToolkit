@@ -30,8 +30,8 @@ class TopBar(ft.Container):
             bar_leading=ft.Icon(ft.Icons.SEARCH_OUTLINED, color=c("ink-3", "fg"), size=16),
             bar_trailing=[ft.Container(
                 content=ft.Text("⌘K" if sys.platform == "darwin" else "Ctrl K", size=11, color=c("ink-3", "fg"), font_family=s.MONO),
-                padding=ft.padding.symmetric(horizontal=6, vertical=2),
-                border=ft.border.all(1, c("line")), border_radius=6,
+                padding=ft.Padding.symmetric(horizontal=6, vertical=2),
+                border=ft.Border.all(1, c("line")), border_radius=6,
             )],
             bar_bgcolor=c("surface"),
             bar_overlay_color=ft.Colors.TRANSPARENT,
@@ -39,7 +39,7 @@ class TopBar(ft.Container):
             bar_elevation=0,
             bar_border_side=ft.BorderSide(1, c("line")),
             bar_shape=ft.RoundedRectangleBorder(radius=s.R_INPUT),
-            bar_padding=ft.padding.symmetric(horizontal=12),
+            bar_padding=ft.Padding.symmetric(horizontal=12),
             bar_text_style=ft.TextStyle(size=13, color=c("ink", "fg"), font_family=s.FONT),
             bar_hint_text_style=hint_style,
             bar_size_constraints=ft.BoxConstraints(min_height=36, max_height=36),
@@ -61,7 +61,7 @@ class TopBar(ft.Container):
 
         super().__init__(
             height=64,
-            padding=ft.padding.only(left=s.PAGE_X, right=s.PAGE_X - 4),
+            padding=ft.Padding.only(left=s.PAGE_X, right=s.PAGE_X - 4),
             content=ft.Row(
                 controls=[
                     leading or ft.Container(),

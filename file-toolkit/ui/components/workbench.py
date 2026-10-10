@@ -168,11 +168,11 @@ class ChoiceGroup(ft.Row):
                     color=c("on-ink" if active else "ink-2", "fg"),
                 ),
                 bgcolor=c("ink") if active else c("surface"),
-                border=ft.border.all(1, c("ink") if active else c("line-strong")),
+                border=ft.Border.all(1, c("ink") if active else c("line-strong")),
                 border_radius=14,
                 height=28,
                 alignment=ft.Alignment(0, 0),
-                padding=ft.padding.symmetric(horizontal=11),
+                padding=ft.Padding.symmetric(horizontal=11),
                 on_click=lambda _, v=val: self._select(v),
                 animate=s.snappy(),
             ))
@@ -309,7 +309,7 @@ class Workbench(ft.Column):
             height=168,
             expand=True,
             bgcolor=c("surface"),
-            border=ft.border.all(1, c("line")),
+            border=ft.Border.all(1, c("line")),
             border_radius=s.R_PANEL,
             on_click=self._pick_files,
             on_hover=self._on_pick_hover,
@@ -325,12 +325,12 @@ class Workbench(ft.Column):
                         ft.Container(expand=True),
                         s.button("清空全部", lambda _: self._clear_files(), kind="ghost", height=30),
                     ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    padding=ft.padding.only(left=16, right=8, top=10, bottom=6),
+                    padding=ft.Padding.only(left=16, right=8, top=10, bottom=6),
                 ),
-                ft.Container(content=self._file_hint, padding=ft.padding.only(left=16, right=16, bottom=6)),
+                ft.Container(content=self._file_hint, padding=ft.Padding.only(left=16, right=16, bottom=6)),
                 self._file_list,
             ], spacing=0),
-            padding=ft.padding.only(bottom=6),
+            padding=ft.Padding.only(bottom=6),
         )
         return ft.Container(
             content=ft.Column(
@@ -344,7 +344,7 @@ class Workbench(ft.Column):
                 ],
                 spacing=16,
             ),
-            padding=ft.padding.only(left=s.PAGE_X, right=16, top=4, bottom=20),
+            padding=ft.Padding.only(left=s.PAGE_X, right=16, top=4, bottom=20),
         )
 
     def _accept_hint(self) -> str:
@@ -357,7 +357,7 @@ class Workbench(ft.Column):
     def _on_pick_hover(self, e: ft.ControlEvent) -> None:
         on = e.data in (True, "true")
         self._pick_area.bgcolor = c("surface-2" if on else "surface")
-        self._pick_area.border = ft.border.all(1, c("line-strong" if on else "line"))
+        self._pick_area.border = ft.Border.all(1, c("line-strong" if on else "line"))
         self._pick_icon.bgcolor = c("surface-3" if on else "surface-2")
         self._pick_area.update()
 
@@ -371,7 +371,7 @@ class Workbench(ft.Column):
                               size=28, color="ink-3"),
             ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER),
             bgcolor=c("surface-2"), border_radius=s.R_INPUT,
-            padding=ft.padding.only(left=12, right=4, top=4, bottom=4),
+            padding=ft.Padding.only(left=12, right=4, top=4, bottom=4),
         ))
         return ft.Container(
             content=ft.Column(
@@ -398,9 +398,9 @@ class Workbench(ft.Column):
             width=320,
             bgcolor=c("surface"),
             border_radius=s.R_PANEL,
-            border=ft.border.all(1, c("line")),
-            padding=ft.padding.all(20),
-            margin=ft.margin.only(right=s.PAGE_X, bottom=20, top=4),
+            border=ft.Border.all(1, c("line")),
+            padding=ft.Padding.all(20),
+            margin=ft.Margin.only(right=s.PAGE_X, bottom=20, top=4),
         )
 
     # ── 功能卡片 ─────────────────────────────────────────────────────────
@@ -418,9 +418,9 @@ class Workbench(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             bgcolor=c("accent-soft") if active else c("surface"),
-            border=ft.border.all(1, c("accent") if active else c("line")),
+            border=ft.Border.all(1, c("accent") if active else c("line")),
             border_radius=s.R_BUTTON,
-            padding=ft.padding.symmetric(horizontal=10),
+            padding=ft.Padding.symmetric(horizontal=10),
             on_click=lambda _, k=f.key: self._select_func(k),
             tooltip=f.desc,
             expand=True,
@@ -481,11 +481,11 @@ class Workbench(ft.Column):
                 controls.append(ft.Column(controls=[
                     ft.IconButton(ft.Icons.KEYBOARD_ARROW_UP_OUTLINED, icon_size=16, disabled=idx == 0,
                                   icon_color=c("ink-2", "fg"), tooltip="上移",
-                                  style=ft.ButtonStyle(padding=ft.padding.all(0)),
+                                  style=ft.ButtonStyle(padding=ft.Padding.all(0)),
                                   on_click=lambda _, i=idx: self._move_file(i, -1)),
                     ft.IconButton(ft.Icons.KEYBOARD_ARROW_DOWN_OUTLINED, icon_size=16, disabled=idx == len(self._files) - 1,
                                   icon_color=c("ink-2", "fg"), tooltip="下移",
-                                  style=ft.ButtonStyle(padding=ft.padding.all(0)),
+                                  style=ft.ButtonStyle(padding=ft.Padding.all(0)),
                                   on_click=lambda _, i=idx: self._move_file(i, 1)),
                 ], spacing=0, width=28))
             controls += [
@@ -506,17 +506,17 @@ class Workbench(ft.Column):
                 content=ft.Row(controls=controls, spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 opacity=1.0 if ok else 0.5,
                 height=s.H_ROW,
-                padding=ft.padding.only(left=16, right=8),
+                padding=ft.Padding.only(left=16, right=8),
                 animate=s.snappy(),
             )
             row.on_hover = lambda e, r=row: self._row_hover(r, e)
             if rows:
-                rows.append(ft.Container(height=1, bgcolor=c("line"), margin=ft.margin.symmetric(horizontal=12)))
+                rows.append(ft.Container(height=1, bgcolor=c("line"), margin=ft.Margin.symmetric(horizontal=12)))
             rows.append(row)
         if not rows:
             rows.append(ft.Container(
                 content=s.text("还没有选择文件", "small", color="ink-3"),
-                padding=ft.padding.symmetric(vertical=18), alignment=ft.Alignment(0, 0),
+                padding=ft.Padding.symmetric(vertical=18), alignment=ft.Alignment(0, 0),
             ))
         self._file_list.controls = rows
 
@@ -682,7 +682,7 @@ class Workbench(ft.Column):
     def _card(self, content: ft.Control) -> ft.Container:
         return s.card(
             content, padding=24, visible=False,
-            margin=ft.margin.only(left=s.PAGE_X, right=16, top=4, bottom=20),
+            margin=ft.Margin.only(left=s.PAGE_X, right=16, top=4, bottom=20),
             animate=s.smooth(),
         )
 
@@ -819,13 +819,13 @@ class Workbench(ft.Column):
         panel = self._param_panel
         if narrow:
             panel.width = None
-            panel.margin = ft.margin.only(left=s.PAGE_X, right=s.PAGE_X, bottom=20)
+            panel.margin = ft.Margin.only(left=s.PAGE_X, right=s.PAGE_X, bottom=20)
             self._run_btn.full_width = 320
             body = ft.Column(controls=[self._main_content, panel], expand=True, spacing=0,
                              scroll=ft.ScrollMode.AUTO)
         else:
             panel.width = 320
-            panel.margin = ft.margin.only(right=s.PAGE_X, bottom=20, top=4)
+            panel.margin = ft.Margin.only(right=s.PAGE_X, bottom=20, top=4)
             self._run_btn.full_width = 278
             body = ft.Row(controls=[self._main_content, panel], expand=True, spacing=0,
                           vertical_alignment=ft.CrossAxisAlignment.STRETCH)

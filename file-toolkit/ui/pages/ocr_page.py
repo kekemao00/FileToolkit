@@ -155,7 +155,7 @@ class OcrPage(ft.Column):
                 spacing=16,
                 horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
-            padding=ft.padding.only(left=s.PAGE_X, right=16, top=4, bottom=20),
+            padding=ft.Padding.only(left=s.PAGE_X, right=16, top=4, bottom=20),
         )
 
     def _build_engine_badge(self) -> ft.Control:
@@ -176,9 +176,9 @@ class OcrPage(ft.Column):
             ),
             height=22,
             bgcolor=c("surface"),
-            border=ft.border.all(1, c("line-strong")),
+            border=ft.Border.all(1, c("line-strong")),
             border_radius=11,
-            padding=ft.padding.symmetric(horizontal=9),
+            padding=ft.Padding.symmetric(horizontal=9),
         )
 
     def _build_drop_zone(self) -> ft.Control:
@@ -199,7 +199,7 @@ class OcrPage(ft.Column):
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
             bgcolor=c("surface"),
-            border=ft.border.all(1, c("line")),
+            border=ft.Border.all(1, c("line")),
             border_radius=s.R_PANEL,
             on_click=self._pick_file,
             on_hover=self._on_drop_zone_hover,
@@ -216,7 +216,7 @@ class OcrPage(ft.Column):
     def _on_drop_zone_hover(self, e: ft.ControlEvent) -> None:
         on = e.data in (True, "true")
         self._drop_zone_body.bgcolor = c("surface-2" if on else "surface")
-        self._drop_zone_body.border = ft.border.all(1, c("line-strong" if on else "line"))
+        self._drop_zone_body.border = ft.Border.all(1, c("line-strong" if on else "line"))
         self._drop_icon.bgcolor = c("surface-3" if on else "surface-2")
         self._drop_zone_body.update()
 
@@ -240,7 +240,7 @@ class OcrPage(ft.Column):
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.only(left=14, right=8, top=10, bottom=10),
+                padding=ft.Padding.only(left=14, right=8, top=10, bottom=10),
             ),
         )
         return self._file_info_container
@@ -266,7 +266,7 @@ class OcrPage(ft.Column):
                 expand=True,
             ),
             width=320,
-            margin=ft.margin.only(right=s.PAGE_X, bottom=20, top=4),
+            margin=ft.Margin.only(right=s.PAGE_X, bottom=20, top=4),
         )
         return self._param_panel
 
@@ -289,7 +289,7 @@ class OcrPage(ft.Column):
                             ],
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
-                        padding=ft.padding.only(bottom=8),
+                        padding=ft.Padding.only(bottom=8),
                     ),
                     self._progress_bar,
                     self._progress_desc,
@@ -299,10 +299,10 @@ class OcrPage(ft.Column):
                 spacing=12,
             ),
             bgcolor=c("surface"),
-            border=ft.border.all(1, c("line")),
+            border=ft.Border.all(1, c("line")),
             border_radius=s.R_PANEL,
-            padding=ft.padding.all(24),
-            margin=ft.margin.only(left=s.PAGE_X, right=16, top=4),
+            padding=ft.Padding.all(24),
+            margin=ft.Margin.only(left=s.PAGE_X, right=16, top=4),
         )
 
     def _build_complete_view(self) -> ft.Container:
@@ -356,7 +356,7 @@ class OcrPage(ft.Column):
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.START,
             ),
-            margin=ft.margin.only(left=s.PAGE_X, right=16, top=4),
+            margin=ft.Margin.only(left=s.PAGE_X, right=16, top=4),
         )
 
     def _build_summary_row(self, label: str, value_text: ft.Text, last: bool = False) -> ft.Control:
@@ -364,8 +364,8 @@ class OcrPage(ft.Column):
             content=ft.Row(
                 controls=[s.text(label, "small"), ft.Container(expand=True), value_text],
             ),
-            padding=ft.padding.symmetric(vertical=8),
-            border=None if last else ft.border.only(bottom=ft.BorderSide(1, c("line"))),
+            padding=ft.Padding.symmetric(vertical=8),
+            border=None if last else ft.Border.only(bottom=ft.BorderSide(1, c("line"))),
         )
 
     # ── 响应式 ──────────────────────────────────────────────
@@ -377,7 +377,7 @@ class OcrPage(ft.Column):
         self._is_narrow = narrow
         if narrow:
             self._param_panel.width = None
-            self._param_panel.margin = ft.margin.only(left=s.PAGE_X, right=s.PAGE_X, bottom=20)
+            self._param_panel.margin = ft.Margin.only(left=s.PAGE_X, right=s.PAGE_X, bottom=20)
             self._run_btn.full_width = 320
             new_body = ft.Column(
                 controls=[self._main_content, self._param_panel],
@@ -385,7 +385,7 @@ class OcrPage(ft.Column):
             )
         else:
             self._param_panel.width = 320
-            self._param_panel.margin = ft.margin.only(right=s.PAGE_X, bottom=20, top=4)
+            self._param_panel.margin = ft.Margin.only(right=s.PAGE_X, bottom=20, top=4)
             self._run_btn.full_width = 278
             new_body = ft.Row(
                 controls=[self._main_content, self._param_panel],

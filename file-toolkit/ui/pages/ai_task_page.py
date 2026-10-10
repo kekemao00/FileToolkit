@@ -52,7 +52,7 @@ class AiTaskPage(ft.Column):
             min_lines=2,
             max_lines=6,
             dense=True,
-            content_padding=ft.padding.symmetric(horizontal=4, vertical=6),
+            content_padding=ft.Padding.symmetric(horizontal=4, vertical=6),
             on_focus=lambda e: self._focus_console(True),
             on_blur=lambda e: self._focus_console(False),
         )
@@ -78,7 +78,7 @@ class AiTaskPage(ft.Column):
             controls=[
                 ft.Container(
                     width=_MAX_WIDTH,
-                    padding=ft.padding.only(left=s.PAGE_X, right=s.PAGE_X, top=72, bottom=40),
+                    padding=ft.Padding.only(left=s.PAGE_X, right=s.PAGE_X, top=72, bottom=40),
                     content=ft.Column(
                         spacing=0,
                         horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
@@ -88,8 +88,8 @@ class AiTaskPage(ft.Column):
                             self._build_prompt_suggestions(),
                             ft.Container(height=12),
                             self._build_input_console(),
-                            ft.Container(content=self._attach_list, padding=ft.padding.only(top=10)),
-                            ft.Container(content=self._plan, padding=ft.padding.only(top=16)),
+                            ft.Container(content=self._attach_list, padding=ft.Padding.only(top=10)),
+                            ft.Container(content=self._plan, padding=ft.Padding.only(top=16)),
                             ft.Container(height=20),
                             self._build_status_indicators(),
                         ],
@@ -125,10 +125,10 @@ class AiTaskPage(ft.Column):
         for item in _PROMPT_SUGGESTIONS:
             btn = ft.Container(
                 bgcolor=c("surface"),
-                border=ft.border.all(1, c("line")),
+                border=ft.Border.all(1, c("line")),
                 border_radius=999,
                 height=32,
-                padding=ft.padding.symmetric(horizontal=12),
+                padding=ft.Padding.symmetric(horizontal=12),
                 on_click=lambda _, lbl=item["label"]: self._use_suggestion(lbl),
                 content=ft.Row(
                     spacing=6,
@@ -166,9 +166,9 @@ class AiTaskPage(ft.Column):
 
         self._console = ft.Container(
             border_radius=s.R_PANEL,
-            border=ft.border.all(1, c("line")),
+            border=ft.Border.all(1, c("line")),
             bgcolor=c("surface"),
-            padding=ft.padding.only(left=14, right=10, top=10, bottom=10),
+            padding=ft.Padding.only(left=14, right=10, top=10, bottom=10),
             animate=s.snappy(),
             content=ft.Column(
                 spacing=6,
@@ -213,7 +213,7 @@ class AiTaskPage(ft.Column):
         console = getattr(self, "_console", None)
         if console is None:
             return
-        console.border = ft.border.all(1.5 if on else 1, c("accent" if on else "line"))
+        console.border = ft.Border.all(1.5 if on else 1, c("accent" if on else "line"))
         try:
             console.update()
         except RuntimeError:
@@ -247,7 +247,7 @@ class AiTaskPage(ft.Column):
                 s.text("没找到对应的工具", "title"),
                 s.text("换个说法试试，比如「PDF 转 Word」「压缩视频」「图片加水印」，"
                        "或用顶部搜索框按功能名查找。", "small"),
-            ]), padding=ft.padding.all(16))]
+            ]), padding=ft.Padding.all(16))]
             return
         rows = [self._step_row(i, f, first=i == 0) for i, f in enumerate(steps)]
         note = ("点「打开」进入对应工具，附加的文件会一起带过去。"
@@ -259,12 +259,12 @@ class AiTaskPage(ft.Column):
             *rows,
             ft.Container(height=10),
             s.text(note, "small", "ink-3"),
-        ]), padding=ft.padding.only(left=16, right=16, top=14, bottom=14))]
+        ]), padding=ft.Padding.only(left=16, right=16, top=14, bottom=14))]
 
     def _step_row(self, index: int, feature: Feature, first: bool) -> ft.Control:
         return ft.Container(
-            padding=ft.padding.symmetric(vertical=8),
-            border=ft.border.only(top=ft.BorderSide(1, c("line"))) if index else None,
+            padding=ft.Padding.symmetric(vertical=8),
+            border=ft.Border.only(top=ft.BorderSide(1, c("line"))) if index else None,
             content=ft.Row(
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=12,
@@ -320,10 +320,10 @@ class AiTaskPage(ft.Column):
         for f in self._attached_files:
             chip = ft.Container(
                 bgcolor=c("surface"),
-                border=ft.border.all(1, c("line")),
+                border=ft.Border.all(1, c("line")),
                 border_radius=999,
                 height=30,
-                padding=ft.padding.only(left=10, right=2),
+                padding=ft.Padding.only(left=10, right=2),
                 content=ft.Row(
                     spacing=6,
                     tight=True,

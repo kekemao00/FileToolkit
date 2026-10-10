@@ -35,7 +35,7 @@ class SettingsPage(ft.Column):
                 controls=[s.text("设置", "headline"), s.text("个性化配置与系统偏好", "small")],
                 spacing=4,
             ),
-            padding=ft.padding.only(left=s.PAGE_X, top=28, right=s.PAGE_X, bottom=4),
+            padding=ft.Padding.only(left=s.PAGE_X, top=28, right=s.PAGE_X, bottom=4),
         )
 
     # ── 外观 ──────────────────────────────────────────────────────────
@@ -162,7 +162,7 @@ class SettingsPage(ft.Column):
                     controls=[save_btn, test_btn],
                     spacing=8,
                 ),
-                padding=ft.padding.only(left=156, top=12),
+                padding=ft.Padding.only(left=156, top=12),
             ),
         ])
 
@@ -222,8 +222,8 @@ class SettingsPage(ft.Column):
                 ],
                 spacing=10,
             ),
-            padding=ft.padding.only(left=20, right=20, top=18, bottom=10),
-            margin=ft.margin.symmetric(horizontal=s.PAGE_X),
+            padding=ft.Padding.only(left=20, right=20, top=18, bottom=10),
+            margin=ft.Margin.symmetric(horizontal=s.PAGE_X),
         )
 
     def _row(self, label: str, control: ft.Control) -> ft.Control:
@@ -236,6 +236,6 @@ class SettingsPage(ft.Column):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=16,
             ),
-            padding=ft.padding.symmetric(vertical=10),
-            border=ft.border.only(top=ft.BorderSide(1, c("line"))),
+            padding=ft.Padding.symmetric(vertical=10),
+            border=ft.Border.only(top=ft.BorderSide(1, c("line"))),
         )

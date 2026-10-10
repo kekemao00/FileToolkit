@@ -47,7 +47,7 @@ class NavRail(ft.Container):
             width=_WIDTH,
             expand_loose=True,
             bgcolor=c("canvas"),
-            border=ft.border.only(right=ft.BorderSide(1, c("line"))),
+            border=ft.Border.only(right=ft.BorderSide(1, c("line"))),
             content=ft.Column(
                 controls=[
                     self._build_logo(),
@@ -57,7 +57,7 @@ class NavRail(ft.Container):
                 spacing=0,
                 expand=True,
             ),
-            padding=ft.padding.only(left=_PAD, right=_PAD, top=16, bottom=14),
+            padding=ft.Padding.only(left=_PAD, right=_PAD, top=16, bottom=14),
         )
 
     # ── 品牌区 ───────────────────────────────────────────────────────────
@@ -85,7 +85,7 @@ class NavRail(ft.Container):
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.only(left=6, bottom=22, top=2),
+            padding=ft.Padding.only(left=6, bottom=22, top=2),
         )
 
     # ── 导航列表 ─────────────────────────────────────────────────────────
@@ -125,7 +125,7 @@ class NavRail(ft.Container):
             ),
             left=0, right=0, top=index * (_ITEM_H + _GAP), height=_ITEM_H,
             border_radius=s.R_BUTTON,
-            padding=ft.padding.symmetric(horizontal=12),
+            padding=ft.Padding.symmetric(horizontal=12),
             on_click=lambda e, r=route: self._on_navigate(r),
             on_hover=lambda e, i=index: self._on_item_hover(i, e),
             animate=s.snappy(),
@@ -165,7 +165,7 @@ class NavRail(ft.Container):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             height=_ITEM_H,
-            padding=ft.padding.symmetric(horizontal=12),
+            padding=ft.Padding.symmetric(horizontal=12),
             border_radius=s.R_BUTTON,
             on_click=lambda e: self._on_navigate("/settings"),
             animate=s.snappy(),
@@ -173,8 +173,8 @@ class NavRail(ft.Container):
         settings.on_hover = lambda e: self._footer_hover(settings, e)
         return ft.Container(
             content=settings,
-            padding=ft.padding.only(top=8),
-            border=ft.border.only(top=ft.BorderSide(1, c("line"))),
+            padding=ft.Padding.only(top=8),
+            border=ft.Border.only(top=ft.BorderSide(1, c("line"))),
         )
 
     @staticmethod
