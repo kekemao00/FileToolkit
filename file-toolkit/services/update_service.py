@@ -120,7 +120,12 @@ def clean_notes(body: str) -> str:
                 continue
         if not skipping:
             out.append(line)
-    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip()
+    text = "\n".join(out)
+    # GitHub 自动生成的条目 "… by @user in https://…/pull/22" 缩成 "…（#22）"
+    text = re.sub(r" by @[\w-]+ in (https://github\.com/\S+/pull/(\d+))", r"（[#\2](\1)）", text)
+    text = re.sub(r"^## What's Changed\s*$", "## 更新内容", text, flags=re.M)
+    text = re.sub(r"^\*\*Full Changelog\*\*: (\S+)\s*$", r"[查看完整变更](\1)", text, flags=re.M)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
 def parse_release(data: dict) -> Release:
@@ -407,6 +412,10 @@ def consume_pending() -> tuple[str, str] | None:
     current = parse_version(app_version())
     target = parse_version(version)
     ok = current is not None and target is not None and current >= target
+    if ok:
+        # 安装包和日志都用不着了
+        import shutil
+        shutil.rmtree(download_dir(), ignore_errors=True)
     return ("updated" if ok else "failed"), version
 
 

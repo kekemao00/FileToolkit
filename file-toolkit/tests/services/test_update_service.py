@@ -141,9 +141,10 @@ def test_package_name_matches_release_workflow():
 
 def test_clean_notes_drops_download_section():
     notes = clean_notes(_BODY)
-    assert notes.startswith("## What's Changed")
+    assert notes.startswith("## 更新内容")
     assert "SHA256SUMS" not in notes and "| 平台 |" not in notes
-    assert "Full Changelog" in notes
+    assert "* feat: 检查更新（[#22](https://github.com/kekemao00/FileToolkit/pull/22)）" in notes
+    assert notes.endswith("[查看完整变更](https://github.com/kekemao00/FileToolkit/compare/v1.4.1...v1.5.0)")
 
 
 def test_parse_release():
@@ -279,10 +280,15 @@ def test_pending_marker(tmp_path: Path, monkeypatch):
     history_service.init_db(db)
     settings_service.init_settings(db)
     monkeypatch.setattr(update_service, "app_version", lambda: "1.5.0")
+    downloads = tmp_path / "downloads"
+    monkeypatch.setattr(update_service, "download_dir", lambda: downloads)
 
     assert update_service.consume_pending() is None
     update_service.mark_pending("1.5.0")
+    downloads.mkdir()
+    (downloads / "FileToolkit-1.5.0-linux-x64.tar.gz").write_bytes(b"x")
     assert update_service.consume_pending() == ("updated", "1.5.0")
+    assert not downloads.exists()
     assert update_service.consume_pending() is None
     update_service.mark_pending("1.6.0")
     assert update_service.consume_pending() == ("failed", "1.6.0")
