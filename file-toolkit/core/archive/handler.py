@@ -9,6 +9,8 @@ from pathlib import Path
 import py7zr
 
 from core.models import ProgressCallback, TaskResult, TaskStatus
+from core.paths import unique_path
+from core.task_control import TaskCancelled, check_cancelled
 
 logger = logging.getLogger(__name__)
 
@@ -63,11 +65,11 @@ def compress(
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        # 生成输出文件名
+        # 生成输出文件名（同名压缩包已存在时追加 _1，不覆盖）
         base_name = input_files[0].stem if len(input_files) == 1 else "archive"
         ext_map = {"zip": ".zip", "7z": ".7z", "tar.gz": ".tar.gz"}
         ext = ext_map.get(format, ".zip")
-        output_file = output_dir / f"{base_name}{ext}"
+        output_file = unique_path(output_dir / f"{base_name}{ext}")
 
         # 收集所有待压缩文件（展开文件夹）
         file_entries: list[tuple[Path, str]] = []
@@ -76,7 +78,10 @@ def compress(
                 for root, _, files in os.walk(p):
                     for f in files:
                         full = Path(root) / f
-                        arcname = str(full.relative_to(p.parent))
+                        if full == output_file:
+                            continue  # 输出目录在所选文件夹里时，别把正在写的压缩包也打进去
+                        # 压缩包里统一用 / 分隔（Windows 上 relative_to 得到的是 \）
+                        arcname = full.relative_to(p.parent).as_posix()
                         file_entries.append((full, arcname))
             else:
                 file_entries.append((p, p.name))
@@ -99,6 +104,10 @@ def compress(
             duration_seconds=time.time() - t0,
         )
 
+    except TaskCancelled:
+        output_file.unlink(missing_ok=True)
+        return TaskResult(status=TaskStatus.CANCELLED, error_message="已取消",
+                          duration_seconds=time.time() - t0)
     except Exception as exc:
         return TaskResult(
             status=TaskStatus.FAILED,
@@ -115,6 +124,7 @@ def _compress_zip(
 ) -> None:
     with zipfile.ZipFile(output_file, "w", zipfile.ZIP_DEFLATED) as zf:
         for i, (full_path, arcname) in enumerate(entries, start=1):
+            check_cancelled()
             zf.write(full_path, arcname)
             if cb:
                 cb(i, total, f"压缩中：{arcname} ({i}/{total})")
@@ -128,6 +138,7 @@ def _compress_7z(
 ) -> None:
     with py7zr.SevenZipFile(str(output_file), "w") as sz:
         for i, (full_path, arcname) in enumerate(entries, start=1):
+            check_cancelled()
             sz.write(full_path, arcname)
             if cb:
                 cb(i, total, f"压缩中：{arcname} ({i}/{total})")
@@ -141,6 +152,7 @@ def _compress_tar(
 ) -> None:
     with tarfile.open(output_file, "w:gz") as tf:
         for i, (full_path, arcname) in enumerate(entries, start=1):
+            check_cancelled()
             tf.add(full_path, arcname)
             if cb:
                 cb(i, total, f"压缩中：{arcname} ({i}/{total})")
@@ -180,11 +192,14 @@ def extract(
 
         return TaskResult(
             status=TaskStatus.SUCCESS,
-            output_files=[],
+            output_files=[output_dir],
             output_dir=output_dir,
             duration_seconds=time.time() - t0,
         )
 
+    except TaskCancelled:
+        return TaskResult(status=TaskStatus.CANCELLED, error_message="已取消",
+                          duration_seconds=time.time() - t0)
     except Exception as exc:
         return TaskResult(
             status=TaskStatus.FAILED,
@@ -193,17 +208,49 @@ def extract(
         )
 
 
+def zip_member_name(info: zipfile.ZipInfo) -> str:
+    """还原 ZIP 成员的真实文件名。
+
+    没有 UTF-8 标志（0x800）的成员名，Python 一律按 cp437 解码；Windows 资源管理器 / 老版
+    WinRAR 打的中文包实际是 GBK，macOS 打的包常常是 UTF-8 却不设标志，直接解会是乱码。
+    """
+    name = info.filename
+    if info.flag_bits & 0x800 or name.isascii():
+        return name
+    try:
+        raw = name.encode("cp437")
+    except UnicodeEncodeError:
+        return name
+    for encoding in ("utf-8", "gbk", "big5", "shift_jis"):
+        try:
+            return raw.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return name
+
+
 def _extract_zip(src: Path, dst: Path, cb: ProgressCallback | None) -> None:
+    import shutil
+
     with zipfile.ZipFile(src, "r") as zf:
-        members = zf.namelist()
-        total = len(members)
-        for i, name in enumerate(members, start=1):
-            safe_target = _safe_extract_check(name, dst)
-            if safe_target is None:
+        infos = zf.infolist()
+        if any(i.flag_bits & 0x1 for i in infos):
+            raise RuntimeError("压缩包有密码保护，暂不支持解压加密的 ZIP")
+        total = len(infos)
+        for i, info in enumerate(infos, start=1):
+            check_cancelled()
+            name = zip_member_name(info)
+            target = _safe_extract_check(name, dst)
+            if target is None:
                 if cb:
                     cb(i, total, f"跳过可疑路径：{name} ({i}/{total})")
                 continue
-            zf.extract(name, dst)
+            if info.is_dir() or name.endswith(("/", "\\")):
+                target.mkdir(parents=True, exist_ok=True)
+            else:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with zf.open(info) as fsrc, open(target, "wb") as fdst:
+                    shutil.copyfileobj(fsrc, fdst, 1024 * 1024)
             if cb:
                 cb(i, total, f"解压中：{name} ({i}/{total})")
 
@@ -230,10 +277,16 @@ def _extract_7z(src: Path, dst: Path, cb: ProgressCallback | None) -> None:
 
 def _extract_rar(src: Path, dst: Path, cb: ProgressCallback | None) -> None:
     import rarfile
-    with rarfile.RarFile(str(src), "r") as rf:
+    try:
+        rf_ctx = rarfile.RarFile(str(src), "r")
+    except rarfile.RarCannotExec as exc:
+        raise RuntimeError("解压 RAR 需要 unrar 或 7-Zip：Windows 请安装 WinRAR / 7-Zip 并加入 PATH，"
+                           "macOS：brew install rar，Linux：sudo apt install unrar") from exc
+    with rf_ctx as rf:
         members = rf.namelist()
         total = len(members)
         for i, name in enumerate(members, start=1):
+            check_cancelled()
             safe_target = _safe_extract_check(name, dst)
             if safe_target is None:
                 if cb:
@@ -249,6 +302,36 @@ def _extract_tar(src: Path, dst: Path, cb: ProgressCallback | None) -> None:
         members = tf.getmembers()
         total = len(members)
         for i, member in enumerate(members, start=1):
+            check_cancelled()
             tf.extract(member, dst, filter="data")
             if cb:
                 cb(i, total, f"解压中：{member.name} ({i}/{total})")
+
+
+def archive_stem(path: Path) -> str:
+    """去掉压缩包的（多段）扩展名：a.tar.gz → a。"""
+    name = path.name
+    for ext in (".tar.gz", ".tar.bz2", ".tar.xz", ".tgz", ".zip", ".7z", ".rar", ".tar", ".gz"):
+        if name.lower().endswith(ext):
+            return name[: -len(ext)] or name
+    return path.stem
+
+
+def extract_many(
+    input_files: list[Path],
+    output_dir: Path,
+    progress_callback: ProgressCallback | None = None,
+) -> TaskResult:
+    """批量解压：每个压缩包解到输出目录下以包名命名的子文件夹（重名追加 _1），互不混在一起。"""
+    from core.batch import run_batch
+
+    def one(path: Path) -> Path:
+        dest = unique_path(output_dir / archive_stem(path))
+        res = extract(path, dest)
+        if res.status != TaskStatus.SUCCESS:
+            if res.status == TaskStatus.CANCELLED:
+                raise TaskCancelled()
+            raise RuntimeError(res.error_message or "解压失败")
+        return dest
+
+    return run_batch(input_files, output_dir, one, progress_callback, "已解压")
