@@ -14,6 +14,10 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 5
+    ignore:
+      # pikepdf 10 只有 macOS 15+ 的 arm64 预编译包，发布用 macos-14 构建会失败，且 Mac 版会抛弃 macOS 14 用户
+      - dependency-name: pikepdf
+        update-types: ["version-update:semver-major"]
     groups:
       python-minor:
         update-types: [minor, patch]
