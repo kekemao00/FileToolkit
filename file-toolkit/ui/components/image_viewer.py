@@ -12,7 +12,7 @@
     + / - / 0 / 1      放大 / 缩小 / 适应窗口 / 原始像素
     Esc / 点空白处      关闭
 
-动效（沿用 ui/style.py 的令牌）：遮罩淡入 + 背景虚化，图片从 94% 缩放淡入，
+动效（沿用 ui/style.py 的令牌）：遮罩淡入，图片从 94% 缩放淡入，
 顶部信息条和底部工具条从上下两侧错开滑入；切图时交叉淡入淡出；
 按钮缩放分多帧逐级放大，看起来是平滑过渡而不是跳变。
 """
@@ -121,8 +121,9 @@ class ImageViewer:
     def _build(self) -> None:
         dark = is_dark()
         self._scrim = ft.Container(
+            # 不加整窗背景虚化：遮罩已有 90% 以上不透明度，虚化几乎看不出来，
+            # 却让每一帧都重算整窗模糊，Windows 上大分辨率时会卡到点不动
             bgcolor=ft.Colors.with_opacity(0.94 if dark else 0.9, c("viewer-bg")),
-            blur=ft.Blur(24, 24),
             left=0, top=0, right=0, bottom=0,
             opacity=0, animate_opacity=s.default(),
         )
