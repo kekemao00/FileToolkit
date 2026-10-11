@@ -17,6 +17,12 @@ from services import prompt_library_service as lib  # noqa: E402
 LOG = Path(__file__).with_name("events.log")
 
 
+def log(msg):
+    import time
+    with LOG.open("a", encoding="utf-8") as f:
+        f.write(f"{time.time():.2f} APP {msg}\n")
+
+
 def wrapped(page: ft.Page):
     app._init_services()
     lib.add_history(Path(sys.argv[1]), "a cat", "测试模板", "1536x1024")
@@ -38,19 +44,27 @@ def wrapped(page: ft.Page):
     orig_close = iv.ImageViewer.close
 
     async def close(self):
-        with LOG.open("a", encoding="utf-8") as f:
-            f.write("CLOSE\n")
+        log("CLOSE")
         await orig_close(self)
     iv.ImageViewer.close = close
     orig_open = iv.ImageViewer.open
 
     def opn(self):
-        with LOG.open("a", encoding="utf-8") as f:
-            f.write("OPEN\n")
+        log("OPEN")
         orig_open(self)
     iv.ImageViewer.open = opn
-    with LOG.open("a", encoding="utf-8") as f:
-        f.write("READY\n")
+    from ui.pages import prompt_image_page as pip
+    pip.open_folder = lambda p: log(f"REVEAL {p}")
+    for name in ("_zoom_by", "_fit", "_actual", "_copy", "_go"):
+        orig = getattr(iv.ImageViewer, name)
+
+        def make(orig=orig, name=name):
+            async def f(self, *a):
+                log(f"VIEWER {name} {a}")
+                return await orig(self, *a)
+            return f
+        setattr(iv.ImageViewer, name, make())
+    log("READY")
 
 
 ft.run(wrapped, assets_dir="assets")

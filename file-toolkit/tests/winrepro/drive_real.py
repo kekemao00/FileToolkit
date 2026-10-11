@@ -77,7 +77,7 @@ def noisy_box():
 
 def mark(msg):
     with LOG.open("a", encoding="utf-8") as f:
-        f.write(f"DRIVER {msg}\n")
+        f.write(f"{time.time():.2f} DRIVER {msg}\n")
 
 
 def move(x, y):
@@ -108,6 +108,7 @@ def key(vk):
 
 dump("10-page")
 box = noisy_box()
+box = (W * 0.87 - 1, H * 0.333 - 1, W * 0.87 + 1, H * 0.333 + 1)
 print("preview box", box, flush=True)
 if box:
     cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
@@ -130,8 +131,9 @@ if box:
         wiggle(cx - 40, cy)
         click(cx, cy)
         time.sleep(3)
+        dump("13-reopened")
         key(0x1B)
         time.sleep(2)
-        dump("13-after-esc")
+        dump("14-after-esc")
 proc.kill()
 print(LOG.read_text(encoding="utf-8"), flush=True)
