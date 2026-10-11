@@ -70,6 +70,20 @@ class ViewerItem:
             return 0
 
 
+def _quiet(handler: Callable) -> Callable:
+    """包一层事件处理：处理完不触发 Flet 的自动刷新。
+
+    Flet 在每个事件处理完后会自动 update 最近的隔离祖先，看图器挂在 page.overlay 上，
+    等于每次都对整页（含底下的提示词出图页）做一次 diff，实测约 30ms。
+    鼠标移动每 30ms 就来一个事件，Python 一直忙着 diff，点击排在后面，按钮就「不跟手」
+    甚至像点不动。看图器里需要刷新的地方都自己调了 update，所以这里一律关掉自动刷新。
+    """
+    def wrapper(e=None):
+        ft.context.disable_auto_update()
+        return handler(e)
+    return wrapper
+
+
 def fit_ratio(img: tuple[int, int], view: tuple[float, float]) -> float:
     """适应窗口时图片的显示比例（不放大小图，所以不超过 1）。"""
     iw, ih = img
@@ -104,6 +118,7 @@ class ImageViewer:
         self._on_save = on_save
         self._on_reveal = on_reveal
         self._prev_key = None
+        self._key_handler = None
         self._closing = False
         self._s = 1.0              # 当前缩放（相对适应窗口）
         self._t = (0.0, 0.0)       # 当前平移（屏幕像素）
@@ -139,18 +154,18 @@ class ImageViewer:
             content=ft.GestureDetector(
                 content=ft.Container(content=self._switcher, alignment=ft.Alignment(0, 0),
                                      padding=INSET, expand=True),
-                on_hover=self._on_content_hover, hover_interval=30,
-                on_tap=self._on_stage_tap,
-                on_secondary_tap_down=self._on_secondary_tap,
-                on_double_tap=lambda _e: self._run(self._toggle_actual),
+                on_hover=_quiet(self._on_content_hover), hover_interval=50,
+                on_tap=_quiet(self._on_stage_tap),
+                on_secondary_tap_down=_quiet(self._on_secondary_tap),
+                on_double_tap=_quiet(lambda _e: self._run(self._toggle_actual)),
                 expand=True,
             ),
             min_scale=1, max_scale=self._max_scale(),
             scale_factor=320,
             interaction_update_interval=0,
-            on_interaction_start=self._on_interaction_start,
-            on_interaction_update=self._on_interaction,
-            on_interaction_end=self._on_interaction_end,
+            on_interaction_start=_quiet(self._on_interaction_start),
+            on_interaction_update=_quiet(self._on_interaction),
+            on_interaction_end=_quiet(self._on_interaction_end),
             expand=True,
         )
         self._stage = ft.Container(
@@ -233,7 +248,7 @@ class ImageViewer:
                           self._top, self._hint_host, self._toolbar],
                 expand=True,
             ),
-            on_hover=self._on_pointer, hover_interval=120,
+            on_hover=_quiet(self._on_pointer), hover_interval=150,
             left=0, top=0, right=0, bottom=0,
         )
         self._fill_info()
@@ -248,18 +263,18 @@ class ImageViewer:
             border_radius=999,
             shadow=ft.BoxShadow(blur_radius=24, offset=ft.Offset(0, 8), spread_radius=-6,
                                 color=ft.Colors.with_opacity(0.18, c("shadow"))),
-            on_hover=self._on_chrome_hover,
+            on_hover=_quiet(self._on_chrome_hover),
         )
 
     def _tool(self, icon: str, tip: str, on_click) -> ft.Control:
-        return s.icon_button(icon, on_click, tooltip=tip, size=34, color="ink")
+        return s.icon_button(icon, _quiet(on_click), tooltip=tip, size=34, color="ink")
 
     def _tool_text(self, label: str, tip: str, on_click) -> ft.Control:
         return ft.Container(
             content=s.text(label, "mono", "ink", size=12, weight=ft.FontWeight.W_600),
             width=40, height=34, border_radius=s.R_BUTTON, alignment=ft.Alignment(0, 0),
-            tooltip=tip, on_click=on_click, animate=s.snappy(),
-            on_hover=lambda e: self._hover_fill(e.control, e.data),
+            tooltip=tip, on_click=_quiet(on_click), animate=s.snappy(),
+            on_hover=_quiet(lambda e: self._hover_fill(e.control, e.data)),
         )
 
     @staticmethod
@@ -284,7 +299,7 @@ class ImageViewer:
     def _nav(self, icon: str, tip: str, step: int, visible: bool, **pos) -> ft.Container:
         btn = self._glass(
             ft.IconButton(icon=icon, icon_size=22, icon_color=c("ink", "fg"), tooltip=tip,
-                          width=44, height=44, on_click=lambda _e: self._run(self._go, step),
+                          width=44, height=44, on_click=_quiet(lambda _e: self._run(self._go, step)),
                           style=ft.ButtonStyle(overlay_color=ft.Colors.TRANSPARENT,
                                                shape=ft.CircleBorder())),
             padding=0,
@@ -419,7 +434,8 @@ class ImageViewer:
         page = self._page
         page.overlay.append(self.host)
         self._prev_key = page.on_keyboard_event
-        page.on_keyboard_event = self._on_key
+        self._key_handler = _quiet(self._on_key)
+        page.on_keyboard_event = self._key_handler
         page.update()
         page.run_task(self._enter)
 
@@ -443,7 +459,7 @@ class ImageViewer:
             return
         self._closing = True
         page = self._page
-        if page.on_keyboard_event == self._on_key:
+        if page.on_keyboard_event is self._key_handler:
             page.on_keyboard_event = self._prev_key
         self._scrim.opacity = 0
         self._stage.opacity, self._stage.scale = 0, 0.96
