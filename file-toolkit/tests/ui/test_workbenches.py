@@ -10,6 +10,7 @@ from PIL import Image
 
 from core.models import TaskStatus
 from services import history_service, settings_service
+from tests.ui._flet_fake import check_run_task
 from ui.components.workbench import run_for_each
 from ui.features import FEATURES
 from ui.pages.image_page import ImagePage
@@ -22,8 +23,8 @@ class _FakePage:
     width = 1280
     on_resize = None
 
-    def run_task(self, *args, **kwargs):
-        pass
+    def run_task(self, handler, *args, **kwargs):
+        check_run_task(handler)
 
 
 @pytest.fixture(autouse=True)

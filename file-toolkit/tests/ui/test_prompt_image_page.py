@@ -6,6 +6,7 @@ import pytest
 from core.prompt_image import templates as tpl
 from services import history_service, settings_service
 from services import prompt_library_service as lib
+from tests.ui._flet_fake import check_run_task
 from ui.pages.prompt_image_page import PromptImagePage
 
 
@@ -14,8 +15,8 @@ class _FakePage:
     width = 1280
     height = 800
 
-    def run_task(self, *args, **kwargs):
-        pass
+    def run_task(self, handler, *args, **kwargs):
+        check_run_task(handler)
 
     def go(self, route):
         pass

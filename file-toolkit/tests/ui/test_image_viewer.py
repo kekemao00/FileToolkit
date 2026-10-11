@@ -5,6 +5,7 @@ from PIL import Image
 
 from services import history_service, settings_service
 from services import prompt_library_service as lib
+from tests.ui._flet_fake import check_run_task
 from ui.components import image_viewer as iv
 from ui.pages.prompt_image_page import PromptImagePage
 
@@ -18,8 +19,8 @@ class _FakePage:
     def __init__(self):
         self.overlay = []
 
-    def run_task(self, *args, **kwargs):
-        pass
+    def run_task(self, handler, *args, **kwargs):
+        check_run_task(handler)
 
     def update(self):
         pass

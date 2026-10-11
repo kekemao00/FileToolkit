@@ -4,7 +4,7 @@ import flet as ft
 from services import feedback_service as fb
 from ui import style as s
 from ui.palette import c
-from ui.utils import show_toast
+from ui.utils import open_url, show_toast
 
 # 切换页面后保留草稿（应用运行期间有效）
 _drafts: dict[str, dict[str, str]] = {}
@@ -165,7 +165,7 @@ class FeedbackPage(ft.Column):
         if values is None:
             return
         url = fb.build_issue_url(self._form, self._title.value or "", values)
-        self._page.run_task(self._page.launch_url, url)
+        open_url(self._page, url)
         show_toast(self._page, "已在浏览器打开，确认内容后点「Create」提交", kind="success")
 
     def _copy(self, _) -> None:
@@ -183,7 +183,7 @@ class FeedbackPage(ft.Column):
             show_toast(self._page, f"复制失败：{e}", kind="error")
 
     def _open_issues(self, _) -> None:
-        self._page.run_task(self._page.launch_url, fb.ISSUES_URL)
+        open_url(self._page, fb.ISSUES_URL)
 
     # ── 通用布局 ──────────────────────────────────────────────────────
     def _card(self, title: str, icon: str, subtitle: str, children: list) -> ft.Control:
