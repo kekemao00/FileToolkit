@@ -1,0 +1,27 @@
+name: winrepro
+on:
+  push:
+    branches: [claude/project-thread-vfp8ud]
+    paths: [file-toolkit/tests/winrepro/**, file-toolkit/ui/**, .github/workflows/winrepro.yml]
+jobs:
+  repro:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: file-toolkit
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+          enable-cache: true
+          cache-dependency-glob: file-toolkit/uv.lock
+      - run: uv sync --locked
+      - run: uv pip install flet-desktop==0.84.0
+      - run: uv run --no-sync python tests/winrepro/drive.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: winrepro
+          path: file-toolkit/tests/winrepro/out
