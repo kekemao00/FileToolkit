@@ -283,3 +283,50 @@ def test_pdf_to_images_and_pptx(tmp_path: Path) -> None:
     prs = Presentation(result.output_files[0])
     assert len(prs.slides) == 3
     assert abs(prs.slide_width / prs.slide_height - 595 / 842) < 0.01
+
+
+# ── Markdown ─────────────────────────────────────────────────────────────
+def test_markdown_to_md_each_and_merge(tmp_path: Path) -> None:
+    from ui.pages.markdown_page import MarkdownPage
+
+    a = tmp_path / "a.txt"
+    a.write_text("第一份", encoding="utf-8")
+    b = tmp_path / "b.html"
+    b.write_text("<h1>第二份</h1><p>正文</p>", encoding="utf-8")
+    page = MarkdownPage(_FakePage(), "to_md")
+    result = _run(page, "to_md", [a, b], tmp_path / "out")
+    assert result.status == TaskStatus.SUCCESS
+    assert sorted(p.name for p in result.output_files) == ["a.md", "b.md"]
+    extras = page.result_extras("to_md", result)
+    assert len(extras) == 1
+
+    page._output_mode.value = "merge"
+    page._merge_name.value = "给AI"
+    result = _run(page, "to_md", [a, b], tmp_path / "out")
+    assert result.output_files == [tmp_path / "out" / "给AI.md"]
+    text = result.output_files[0].read_text(encoding="utf-8")
+    assert "# a.txt" in text and "## 第二份" in text
+
+
+def test_markdown_from_md_targets(tmp_path: Path) -> None:
+    from ui.pages.markdown_page import MarkdownPage
+
+    src = tmp_path / "note.md"
+    src.write_text("# 标题\n\n- 一\n- 二\n", encoding="utf-8")
+    page = MarkdownPage(_FakePage(), "from_md")
+    for target in ("docx", "pdf", "html"):
+        page._target.value = target
+        result = _run(page, "from_md", [src], tmp_path / "out")
+        assert result.status == TaskStatus.SUCCESS, result.error_message
+        assert result.output_files[0].suffix == f".{target}"
+    assert page.result_extras("from_md", result) == []
+
+
+def test_markdown_merge_name_rejects_bad_chars(tmp_path: Path, monkeypatch) -> None:
+    from ui.pages.markdown_page import MarkdownPage
+
+    monkeypatch.setattr("ui.pages.markdown_page.show_toast", lambda *a, **k: None)
+    page = MarkdownPage(_FakePage(), "to_md")
+    page._output_mode.value = "merge"
+    page._merge_name.value = "a/b"
+    assert page.build_task("to_md", [tmp_path / "x.txt"], tmp_path) is None

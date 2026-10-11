@@ -11,6 +11,7 @@ File Toolkit — 路由管理
   /media           → MediaPage    （?func=video_convert|video_compress|video_cut|audio_extract|audio_convert）
   /archive         → ArchivePage  （?func=compress_zip|compress_7z|compress_targz|extract）
   /ocr             → OcrPage
+  /markdown        → MarkdownPage （?func=to_md|from_md）
   /ai              → AiTaskPage
   /prompt-image    → PromptImagePage
   /history         → HistoryPage
@@ -30,6 +31,7 @@ from ui.pages.feedback_page import FeedbackPage
 from ui.pages.history_page import HistoryPage
 from ui.pages.home_page import HomePage
 from ui.pages.image_page import ImagePage
+from ui.pages.markdown_page import MarkdownPage
 from ui.pages.media_page import MediaPage
 from ui.pages.ocr_page import OcrPage
 from ui.pages.pdf_page import PdfPage
@@ -86,6 +88,8 @@ def _resolve_page(route: str, page: ft.Page) -> ft.Control:
         return MediaPage(page, initial_func=func)
     if route == "/archive":
         return ArchivePage(page, initial_func=func)
+    if route == "/markdown":
+        return MarkdownPage(page, initial_func=func)
     if route == "/ai":
         return AiTaskPage(page)
     if route == "/prompt-image":

@@ -22,7 +22,9 @@ _TOOL_CARDS = [
     ("音视频工具", "转码、提取音频或剪辑", ft.Icons.MOVIE_OUTLINED, ("MP4", "MP3"), "/media"),
     ("压缩解压", "极速打包与安全解压文件", ft.Icons.FOLDER_ZIP_OUTLINED, ("ZIP", "7Z"), "/archive"),
     ("OCR识别", "从图像提取可编辑的文本", ft.Icons.DOCUMENT_SCANNER_OUTLINED, ("TXT", "OCR"), "/ocr"),
+    ("转 Markdown", "Word、PDF 转成 AI 好读的 MD", ft.Icons.ARTICLE_OUTLINED, ("MD", "AI"), "/markdown"),
     ("提示词出图", "AI 智能生成精美图片", ft.Icons.AUTO_FIX_HIGH_OUTLINED, ("AI", "IMG"), "/prompt-image"),
+    ("AI 智能任务", "一句话找到要用的工具", ft.Icons.AUTO_AWESOME_OUTLINED, ("AI", "AUTO"), "/ai"),
 ]
 
 _FEATURES = [
@@ -53,6 +55,7 @@ _MODULE_ICONS = {
     "MEDIA": ft.Icons.MOVIE_OUTLINED,
     "ARCHIVE": ft.Icons.FOLDER_ZIP_OUTLINED,
     "OCR": ft.Icons.DOCUMENT_SCANNER_OUTLINED,
+    "MARKDOWN": ft.Icons.ARTICLE_OUTLINED,
 }
 
 # 表格列宽（文件名列自适应）
@@ -160,7 +163,7 @@ class HomePage(ft.Column):
                 spacing=4,
             ),
             padding=16,
-            col={"xs": 12, "sm": 6, "lg": 4},
+            col={"xs": 12, "sm": 6, "lg": 3},
             on_click=lambda e, r=route: self._page.go(r),
         )
         s.hover_surface(card)

@@ -23,6 +23,7 @@ _NAV_ITEMS = [
     ("音视频工具", "/media",  ft.Icons.MOVIE_OUTLINED,          ft.Icons.MOVIE_OUTLINED),
     ("压缩解压",  "/archive", ft.Icons.FOLDER_ZIP_OUTLINED,     ft.Icons.FOLDER_ZIP_OUTLINED),
     ("OCR识别",   "/ocr",     ft.Icons.DOCUMENT_SCANNER_OUTLINED, ft.Icons.DOCUMENT_SCANNER_OUTLINED),
+    ("Markdown",  "/markdown", ft.Icons.ARTICLE_OUTLINED,        ft.Icons.ARTICLE_OUTLINED),
     ("最近操作",  "/history", ft.Icons.HISTORY_OUTLINED,                 ft.Icons.HISTORY_OUTLINED),
 ]
 

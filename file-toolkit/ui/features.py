@@ -70,6 +70,12 @@ FEATURES: list[Feature] = [
             ("解压", "zip", "7z", "rar", "tar")),
     # OCR
     Feature("OCR 文字识别", "/ocr", ft.Icons.DOCUMENT_SCANNER_OUTLINED, "OCR", ("识别", "文字", "提取文字", "扫描", "ocr")),
+    # Markdown
+    Feature("文档转 Markdown", "/markdown?func=to_md", ft.Icons.ARTICLE_OUTLINED, "Markdown",
+            ("markdown", "md", "转md", "转markdown", "word转md", "doc转md", "pdf转md", "docx", "ppt", "excel",
+             "html", "网页", "ai", "chatgpt", "知识库", "token")),
+    Feature("Markdown 转 Word / PDF / 网页", "/markdown?func=from_md", ft.Icons.IOS_SHARE_OUTLINED, "Markdown",
+            ("md转", "markdown转", "md转word", "md转pdf", "md转html", "md转docx", "导出")),
     # 其他
     Feature("最近操作", "/history", ft.Icons.HISTORY_OUTLINED, "应用", ("历史", "记录")),
     Feature("问题反馈", "/feedback", ft.Icons.FEEDBACK_OUTLINED, "应用",
@@ -89,6 +95,7 @@ ACTION_LABELS: dict[str, str] = {
     "audio_extract": "音频提取", "audio_convert": "音频转换",
     "compress_zip": "ZIP 压缩", "compress_7z": "7Z 压缩", "compress_targz": "TAR.GZ 压缩", "extract": "解压",
     "recognize": "文字识别", "ocr": "OCR 识别", "ai_task": "AI 处理",
+    "to_md": "转 Markdown", "from_md": "Markdown 转出",
 }
 
 
