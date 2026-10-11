@@ -565,6 +565,8 @@ source = { editable = "." }
 dependencies = [
     { name = "flet" },
     { name = "httpx" },
+    { name = "lxml" },
+    { name = "markdown-it-py" },
     { name = "openpyxl" },
     { name = "pdf2docx" },
     { name = "pdfplumber" },
@@ -574,6 +576,7 @@ dependencies = [
     { name = "py7zr" },
     { name = "pypdf" },
     { name = "pypdfium2" },
+    { name = "python-docx" },
     { name = "python-pptx" },
     { name = "rarfile" },
     { name = "reportlab" },
@@ -604,6 +607,8 @@ dev = [
 requires-dist = [
     { name = "flet", specifier = "==0.84.0" },
     { name = "httpx", specifier = ">=0.27,<1.0" },
+    { name = "lxml", specifier = ">=5.0,<7" },
+    { name = "markdown-it-py", specifier = ">=3.0,<5" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=2.4.0" },
     { name = "openpyxl", specifier = ">=3.1,<4.0" },
     { name = "pdf2docx", specifier = ">=0.5.13,<0.6.0" },
@@ -616,6 +621,7 @@ requires-dist = [
     { name = "pypdfium2", specifier = ">=5.14.0,<6" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.1.1" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.4.0" },
+    { name = "python-docx", specifier = ">=1.1,<2" },
     { name = "python-pptx", specifier = ">=1.0.2,<2.0" },
     { name = "pyyaml", marker = "extra == 'dev'", specifier = ">=6.0.3" },
     { name = "rarfile", specifier = ">=4.5,<5.0" },

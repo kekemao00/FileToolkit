@@ -215,6 +215,10 @@ class Workbench(ft.Column):
     def after_task(self, key: str, files: list[Path], result: TaskResult) -> None:
         """任务结束后的钩子（子类可选），如原地重命名后刷新文件路径。"""
 
+    def result_extras(self, key: str, result: TaskResult) -> list[ft.Control]:
+        """完成视图里额外显示的内容（子类可选），如字数统计、复制按钮。"""
+        return []
+
     # ── 构建 ─────────────────────────────────────────────────────────────
     def __init__(self, page: ft.Page, initial_func: str | None = None) -> None:
         super().__init__(expand=True, spacing=0)
@@ -711,6 +715,7 @@ class Workbench(ft.Column):
         self._result_size = s.text(kind="body-medium", visible=False)
         self._result_warnings = ft.Column(spacing=4, visible=False)
         self._result_files = ft.Column(spacing=6)
+        self._result_extra = ft.Column(spacing=10, visible=False)
         self._result_open_btn = s.button(
             "打开文件夹", lambda _: self._result_dir and open_folder(self._result_dir),
             icon=ft.Icons.FOLDER_OPEN_OUTLINED,
@@ -721,6 +726,7 @@ class Workbench(ft.Column):
             self._result_size,
             self._result_warnings,
             self._result_files,
+            self._result_extra,
             ft.Row(controls=[
                 s.button("返回继续处理", lambda _: self._back_to_workspace(clear=False), kind="secondary"),
                 s.button("清空并开始新任务", lambda _: self._back_to_workspace(clear=True), kind="ghost"),
@@ -777,6 +783,8 @@ class Workbench(ft.Column):
         if len(result.output_files) > 6:
             self._result_files.controls.append(
                 s.text(f"…共 {len(result.output_files)} 个文件", "small"))
+        self._result_extra.controls = self.result_extras(self._running[0], result)
+        self._result_extra.visible = bool(self._result_extra.controls)
         self._result_open_btn.visible = self._result_dir is not None
         self._processing_view.visible = False
         self._complete_view.visible = True

@@ -55,6 +55,10 @@
 | **压缩解压** | 文件和文件夹压缩为 ZIP / 7Z / TAR.GZ，7Z 可设密码 | ✅ |
 | | 批量解压 ZIP / 7Z / TAR（每个包单独一个文件夹，支持带密码的 ZIP / 7Z，Windows 中文文件名不乱码） | ✅ |
 | | 解压 RAR | 🔧 unrar |
+| **Markdown** | Word（docx）、PDF、PPT、Excel / CSV、网页、TXT 转成 AI 好读的 Markdown：保留标题层级、列表、表格，PDF 自动拼回折行、去掉页眉页脚 | ✅ |
+| | 图片单独保存 / 不要（最省 token）/ 内嵌；多个文件合并成一份；结果页显示预估 token，一键复制给 AI | ✅ |
+| | doc / xls / ppt / rtf / odt 等旧格式转 Markdown；扫描版 PDF 自动 OCR | 🔧 LibreOffice / Tesseract |
+| | Markdown 转 Word、PDF、单文件网页（表格、代码块、任务列表、本地图片） | ✅ |
 | **文字识别** | 从图片、扫描版 PDF 识别文字（中文 / 英文 / 日文） | 🔧 Tesseract |
 | | 提取 PDF 内嵌文字 | ✅ |
 | **AI** | 提示词出图（OpenAI Images 兼容接口），可附最多 8 张参考图生成合照、婚纱照、集体照；保留最近作品 | 🔧 API Key |
@@ -74,8 +78,8 @@
 | 程序 | 用于 | 获取方式 |
 |---|---|---|
 | FFmpeg | 音视频全部功能 | **三个平台的安装包都已内置**；源码运行时放到 `file-toolkit/assets/bin/` 或装到系统 PATH（macOS 可 `brew install ffmpeg`） |
-| LibreOffice | Office 转 PDF | [官网下载](https://www.libreoffice.org/download/)，装在默认位置或 PATH 中即可被识别 |
-| Tesseract | 图片文字识别 | Windows：[UB-Mannheim 安装包](https://github.com/UB-Mannheim/tesseract/wiki)；macOS：`brew install tesseract tesseract-lang`；Linux：`sudo apt install tesseract-ocr tesseract-ocr-chi-sim` |
+| LibreOffice | Office 转 PDF；doc / xls / ppt 等旧格式转 Markdown | [官网下载](https://www.libreoffice.org/download/)，装在默认位置或 PATH 中即可被识别 |
+| Tesseract | 图片文字识别；扫描版 PDF 转 Markdown | Windows：[UB-Mannheim 安装包](https://github.com/UB-Mannheim/tesseract/wiki)；macOS：`brew install tesseract tesseract-lang`；Linux：`sudo apt install tesseract-ocr tesseract-ocr-chi-sim` |
 | unrar | 解压 RAR | macOS：`brew install rar`；Linux：`sudo apt install unrar`；Windows：安装 [WinRAR](https://www.win-rar.com/) 或 7-Zip 并加入 PATH |
 | API Key | 提示词出图 | 在应用「设置」里填写 API Key，可改 Base URL 与模型以接入兼容服务 |
 

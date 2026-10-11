@@ -22,6 +22,7 @@ _MODULE_META: dict[str, tuple[str, str]] = {
     "MEDIA":   (ft.Icons.MOVIE_OUTLINED, "音视频"),
     "ARCHIVE": (ft.Icons.FOLDER_ZIP_OUTLINED, "压缩打包"),
     "OCR":     (ft.Icons.DOCUMENT_SCANNER_OUTLINED, "OCR 识别"),
+    "MARKDOWN": (ft.Icons.ARTICLE_OUTLINED, "Markdown"),
     "AI":      (ft.Icons.AUTO_AWESOME_OUTLINED, "AI 任务"),
 }
 

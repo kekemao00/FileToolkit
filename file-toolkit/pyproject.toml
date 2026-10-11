@@ -24,6 +24,9 @@ dependencies = [
     "openpyxl>=3.1,<4.0",
     "python-pptx>=1.0.2,<2.0",
     "reportlab>=5.0.1,<6.0",
+    "markdown-it-py>=3.0,<5",  # Markdown 解析（MD 转 Word / HTML / PDF）
+    "python-docx>=1.1,<2",  # Word 读写（转 Markdown、MD 转 Word）
+    "lxml>=5.0,<7",  # 网页转 Markdown
 ]
 
 [project.optional-dependencies]
