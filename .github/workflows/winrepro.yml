@@ -19,7 +19,13 @@ jobs:
           cache-dependency-glob: file-toolkit/uv.lock
       - run: uv sync --locked
       - run: uv pip install flet-desktop==0.84.0
-      - run: uv run --no-sync python tests/winrepro/drive_real.py
+      - name: Download v1.8.0
+        shell: bash
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/ft.zip" https://github.com/kekemao00/FileToolkit/releases/download/v1.8.0/FileToolkit-1.8.0-windows-x64.zip
+          7z x -y -o"$RUNNER_TEMP/ft" "$RUNNER_TEMP/ft.zip" >/dev/null
+          ls "$RUNNER_TEMP/ft"
+      - run: uv run --no-sync python tests/winrepro/drive_pkg.py "$env:RUNNER_TEMP\ft"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
