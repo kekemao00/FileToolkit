@@ -16,7 +16,7 @@ from services import update_installer, update_service
 from services.update_service import UpdateState
 from ui import style as s
 from ui.palette import c
-from ui.utils import open_folder, show_toast
+from ui.utils import open_folder, open_url, show_toast
 
 
 def _mb(n: int) -> str:
@@ -316,4 +316,4 @@ class UpdatePanel(_Subscriber, ft.Container):
 
     def _open_url(self, url: str | None) -> None:
         if url:
-            self._page.run_task(self._page.launch_url, url)
+            open_url(self._page, url)

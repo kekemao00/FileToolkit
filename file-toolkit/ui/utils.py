@@ -174,6 +174,33 @@ def _launch(cmd: list[str]) -> bool:
         return False
 
 
+def open_url(page: ft.Page, url: str) -> None:
+    """在系统浏览器打开链接。
+
+    不能写 `page.run_task(page.launch_url, url)`：Flet 0.84 的 launch_url 套了弃用装饰器，
+    已不是协程函数，run_task 直接抛 TypeError，点了没反应。这里改用 UrlLauncher，
+    桌面端失败时再退回标准库 webbrowser。
+    """
+    if not url:
+        return
+
+    async def _go() -> None:
+        try:
+            await ft.UrlLauncher().launch_url(url)
+            return
+        except Exception:
+            pass
+        import webbrowser
+        try:
+            ok = not page.web and await asyncio.to_thread(webbrowser.open, url)
+        except Exception:
+            ok = False
+        if not ok:
+            show_toast(page, "无法打开浏览器，请手动访问：" + url, kind="error")
+
+    page.run_task(_go)
+
+
 def open_folder(path) -> bool:
     """用系统文件管理器打开目录；目录不存在或打不开时返回 False。"""
     import sys

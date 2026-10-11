@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from services import history_service, settings_service
+from tests.ui._flet_fake import check_run_task
 from ui.handoff import pop_pending_files, set_pending_files
 from ui.intent import plan_steps
 from ui.pages.ai_task_page import AiTaskPage
@@ -43,8 +44,8 @@ class _FakePage:
     def __init__(self) -> None:
         self.routes: list[str] = []
 
-    def run_task(self, *args, **kwargs):
-        pass
+    def run_task(self, handler, *args, **kwargs):
+        check_run_task(handler)
 
     def go(self, route: str) -> None:
         self.routes.append(route)

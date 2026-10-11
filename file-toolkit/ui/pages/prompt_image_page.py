@@ -30,7 +30,7 @@ from services import prompt_library_service as lib
 from ui import style as s
 from ui.components.image_viewer import ImageViewer, ViewerItem
 from ui.palette import c
-from ui.utils import open_folder, show_toast
+from ui.utils import open_folder, open_url, show_toast
 
 _LIST_LIMIT = 300          # 左栏最多渲染的模板数，超出提示用户搜索
 _CHIP_CATEGORY_LIMIT = 14  # 分类不超过这个数用标签，否则改用下拉框
@@ -1366,7 +1366,7 @@ class PromptImagePage(ft.Column):
             show_toast(self._page, f"复制失败：{e}", kind="error")
 
     def _launch(self, url: str) -> None:
-        self._page.run_task(self._page.launch_url, url)
+        open_url(self._page, url)
 
     # ═════════════════════════════════════════════════════════════════
     # 我的模板
