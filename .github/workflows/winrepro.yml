@@ -19,7 +19,7 @@ jobs:
           cache-dependency-glob: file-toolkit/uv.lock
       - run: uv sync --locked
       - run: uv pip install flet-desktop==0.84.0
-      - run: uv run --no-sync python tests/winrepro/drive.py
+      - run: uv run --no-sync python tests/winrepro/drive_real.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
