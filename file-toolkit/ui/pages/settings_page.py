@@ -269,10 +269,19 @@ class SettingsPage(ft.Column):
             settings_service.get("auto_check_update", "1"),
             on_change=lambda v: settings_service.set("auto_check_update", v),
         )
+        channel = s.Segmented(
+            [("stable", "正式版"), ("beta", "测试版")],
+            settings_service.get("update_channel", "stable"),
+            on_change=lambda v: settings_service.set("update_channel", v),
+        )
         return self._card("关于", ft.Icons.INFO_OUTLINED, [
             self._row("版本", VersionRow(self._page)),
             UpdatePanel(self._page),
             self._row("自动检查更新", ft.Row(controls=[auto_check])),
+            self._row("更新渠道", ft.Row(controls=[
+                channel,
+                s.text("测试版能更早用上新功能，可能不够稳定", "small", "ink-3"),
+            ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER)),
             self._row("问题反馈", ft.Row(controls=[
                 s.button("反馈问题", lambda _: self._page.go("/feedback"), kind="secondary",
                          icon=ft.Icons.FEEDBACK_OUTLINED),
