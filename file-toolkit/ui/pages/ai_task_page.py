@@ -64,6 +64,7 @@ class AiTaskPage(ft.Column):
         self._exec_task = None
         self._thinking: ft.Control | None = None
         self._last_text = ""
+        self._scroller: ft.Column | None = None
 
         self._input_field = ft.TextField(
             hint_text="描述您想完成的任务，例如「把这些照片合成 PDF，压缩到 5MB 以内」",
@@ -146,8 +147,8 @@ class AiTaskPage(ft.Column):
                 s.button("新对话", self._new_conversation, kind="ghost", icon=ft.Icons.ADD_COMMENT_OUTLINED),
             ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
         )
-        body = ft.Column(
-            expand=True, scroll=ft.ScrollMode.AUTO, auto_scroll=True,
+        body = self._scroller = ft.Column(
+            expand=True, scroll=ft.ScrollMode.AUTO,
             controls=[self._column(self._feed, top=20, bottom=20)],
         )
         footer = self._column(
@@ -339,6 +340,20 @@ class AiTaskPage(ft.Column):
             self._page.update()
         else:
             _safe_update(self._feed)
+        self._scroll_to_end()
+
+    def _scroll_to_end(self) -> None:
+        # 新消息加在内层 feed 里，外层的 auto_scroll 感知不到，得主动滚到底
+        if self._scroller is not None and is_mounted(self._scroller):
+            self._page.run_task(self._scroll_end_async)
+
+    async def _scroll_end_async(self) -> None:
+        await asyncio.sleep(0.1)  # 等新内容完成布局，否则滚到的是旧的底部
+        try:
+            if self._scroller is not None:
+                await self._scroller.scroll_to(offset=-1, duration=250)
+        except Exception:
+            pass
 
     def _remove_thinking(self) -> None:
         if self._thinking is not None and self._thinking in self._feed.controls:
@@ -438,11 +453,13 @@ class AiTaskPage(ft.Column):
             self._cards.append(card)
             self._feed.controls.append(ft.Container(content=card, padding=ft.Padding.only(left=38)))
         _safe_update(self._feed)
+        self._scroll_to_end()
 
     def _on_error(self, err: LlmError) -> None:
         self._done_thinking()
         self._feed.controls.append(self._error_row(err))
         _safe_update(self._feed)
+        self._scroll_to_end()
 
     def _new_conversation(self, _=None) -> None:
         if self._exec_task is not None and not self._exec_task.done():
@@ -492,6 +509,8 @@ class AiTaskPage(ft.Column):
                 notify_task_done(self._page, report.output_dir)
             else:
                 card.set_state(CANCELLED if report.cancelled else BROKEN, report)
+            if card is self._cards[-1]:
+                self._scroll_to_end()  # 结果区让卡片变高了
 
         self._exec_task = self._page.run_task(_run)
 
