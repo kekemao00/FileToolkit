@@ -1,9 +1,9 @@
-"""设置页 — 外观 / 文件 / 网络(OCR) / AI 生图 / 关于，每组一张白卡片。"""
+"""设置页 — 外观 / 文件 / 文字识别 / AI 模型 / AI 生图 / 关于，每组一张白卡片。"""
 import flet as ft
 
 from core.ocr.client import INSTALL_HINT, find_tesseract, installed_languages
 from core.version import app_license
-from services import settings_service
+from services import llm_service, settings_service
 from services.prompt_image_service import DEFAULT_BASE_URL, DEFAULT_MODEL
 from ui import style as s
 from ui.components.update_panel import UpdatePanel, VersionRow
@@ -13,7 +13,7 @@ from ui.utils import show_toast
 
 
 class SettingsPage(ft.Column):
-    """设置页：外观 / 文件 / 网络(OCR) / AI 生图 / 关于"""
+    """设置页：外观 / 文件 / 文字识别 / AI 模型 / AI 生图 / 关于"""
 
     def __init__(self, page: ft.Page) -> None:
         super().__init__(expand=True, scroll=ft.ScrollMode.AUTO, spacing=12)
@@ -23,6 +23,7 @@ class SettingsPage(ft.Column):
             self._build_appearance(),
             self._build_file(),
             self._build_ocr(),
+            self._build_ai_chat(),
             self._build_ai_image(),
             self._build_about(),
             ft.Container(height=12),
@@ -136,6 +137,80 @@ class SettingsPage(ft.Column):
                 self._row("安装方法", s.text(INSTALL_HINT.split("\n", 1)[1], "small", selectable=True)),
             ]
         return self._card("文字识别（OCR）", ft.Icons.DOCUMENT_SCANNER_OUTLINED, rows)
+
+    # ── AI 模型（智能任务）────────────────────────────────────────────
+    def _build_ai_chat(self) -> ft.Control:
+        cfg = llm_service.get_config()
+        self._chat_provider = ft.Dropdown(
+            value=cfg.provider,
+            options=[ft.dropdown.Option(p.key, p.label) for p in llm_service.PROVIDERS],
+            width=260, **self._dropdown_style(),
+            on_select=self._on_chat_provider,
+        )
+        preset = llm_service.PROVIDERS_BY_KEY.get(cfg.provider)
+        self._chat_key = s.text_field(
+            settings_service.get("ai_chat_api_key", ""), self._chat_key_hint(cfg.provider),
+            password=True, can_reveal_password=True, expand=True,
+        )
+        self._chat_base = s.text_field(cfg.base_url, (preset.base_url if preset else "") or "https://…/v1",
+                                       expand=True)
+        self._chat_model = s.text_field(cfg.model, (preset.model if preset else "") or "模型名称", expand=True)
+        return self._card("AI 模型（智能任务）", ft.Icons.AUTO_AWESOME_OUTLINED, [
+            self._row("服务商", self._chat_provider),
+            self._row("API Key", self._chat_key),
+            self._row("Base URL", self._chat_base),
+            self._row("模型名称", self._chat_model),
+            ft.Container(
+                content=ft.Column(controls=[
+                    ft.Row(controls=[
+                        s.button("保存模型配置", self._save_ai_chat_config, icon=ft.Icons.SAVE_OUTLINED),
+                        s.button("测试连接", self._test_ai_chat_connection, kind="secondary",
+                                 icon=ft.Icons.SCIENCE_OUTLINED),
+                    ], spacing=8),
+                    s.text("AI 智能任务用它理解需求、规划步骤。只发送文字需求和文件名、类型、大小等信息，"
+                           "文件内容不会上传；处理全部在本机完成。Key 只保存在本机。", "small", "ink-3"),
+                ], spacing=10),
+                padding=ft.Padding.only(left=156, top=12, bottom=6),
+            ),
+        ])
+
+    @staticmethod
+    def _chat_key_hint(provider: str) -> str:
+        preset = llm_service.PROVIDERS_BY_KEY.get(provider)
+        if provider == "openai":
+            return "sk-...（留空则使用 AI 生图的 Key）"
+        if preset and not preset.needs_key:
+            return "本机或无需鉴权的服务可留空"
+        return (preset.key_hint if preset and preset.key_hint else "API Key")
+
+    def _on_chat_provider(self, e) -> None:
+        """换服务商时填入它的默认地址和模型（用户手动改过的值也会被替换）。"""
+        preset = llm_service.PROVIDERS_BY_KEY.get(e.control.value or "")
+        if preset is None:
+            return
+        self._chat_base.value = preset.base_url
+        self._chat_base.hint_text = preset.base_url or "https://…/v1"
+        self._chat_model.value = preset.model
+        self._chat_model.hint_text = preset.model or "模型名称"
+        self._chat_key.hint_text = self._chat_key_hint(preset.key)
+        for ctl in (self._chat_base, self._chat_model, self._chat_key):
+            ctl.update()
+
+    def _save_ai_chat_config(self, _) -> None:
+        llm_service.save_config(self._chat_provider.value or llm_service.DEFAULT_PROVIDER,
+                                self._chat_key.value or "", self._chat_base.value or "",
+                                self._chat_model.value or "")
+        if _ is not None:
+            show_toast(self._page, "模型配置已保存", kind="success")
+
+    def _test_ai_chat_connection(self, _) -> None:
+        self._save_ai_chat_config(None)
+        show_toast(self._page, "正在测试连接…")
+        self._page.run_task(self._test_ai_chat_connection_async)
+
+    async def _test_ai_chat_connection_async(self) -> None:
+        ok, message = await llm_service.check_connection(llm_service.get_config())
+        show_toast(self._page, message, kind="success" if ok else "error", duration=2600 if ok else 5000)
 
     # ── AI 生图 ────────────────────────────────────────────────────────
     def _build_ai_image(self) -> ft.Control:

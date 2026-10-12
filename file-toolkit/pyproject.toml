@@ -27,6 +27,7 @@ dependencies = [
     "markdown-it-py>=3.0,<5",  # Markdown 解析（MD 转 Word / HTML / PDF）
     "python-docx>=1.1,<2",  # Word 读写（转 Markdown、MD 转 Word）
     "lxml>=5.0,<7",  # 网页转 Markdown
+    "anthropic>=1.13,<2",  # AI 智能任务：Claude（Anthropic 官方 SDK）
 ]
 
 [project.optional-dependencies]

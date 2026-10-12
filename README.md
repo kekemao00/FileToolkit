@@ -65,7 +65,8 @@
 | | 全窗口看图器：滚轮缩放、拖动平移、双击切换 1:1 原图像素，左右键切换作品，右键复制图片 | 🔧 API Key |
 | | 13 类 35 个内置模板；风格增强词与反向提示词；「我的模板」支持 `{变量}`、收藏与导出 | 🔧 API Key |
 | | 一键导入开源提示词库（Awesome GPT-4o Images、Awesome GPT Image 2 Prompts，注明出处），或从网址 / JSON / CSV / Markdown 导入 | 🔧 API Key |
-| | 智能入口：一句话描述需求（如「图片转 PDF 再加水印」），拆成步骤并带着文件打开对应工具 | ✅ |
+| | **AI 智能任务**：一句话描述需求（如「这些照片合成 PDF 再压缩」「合同加水印后加密」），大模型规划成多步方案，确认后在本机自动执行，上一步的结果直接交给下一步；可继续对话调整方案、追加处理，失败时让 AI 自动修正。只把文字需求和文件名、类型、大小发给模型，文件内容不上传 | 🔧 API Key |
+| | 支持 Claude、OpenAI、DeepSeek、通义千问、智谱 GLM、Kimi、OpenRouter、本机 Ollama 及任意 OpenAI 兼容服务（自带 Key）；未配置时退回本地关键词匹配，拆成步骤并带着文件打开对应工具 | ✅ |
 | **应用** | 全局功能搜索、最近操作记录、偏好设置；批量处理中某个文件失败不影响其余文件，输出不会覆盖已有文件 | ✅ |
 | | 应用内检查更新：查看更新说明，下载校验后一键重启更新 | ✅ |
 | | 应用内问题反馈 / 功能建议：自动填好系统、版本和安装方式，在浏览器打开预填好的 GitHub Issue | ✅ |
@@ -81,7 +82,7 @@
 | LibreOffice | Office 转 PDF；doc / xls / ppt 等旧格式转 Markdown | [官网下载](https://www.libreoffice.org/download/)，装在默认位置或 PATH 中即可被识别 |
 | Tesseract | 图片文字识别；扫描版 PDF 转 Markdown | Windows：[UB-Mannheim 安装包](https://github.com/UB-Mannheim/tesseract/wiki)；macOS：`brew install tesseract tesseract-lang`；Linux：`sudo apt install tesseract-ocr tesseract-ocr-chi-sim` |
 | unrar | 解压 RAR | macOS：`brew install rar`；Linux：`sudo apt install unrar`；Windows：安装 [WinRAR](https://www.win-rar.com/) 或 7-Zip 并加入 PATH |
-| API Key | 提示词出图 | 在应用「设置」里填写 API Key，可改 Base URL 与模型以接入兼容服务 |
+| API Key | 提示词出图、AI 智能任务 | 在应用「设置」里填写：「AI 生图」用于提示词出图；「AI 模型」选择服务商（Claude、OpenAI、DeepSeek、通义千问等）后填 Key，可改 Base URL 与模型。本机 Ollama 无需 Key |
 
 ## 截图
 

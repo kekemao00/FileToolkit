@@ -24,7 +24,7 @@ _TOOL_CARDS = [
     ("OCR识别", "从图像提取可编辑的文本", ft.Icons.DOCUMENT_SCANNER_OUTLINED, ("TXT", "OCR"), "/ocr"),
     ("转 Markdown", "Word、PDF 转成 AI 好读的 MD", ft.Icons.ARTICLE_OUTLINED, ("MD", "AI"), "/markdown"),
     ("提示词出图", "AI 智能生成精美图片", ft.Icons.AUTO_FIX_HIGH_OUTLINED, ("AI", "IMG"), "/prompt-image"),
-    ("AI 智能任务", "一句话找到要用的工具", ft.Icons.AUTO_AWESOME_OUTLINED, ("AI", "AUTO"), "/ai"),
+    ("AI 智能任务", "一句话说需求，自动处理文件", ft.Icons.AUTO_AWESOME_OUTLINED, ("AI", "AUTO"), "/ai"),
 ]
 
 _FEATURES = [
@@ -56,6 +56,7 @@ _MODULE_ICONS = {
     "ARCHIVE": ft.Icons.FOLDER_ZIP_OUTLINED,
     "OCR": ft.Icons.DOCUMENT_SCANNER_OUTLINED,
     "MARKDOWN": ft.Icons.ARTICLE_OUTLINED,
+    "AI": ft.Icons.AUTO_AWESOME_OUTLINED,
 }
 
 # 表格列宽（文件名列自适应）

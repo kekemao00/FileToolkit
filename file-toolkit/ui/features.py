@@ -27,7 +27,8 @@ class Feature:
 
 FEATURES: list[Feature] = [
     # AI
-    Feature("AI 智能任务", "/ai", ft.Icons.AUTO_AWESOME_OUTLINED, "AI", ("助手", "自动", "ai")),
+    Feature("AI 智能任务", "/ai", ft.Icons.AUTO_AWESOME_OUTLINED, "AI",
+            ("助手", "自动", "ai", "智能", "大模型", "编排", "claude", "gpt", "deepseek")),
     Feature("提示词出图", "/prompt-image", ft.Icons.AUTO_FIX_HIGH_OUTLINED, "AI",
             ("生图", "海报", "图片生成", "prompt", "gpt-image")),
     # PDF
@@ -82,7 +83,7 @@ FEATURES: list[Feature] = [
             ("反馈", "bug", "报错", "提问", "issue", "建议", "github")),
     Feature("功能建议", "/feedback?kind=feature", ft.Icons.LIGHTBULB_OUTLINE, "应用",
             ("建议", "需求", "新功能", "feature", "issue")),
-    Feature("设置", "/settings", ft.Icons.SETTINGS_OUTLINED, "应用", ("设置", "主题", "输出目录", "api key")),
+    Feature("设置", "/settings", ft.Icons.SETTINGS_OUTLINED, "应用", ("设置", "主题", "输出目录", "api key", "模型", "大模型")),
 ]
 
 
