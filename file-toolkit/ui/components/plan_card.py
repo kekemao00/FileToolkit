@@ -1,8 +1,10 @@
 """AI 智能任务的方案卡片 — 展示步骤，原地切换为执行中 / 完成 / 失败。
 
 状态：ready（等确认）→ running → done / failed / cancelled；用户发了新消息后旧方案变为 stale。
+状态放在 CardModel 里：离开 AI 页面再回来、切换主题时页面会重建，卡片按同一个 model 重新画出来。
 """
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import flet as ft
@@ -26,22 +28,28 @@ def _safe_update(control: ft.Control) -> None:
             pass
 
 
+@dataclass(eq=False)
+class CardModel:
+    plan: Plan
+    state: str = READY
+    report: ExecutionReport | None = None
+    out_dir: Path | None = None
+    progress: dict[int, str] = field(default_factory=dict)
+
+
 class PlanCard(ft.Container):
     def __init__(
         self,
-        plan: Plan,
+        model: CardModel,
         on_run: Callable[["PlanCard"], None],
         on_cancel: Callable[["PlanCard"], None],
         on_revise: Callable[["PlanCard"], None],
     ) -> None:
-        self.plan = plan
-        self.state = READY
-        self.report: ExecutionReport | None = None
-        self.out_dir: Path | None = None
+        self.model = model
         self._on_run = on_run
         self._on_cancel = on_cancel
         self._on_revise = on_revise
-        self._progress: dict[int, str] = {}
+        self._progress = model.progress
         self._rows: dict[int, ft.Container] = {}
         self._steps = ft.Column(spacing=0)
         self._footer = ft.Container()
@@ -62,6 +70,26 @@ class PlanCard(ft.Container):
             ]),
         )
         self.render()
+
+    @property
+    def plan(self) -> Plan:
+        return self.model.plan
+
+    @property
+    def state(self) -> str:
+        return self.model.state
+
+    @property
+    def report(self) -> ExecutionReport | None:
+        return self.model.report
+
+    @property
+    def out_dir(self) -> Path | None:
+        return self.model.out_dir
+
+    @out_dir.setter
+    def out_dir(self, value: Path | None) -> None:
+        self.model.out_dir = value
 
     # ── 渲染 ────────────────────────────────────────────────────────────
     def render(self) -> None:
@@ -97,9 +125,9 @@ class PlanCard(ft.Container):
         _safe_update(self._title)
 
     def set_state(self, state: str, report: ExecutionReport | None = None) -> None:
-        self.state = state
+        self.model.state = state
         if report is not None:
-            self.report = report
+            self.model.report = report
         if state != EXECUTING:
             self._progress.clear()
         self.render()
@@ -164,10 +192,20 @@ class PlanCard(ft.Container):
         return row
 
     # ── 底部操作区 ───────────────────────────────────────────────────────
+    def _privacy_text(self) -> tuple[str, str]:
+        online = [i for i, st in enumerate(self.plan.steps, start=1) if st.tool.network]
+        if not online:
+            return ft.Icons.LOCK_OUTLINE, "全部在本机处理，文件不会上传"
+        which = "、".join(f"第 {i} 步" for i in online)
+        refs = any(self.plan.steps[i - 1].inputs for i in online)
+        sent = "提示词和参考图" if refs else "提示词"
+        return ft.Icons.CLOUD_OUTLINED, f"{which}会把{sent}发给 AI 生图服务，其余在本机处理"
+
     def _build_footer(self) -> ft.Control:
+        icon, note = self._privacy_text()
         privacy = ft.Row(controls=[
-            ft.Icon(ft.Icons.LOCK_OUTLINE, size=13, color=c("ink-3", "fg")),
-            s.text("全部在本机处理，文件不会上传", "small", "ink-3"),
+            ft.Icon(icon, size=13, color=c("ink-3", "fg")),
+            s.text(note, "small", "ink-3"),
         ], spacing=6, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER)
 
         if self.state == READY:

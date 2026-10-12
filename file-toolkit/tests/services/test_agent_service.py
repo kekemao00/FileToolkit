@@ -1,4 +1,5 @@
 """AI 智能任务：用假模型驱动规划，真实执行 core 函数。"""
+import asyncio
 from pathlib import Path
 
 import pypdf
@@ -69,7 +70,8 @@ def test_tool_schemas_are_complete() -> None:
             assert "default" not in prop
 
 
-def test_every_tool_has_valid_defaults() -> None:
+def test_every_tool_has_valid_defaults(monkeypatch) -> None:
+    monkeypatch.setattr("services.prompt_image_service.is_configured", lambda: True)
     for tool in TOOLS:
         raw = {k: "x" for k in tool.required}
         if tool.name == "video_cut":
@@ -281,3 +283,141 @@ def test_describe_file(tmp_path: Path) -> None:
     (tmp_path / "d").mkdir()
     (tmp_path / "d" / "a.txt").write_text("a")
     assert "1 个文件" in agent_service.describe_file(tmp_path / "d")
+
+
+# ── 停止规划 ─────────────────────────────────────────────────────────────
+async def test_cancelled_send_rolls_back(tmp_path: Path) -> None:
+    started = asyncio.Event()
+
+    async def slow(config, system, messages, tools, **_):
+        started.set()
+        await asyncio.sleep(60)
+
+    session = AgentSession(CONFIG, complete=slow)
+    session._notes.append("上一个方案的执行结果：…")
+    task = asyncio.ensure_future(session.send("压缩", [_pdf(tmp_path / "a.pdf")]))
+    await started.wait()
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert session.messages == [] and session.plan is None
+    assert session._notes == ["上一个方案的执行结果：…"]   # 下次发送时照常带上
+
+    # 停止后再发，模型看到的是干净的上下文
+    session._complete = ScriptedModel([LlmTurn("要压缩成多大？")])
+    reply = await session.send("压缩到 1MB")
+    assert reply.text == "要压缩成多大？"
+    assert [m["role"] for m in session.messages] == ["user", "assistant"]
+    assert "执行结果" in session.messages[0]["content"]
+
+
+# ── AI 出图 ──────────────────────────────────────────────────────────────
+async def test_generate_image_needs_no_inputs_and_chains(tmp_path: Path, monkeypatch) -> None:
+    import io
+    buf = io.BytesIO()
+    Image.new("RGB", (64, 64), (200, 30, 30)).save(buf, "PNG")
+    calls = []
+
+    async def fake_generate(prompt, size="1024x1024", quality="high", **_):
+        calls.append((prompt, size, quality))
+        return {"success": True, "image_bytes": buf.getvalue(), "error": ""}
+
+    monkeypatch.setattr("services.prompt_image_service.is_configured", lambda: True)
+    monkeypatch.setattr("services.prompt_image_service.generate_image", fake_generate)
+    model = ScriptedModel([
+        LlmTurn("", [_call("generate_image", prompt="红色圆形徽章，扁平风格", size="1024x1024",
+                           output_name="徽章"),
+                     _call("images_to_pdf", 2, inputs=["s1"])]),
+        LlmTurn("先出图再转 PDF。"),
+    ])
+    session = AgentSession(CONFIG, complete=model)
+    reply = await session.send("画个徽章再转成 PDF")
+    assert [s.tool.name for s in reply.plan.steps] == ["generate_image", "images_to_pdf"]
+    assert reply.plan.steps[0].tool.network and not reply.plan.steps[1].tool.network
+
+    report = await session.execute(_sync_runner, out_dir=tmp_path / "out")
+    assert report.ok, report.error
+    assert calls == [("红色圆形徽章，扁平风格", "1024x1024", "high")]
+    gen = reply.plan.steps[0].outputs[0]
+    assert gen.name == "徽章.png" and gen.read_bytes() == buf.getvalue()
+    assert report.outputs[0].suffix == ".pdf"
+
+
+async def test_generate_image_uses_references_and_reports_failure(tmp_path: Path, monkeypatch) -> None:
+    seen = {}
+
+    async def fake_edit(prompt, images, **_):
+        seen["images"] = [p.name for p in images]
+        return {"success": False, "image_bytes": None, "error": "额度不足"}
+
+    monkeypatch.setattr("services.prompt_image_service.is_configured", lambda: True)
+    monkeypatch.setattr("services.prompt_image_service.edit_image", fake_edit)
+    model = ScriptedModel([
+        LlmTurn("", [_call("generate_image", inputs=["f1"], prompt="改成水彩风格")]),
+        LlmTurn("按参考图生成。"),
+    ])
+    session = AgentSession(CONFIG, complete=model)
+    await session.send("改成水彩", [_img(tmp_path / "photo.png")])
+    report = await session.execute(_sync_runner, out_dir=tmp_path / "out")
+    assert not report.ok and "额度不足" in report.error
+    assert seen["images"] == ["photo.png"]
+
+
+async def test_generate_image_without_key_is_rejected_at_planning(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr("services.prompt_image_service.is_configured", lambda: False)
+    model = ScriptedModel([
+        LlmTurn("", [_call("generate_image", prompt="猫")]),
+        LlmTurn("需要先在设置里填写 AI 生图的 Key。", [_call("open_page", page="settings", label="去设置填写 Key")]),
+        LlmTurn("需要先在设置里填写 AI 生图的 Key。"),
+    ])
+    session = AgentSession(CONFIG, complete=model)
+    reply = await session.send("画只猫")
+    assert reply.plan is None
+    tool_msg = model.calls[1][-1]
+    assert tool_msg["is_error"] and "AI 生图" in tool_msg["content"]
+    assert [(a.label, a.route) for a in reply.actions] == [("去设置填写 Key", "/settings")]
+
+
+# ── 应用级工具 ───────────────────────────────────────────────────────────
+async def test_check_update_tool(monkeypatch) -> None:
+    from services import update_service
+    from services.update_service import Release, UpdateState
+
+    rel = Release(version="2.0.0", tag="v2.0.0", name="v2.0.0", notes="", html_url="", published_at="2026-10-12",
+                  assets={})
+
+    async def fake_check():
+        return UpdateState(status="available", release=rel)
+
+    monkeypatch.setattr(update_service, "check", fake_check)
+    monkeypatch.setattr("core.version.app_version", lambda: "1.9.0")
+    model = ScriptedModel([
+        LlmTurn("", [_call("check_update")]),
+        LlmTurn("有新版本 2.0.0，点下面的按钮去更新。"),
+    ])
+    session = AgentSession(CONFIG, complete=model)
+    reply = await session.send("检查一下更新")
+    result = model.calls[1][-1]["content"]
+    assert "1.9.0" in result and "2.0.0" in result
+    assert reply.plan is None and [a.route for a in reply.actions] == ["/settings"]
+
+    async def latest():
+        return UpdateState(status="latest", release=Release(version="1.9.0", tag="v1.9.0", name="", notes="",
+                                                             html_url="", published_at="", assets={}))
+
+    monkeypatch.setattr(update_service, "check", latest)
+    model.turns = [LlmTurn("", [_call("check_update", 2)]), LlmTurn("已是最新版本。")]
+    reply = await session.send("再查一次")
+    assert "已是最新" in model.calls[-1][-1]["content"] and not reply.actions
+
+
+async def test_open_page_tool_validates_page() -> None:
+    model = ScriptedModel([
+        LlmTurn("", [_call("open_page", page="nowhere"), _call("open_page", 2, page="history")]),
+        LlmTurn("可以在最近操作里查看。"),
+    ])
+    session = AgentSession(CONFIG, complete=model)
+    reply = await session.send("我之前处理过哪些文件")
+    results = [m for m in model.calls[1] if m["role"] == "tool"]
+    assert results[0]["is_error"] and not results[1]["is_error"]
+    assert [(a.label, a.route) for a in reply.actions] == [("打开最近操作", "/history")]
