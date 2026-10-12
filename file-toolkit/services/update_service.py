@@ -1,7 +1,7 @@
 """
 File Toolkit — 检查更新服务
 
-从 GitHub Releases 取最新的正式版（不含预发布），与当前版本比较；
+从 GitHub Releases 取最新版本与当前版本比较：默认只看正式版，更新渠道选「测试版」时预发布版也算；
 下载当前平台的安装包，用发布附带的 SHA256SUMS.txt 校验后交给 update_installer 安装。
 
 界面通过 subscribe() 订阅状态变化：设置页切换主题时会整个重建，
@@ -24,6 +24,7 @@ from core.version import app_version
 
 REPO = "kekemao00/FileToolkit"
 LATEST_API = f"https://api.github.com/repos/{REPO}/releases/latest"
+RELEASES_API = f"https://api.github.com/repos/{REPO}/releases?per_page=20"
 RELEASES_PAGE = f"https://github.com/{REPO}/releases"
 SUMS_NAME = "SHA256SUMS.txt"
 
@@ -180,20 +181,31 @@ def _net_error(exc: Exception) -> UpdateError:
     return UpdateError("无法连接 GitHub，请检查网络后重试")
 
 
-async def fetch_latest() -> Release:
-    """最新正式版（GitHub 的 releases/latest 本身就跳过预发布和草稿）。"""
-    try:
-        async with _client() as client:
-            resp = await client.get(LATEST_API)
-    except httpx.HTTPError as exc:
-        raise _net_error(exc) from exc
-    if resp.status_code == 404:
-        raise UpdateError("还没有发布过正式版")
+def _check_status(resp: httpx.Response) -> None:
     if resp.status_code in (403, 429):
         raise UpdateError("GitHub 访问次数已达上限，请稍后再试")
     if resp.status_code != 200:
         raise UpdateError(f"检查更新失败（HTTP {resp.status_code}）")
-    return parse_release(resp.json())
+
+
+async def fetch_latest(include_prerelease: bool = False) -> Release:
+    """最新版本。默认只看正式版（GitHub 的 releases/latest 本身就跳过预发布和草稿）；
+    include_prerelease 时从最近的发布里取版本号最高的一个，预发布版也算。"""
+    try:
+        async with _client() as client:
+            resp = await client.get(RELEASES_API if include_prerelease else LATEST_API)
+    except httpx.HTTPError as exc:
+        raise _net_error(exc) from exc
+    if resp.status_code == 404:
+        raise UpdateError("还没有发布过正式版")
+    _check_status(resp)
+    if not include_prerelease:
+        return parse_release(resp.json())
+    releases = [parse_release(r) for r in resp.json() if not r.get("draft")]
+    releases = [r for r in releases if parse_version(r.version) is not None]
+    if not releases:
+        raise UpdateError("还没有发布过版本")
+    return max(releases, key=lambda r: parse_version(r.version))
 
 
 async def _expected_sha256(client: httpx.AsyncClient, release: Release, asset: Asset) -> str:
@@ -332,7 +344,7 @@ async def check() -> UpdateState:
         return state
     _emit(status="checking", error="")
     try:
-        release = await fetch_latest()
+        release = await fetch_latest(include_prerelease=update_channel() == "beta")
     except UpdateError as exc:
         _emit(status="error", error=str(exc), checked_at=time.time())
         return state
@@ -422,3 +434,9 @@ def consume_pending() -> tuple[str, str] | None:
 def auto_check_enabled() -> bool:
     from services import settings_service
     return settings_service.get("auto_check_update", "1") == "1"
+
+
+def update_channel() -> str:
+    """stable：只更新到正式版；beta：测试版（预发布）也提示。"""
+    from services import settings_service
+    return "beta" if settings_service.get("update_channel", "stable") == "beta" else "stable"

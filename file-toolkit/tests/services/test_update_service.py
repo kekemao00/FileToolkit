@@ -70,6 +70,7 @@ def server(monkeypatch):
     state = {
         "latest": _release_json(sums=""),
         "latest_status": 200,
+        "releases": [],
         "sums": None,
         "package": _PKG,
         "calls": [],
@@ -78,6 +79,8 @@ def server(monkeypatch):
     def handler(request: httpx.Request) -> httpx.Response:
         state["calls"].append(str(request.url))
         if request.url.host == "api.github.com":
+            if request.url.path.endswith("/releases"):
+                return httpx.Response(state["latest_status"], json=state["releases"])
             return httpx.Response(state["latest_status"], json=state["latest"])
         if request.url.path.endswith("SHA256SUMS.txt"):
             name = state["latest"]["assets"][0]["name"]
@@ -92,6 +95,7 @@ def server(monkeypatch):
     monkeypatch.setattr(update_service.httpx, "AsyncClient", factory)
     monkeypatch.setattr(update_service, "platform_key", lambda *a: _KEY)
     monkeypatch.setattr(update_service, "app_version", lambda: "1.4.1")
+    monkeypatch.setattr(update_service, "update_channel", lambda: "stable")
     monkeypatch.setattr(update_service, "state", update_service.UpdateState())
     return state
 
@@ -166,6 +170,40 @@ def test_check_finds_newer_release(server):
     st = asyncio.run(update_service.check())
     assert st.status == "available" and st.release.version == "1.5.0"
     assert server["calls"] == [update_service.LATEST_API]
+
+
+def _pre(version: str, **extra) -> dict:
+    return {**_release_json(version, sums=""), "prerelease": "-" in version, **extra}
+
+
+def test_stable_channel_ignores_prereleases(server):
+    server["releases"] = [_pre("1.6.0-beta.1")]
+    st = asyncio.run(update_service.check())
+    assert st.release.version == "1.5.0"
+
+
+def test_beta_channel_offers_newest_prerelease(server, monkeypatch):
+    monkeypatch.setattr(update_service, "update_channel", lambda: "beta")
+    server["releases"] = [_pre("1.5.0"), _pre("1.6.0-beta.2"), _pre("1.7.0", draft=True), _pre("1.6.0-beta.10")]
+    st = asyncio.run(update_service.check())
+    assert st.status == "available" and st.release.version == "1.6.0-beta.10"
+    assert server["calls"] == [update_service.RELEASES_API]
+
+
+def test_beta_channel_prefers_stable_of_same_version(server, monkeypatch):
+    monkeypatch.setattr(update_service, "update_channel", lambda: "beta")
+    monkeypatch.setattr(update_service, "app_version", lambda: "1.6.0-beta.1")
+    server["releases"] = [_pre("1.6.0"), _pre("1.6.0-beta.2")]
+    assert asyncio.run(update_service.check()).release.version == "1.6.0"
+
+
+def test_update_channel_setting(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(settings_service, "_db_path", settings_service._db_path)
+    history_service.init_db(tmp_path / "app.db")
+    settings_service.init_settings(tmp_path / "app.db")
+    assert update_service.update_channel() == "stable"
+    settings_service.set("update_channel", "beta")
+    assert update_service.update_channel() == "beta"
 
 
 def test_check_up_to_date(server):
