@@ -11,6 +11,7 @@ from core.image.to_pdf import images_to_pdf
 from core.image.watermark import add_text_watermark
 from core.models import TaskResult, TaskStatus
 from core.paths import unique_path
+from ui import style as s
 from ui.components.workbench import ChoiceGroup, Workbench, WorkbenchFunction, is_mounted
 from ui.palette import c
 from ui.utils import show_toast
@@ -78,9 +79,9 @@ class ImagePage(Workbench):
         self._pdf_name = self.text_field("", "默认用第一张图片的名字")
         self._pdf_page = ChoiceGroup([("fit", "跟随图片尺寸"), ("a4", "A4 纸")], "fit")
         # 重命名
-        self._template = self.text_field("{name}_{n:03d}", "命名模板", on_change=lambda _: self._refresh_preview())
+        self._template = self.text_field("{name}_{n:03d}", "命名模板", on_change=s.debounced(lambda _: self._refresh_preview()))
         self._start_num = self.text_field("1", "起始序号", keyboard_type=ft.KeyboardType.NUMBER, expand=True,
-                                          on_change=lambda _: self._refresh_preview())
+                                          on_change=s.debounced(lambda _: self._refresh_preview()))
         self._preview = ft.Column(spacing=4)
         super().__init__(page, initial_func)
 

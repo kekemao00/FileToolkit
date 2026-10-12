@@ -117,7 +117,7 @@ class PromptImagePage(ft.Column):
         self._search = _field(
             hint="搜索名称 / 标签 / 提示词",
             prefix_icon=ft.Icons.SEARCH_OUTLINED,
-            on_change=self._on_search_change,
+            on_change=s.debounced(self._on_search_change),
         )
         self._category_area = ft.Container()
         self._count_text = _txt("", 11, "ink-3")
@@ -140,7 +140,7 @@ class PromptImagePage(ft.Column):
         self._modifier_count = _txt("", 11, "ink-3")
         self._negative = _field(
             hint="避免出现的内容（可选），如：文字水印、多余手指、模糊",
-            on_change=lambda _e: self._schedule_refresh(),
+            on_change=s.quiet(lambda _e: self._schedule_refresh()),
         )
         self._prompt_state = _txt("自动生成", 11, "ink-3")
         self._restore_btn = s.button("恢复自动", self._on_restore_prompt, kind="ghost",
@@ -148,7 +148,7 @@ class PromptImagePage(ft.Column):
         self._prompt_field = _field(
             multiline=True, min_lines=4, max_lines=10,
             text_style=ft.TextStyle(color=c("ink", "fg"), size=13, font_family=s.MONO),
-            on_change=self._on_prompt_edited,
+            on_change=s.quiet(self._on_prompt_edited),
         )
         self._size_dd = _dropdown(
             value="1024x1024", dense=True, border_radius=10, expand=True, text_size=13,
@@ -644,7 +644,7 @@ class PromptImagePage(ft.Column):
                     value=default, hint=var.get("placeholder", ""),
                     multiline=multiline, min_lines=4 if multiline else None,
                     max_lines=10 if multiline else 1,
-                    on_change=lambda _e: self._schedule_refresh(),
+                    on_change=s.quiet(lambda _e: self._schedule_refresh()),
                 )
             self._var_controls[name] = ctrl
             label = var.get("label") or name

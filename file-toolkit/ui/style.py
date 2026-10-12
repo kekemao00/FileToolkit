@@ -280,6 +280,40 @@ def text_field(value: str = "", hint: str = "", **kwargs) -> ft.TextField:
     return ft.TextField(value=value, hint_text=hint, **opts)
 
 
+def quiet(handler: Callable) -> Callable:
+    """包一层事件处理：处理完不触发 Flet 的自动刷新。
+
+    Flet 在每个事件处理完后会自动 update 最近的隔离祖先，通常就是整页，实测一次 diff
+    约 30ms。输入框 on_change、全局按键这类高频事件每次都整页 diff，Python 一直被占着，
+    中文输入法组字、连续打字时就会明显卡顿。被包的处理函数需要刷新的地方自己 update。
+    """
+    def wrapper(e=None):
+        ft.context.disable_auto_update()
+        return handler(e)
+    return wrapper
+
+
+def debounced(handler: Callable, delay: float = 0.25) -> Callable:
+    """输入框 on_change 用：停止输入 delay 秒后才执行一次 handler(e)，且不整页自动刷新。
+
+    搜索、预览这类每改一个字就要重算列表并刷新的处理，输入法组字时一个字会触发好几次，
+    合并成停顿后执行一次。handler 里需要刷新的控件自己 update。
+    """
+    seq = 0
+
+    async def later(e, mine: int) -> None:
+        await asyncio.sleep(delay)
+        if mine == seq:
+            handler(e)
+
+    def wrapper(e) -> None:
+        nonlocal seq
+        ft.context.disable_auto_update()
+        seq += 1
+        e.page.run_task(later, e, seq)
+    return wrapper
+
+
 # ── 分段标签页 ───────────────────────────────────────────────────────
 class Segmented(ft.Container):
     """分段标签页：白色胶囊轨道 + 墨黑胶囊指示条。
@@ -610,7 +644,7 @@ def confirm(
         left=0, top=0, right=0, bottom=0,
     )
     page.overlay.append(host)
-    page.on_keyboard_event = on_key
+    page.on_keyboard_event = quiet(on_key)
     page.update()
 
     async def _open() -> None:

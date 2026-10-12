@@ -52,7 +52,7 @@ class TopBar(ft.Container):
             view_hint_text_style=hint_style,
             view_header_height=44,
             divider_color=c("line"),
-            on_change=self._on_change,
+            on_change=s.quiet(self._on_change),
             on_submit=self._on_submit,
             on_tap=self._on_tap,
             width=300,
@@ -77,10 +77,12 @@ class TopBar(ft.Container):
 
     def did_mount(self) -> None:
         self._prev_key_handler = self._page.on_keyboard_event
-        self._page.on_keyboard_event = self._on_key
+        # 每次按键都会来一个事件，只处理 Ctrl+K，不让它每次都整页刷新
+        self._key_handler = s.quiet(self._on_key)
+        self._page.on_keyboard_event = self._key_handler
 
     def will_unmount(self) -> None:
-        if self._page.on_keyboard_event == self._on_key:
+        if self._page.on_keyboard_event is getattr(self, "_key_handler", None):
             self._page.on_keyboard_event = getattr(self, "_prev_key_handler", None)
 
     def _on_key(self, e: ft.KeyboardEvent) -> None:
