@@ -58,3 +58,38 @@ def run_batch(
         warnings=failures,
         duration_seconds=time.time() - t0,
     )
+
+
+def run_for_each(
+    fn: Callable[..., TaskResult],
+    input_files: list[Path],
+    make_kwargs: Callable[[Path], dict],
+    progress_callback=None,
+) -> TaskResult:
+    """把单文件 core 函数逐个应用到多个文件，汇总输出。
+
+    单个文件失败不中断整批，失败原因记入 warnings；全部失败才算任务失败。
+    """
+    extra_warnings: list[str] = []
+    total = len(input_files)
+
+    def one(path: Path) -> list[Path]:
+        kwargs = make_kwargs(path)
+        if progress_callback and "progress_callback" not in kwargs:
+            i = input_files.index(path)
+
+            def sub(cur: int, tot: int, desc: str) -> None:
+                frac = min(1.0, cur / tot) if tot else 0.0
+                progress_callback(int((i + frac) * 1000), total * 1000, f"{path.name}：{desc}")
+            kwargs["progress_callback"] = sub
+        res = fn(**kwargs)
+        if res.status == TaskStatus.CANCELLED:
+            raise TaskCancelled()
+        if res.status != TaskStatus.SUCCESS:
+            raise RuntimeError(res.error_message or "处理失败")
+        extra_warnings.extend(res.warnings)
+        return list(res.output_files)
+
+    result = run_batch(input_files, None, one, progress_callback, "已完成")
+    result.warnings = extra_warnings + result.warnings
+    return result
