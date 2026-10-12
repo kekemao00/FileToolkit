@@ -9,7 +9,11 @@
       → 按步骤调用 core 函数（task_service 线程池，可取消），产物登记为新的 f 编号
       → 执行结果在下一轮对话时告诉模型，用户可以接着说「再压缩一下」
 
-发给模型的只有文字需求和文件元信息（名称、类型、大小、页数、图片尺寸），不含文件内容。
+应用级工具（检查更新、打开某个页面）不进方案：规划时直接执行，结果回给模型，
+需要用户点的入口作为回复里的按钮（AgentReply.actions）。
+
+发给模型的只有文字需求和文件元信息（名称、类型、大小、页数、图片尺寸），不含文件内容；
+AI 出图这一步执行时会把提示词和参考图发给用户配置的生图服务，界面会提示。
 """
 from __future__ import annotations
 
@@ -44,6 +48,46 @@ RESET_TOOL = {
     "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
 }
 
+# 应用里可以打开的页面：key → (名称, 路由, 说明)
+PAGES: dict[str, tuple[str, str, str]] = {
+    "home": ("首页", "/", "全部功能入口"),
+    "pdf": ("PDF 工具", "/pdf", "合并、拆分、压缩、转换、加密水印"),
+    "image": ("图片工具", "/image", "压缩、格式转换、尺寸、水印、转 PDF、批量重命名"),
+    "media": ("音视频工具", "/media", "视频转换、压缩、剪辑，提取音频，音频转换"),
+    "archive": ("压缩解压", "/archive", "zip / 7z / tar.gz 打包，解压"),
+    "ocr": ("OCR 文字识别", "/ocr", "识别图片和扫描 PDF 里的文字"),
+    "markdown": ("Markdown", "/markdown", "文档转 Markdown，Markdown 转 Word / PDF / 网页"),
+    "prompt_image": ("提示词出图", "/prompt-image", "用模板和风格手动调提示词出图"),
+    "history": ("最近操作", "/history", "查看处理记录、打开输出目录"),
+    "feedback": ("问题反馈", "/feedback", "反馈问题"),
+    "feature_request": ("功能建议", "/feedback?kind=feature", "提功能建议"),
+    "settings": ("设置", "/settings", "主题、默认输出目录、AI 模型 / AI 生图的 Key、检查和安装更新、更新渠道"),
+}
+
+CHECK_UPDATE_TOOL = {
+    "name": "check_update",
+    "description": "检查「文件全能王」本身有没有新版本（立即执行，不进方案）。有新版本时会在回复里放一个去设置页更新的按钮。",
+    "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+}
+
+OPEN_PAGE_TOOL = {
+    "name": "open_page",
+    "description": "在回复里放一个按钮，用户点了就打开应用里的某个页面（立即生效，不进方案）。"
+                   "用于需要用户自己操作的功能，例如去设置里填 API Key、手动调提示词、看处理记录、反馈问题。可选页面：\n"
+                   + "\n".join(f"- {k}：{v[0]}（{v[2]}）" for k, v in PAGES.items()),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "page": {"type": "string", "enum": list(PAGES), "description": "要打开的页面"},
+            "label": {"type": "string", "description": "按钮文字（可选），如「去设置填写 Key」"},
+        },
+        "required": ["page"],
+        "additionalProperties": False,
+    },
+}
+
+APP_TOOLS = [CHECK_UPDATE_TOOL, OPEN_PAGE_TOOL]
+
 SYSTEM_PROMPT = """你是「文件全能王」桌面应用里的文件处理助手。用户用一句话描述要对本机文件做什么，你负责把需求规划成由应用内置工具组成的执行方案。
 
 工作方式：
@@ -54,15 +98,24 @@ SYSTEM_PROMPT = """你是「文件全能王」桌面应用里的文件处理助�
 - 用最少的步骤完成需求，参数尽量取用户说的值；用户没说的用合理默认值。
 - 规划完成后，用一两句话向用户说明方案要做什么、结果是什么（不要逐条复述参数，界面会展示每一步）。
 - 需求不清楚、缺少必要信息（如水印文字、密码），或者没有附件却需要处理文件时，不要调用工具，直接简短地问用户。
+- generate_image 可以凭提示词生成图片（不需要附件），也可以拿图片当参考图；它会联网，提示词要写具体。生成的图片可以接着交给其他工具（如转 PDF、压缩、加水印）。
+- check_update 和 open_page 是应用级工具，调用后立即生效、不进方案：用户问版本或更新时调 check_update；需要用户自己去某个页面操作时（如填 API Key、手动调提示词、看处理记录、反馈问题）调 open_page 放一个按钮。
 - 现有工具做不到的事（例如阅读、总结、翻译文件内容，或编辑文件里的文字）直接说明做不到，可以给出最接近的替代方案。
 - 你看不到文件内容，只知道文件名、类型、大小等信息。
 - 用户的语言是什么就用什么语言回复，简洁，不要使用 Markdown 标题。"""
 
 
 @dataclass
+class ReplyAction:
+    label: str
+    route: str
+
+
+@dataclass
 class AgentReply:
     text: str
     plan: Plan | None = None          # 有步骤时才返回
+    actions: list[ReplyAction] = field(default_factory=list)
 
 
 @dataclass
@@ -77,7 +130,8 @@ class ExecutionReport:
 
 
 def tool_definitions() -> list[dict]:
-    return [{"name": t.name, "description": t.description, "parameters": t.schema()} for t in TOOLS] + [RESET_TOOL]
+    return ([{"name": t.name, "description": t.description, "parameters": t.schema()} for t in TOOLS]
+            + [RESET_TOOL, *APP_TOOLS])
 
 
 # ── 文件元信息 ───────────────────────────────────────────────────────────
@@ -126,11 +180,29 @@ class AgentSession:
         self.plan: Plan | None = None
         self._next_sid = 1
         self._notes: list[str] = []   # 下一轮发给模型的执行结果等说明
+        self._actions: list[ReplyAction] = []
         self.tools = tool_definitions()
+
+    def _snapshot(self) -> tuple:
+        return len(self.messages), list(self._notes), self.plan, self._next_sid
+
+    def _rollback(self, snap: tuple) -> None:
+        """请求被用户停止：回到发送前，就像这条消息没发过（附件编号保留，不影响后续）。"""
+        n, notes, plan, next_sid = snap
+        del self.messages[n:]
+        self._notes, self.plan, self._next_sid = notes, plan, next_sid
 
     # ── 规划 ────────────────────────────────────────────────────────────
     async def send(self, text: str, attachments: list[Path] | None = None) -> AgentReply:
-        """发送用户需求，返回模型的回复和（如有）方案。失败抛 LlmError。"""
+        """发送用户需求，返回模型的回复和（如有）方案。失败抛 LlmError；被取消时回滚后再抛出。"""
+        snap = self._snapshot()
+        try:
+            return await self._send(text, attachments)
+        except asyncio.CancelledError:
+            self._rollback(snap)
+            raise
+
+    async def _send(self, text: str, attachments: list[Path] | None) -> AgentReply:
         parts = list(self._notes)
         self._notes.clear()
         if self.plan is not None and self.plan.steps and all(s.status == PENDING for s in self.plan.steps):
@@ -153,9 +225,14 @@ class AgentSession:
         """上一轮请求失败（网络、额度等）后重试：不重复添加用户消息，接着已有上下文再请求一次。"""
         if not self.messages or self.messages[-1]["role"] == "assistant":
             raise LlmError("没有需要重试的请求", "config")
+        snap = self._snapshot()
         if self.plan is None:
             self.plan = Plan(self.registry, self._next_sid)
-        return await self._plan_loop()
+        try:
+            return await self._plan_loop()
+        except asyncio.CancelledError:
+            self._rollback(snap)
+            raise
 
     async def revise(self) -> AgentReply:
         """执行失败后，把失败原因发回模型，请它调整方案。"""
@@ -164,6 +241,7 @@ class AgentSession:
     async def _plan_loop(self) -> AgentReply:
         plan = self.plan
         assert plan is not None
+        self._actions = []
         text = ""
         for _ in range(MAX_ROUNDS):
             turn = await self._complete(self.config, SYSTEM_PROMPT, self.messages, self.tools)
@@ -173,26 +251,63 @@ class AgentSession:
             if not turn.tool_calls:
                 break
             for call in turn.tool_calls:
-                result, is_error = self._handle_call(plan, call)
+                result, is_error = await self._handle_call(plan, call)
                 self.messages.append({"role": "tool", "tool_call_id": call.id, "name": call.name,
                                       "content": result, "is_error": is_error})
         else:
             if not text:
                 text = "方案已规划好。" if plan.steps else "这次没能规划出方案，换个说法试试。"
         self._next_sid = plan.next_sid
+        actions = list(self._actions)
         if not plan.steps:
             self.plan = None
-            return AgentReply(text or "我没太明白要做什么，可以再具体说说吗？")
-        return AgentReply(text or f"方案共 {len(plan.steps)} 步，确认后开始执行。", plan)
+            fallback = "好的。" if actions else "我没太明白要做什么，可以再具体说说吗？"
+            return AgentReply(text or fallback, actions=actions)
+        return AgentReply(text or f"方案共 {len(plan.steps)} 步，确认后开始执行。", plan, actions)
 
-    def _handle_call(self, plan: Plan, call) -> tuple[str, bool]:
+    async def _handle_call(self, plan: Plan, call) -> tuple[str, bool]:
         if call.parse_error:
             return f"错误：{call.parse_error}，请重新调用。", True
         if call.name == RESET_TOOL["name"]:
             plan.reset()
             return "已清空方案，请重新规划。", False
+        if call.name == CHECK_UPDATE_TOOL["name"]:
+            return await self._check_update(), False
+        if call.name == OPEN_PAGE_TOOL["name"]:
+            return self._open_page(call.arguments)
         step, message = plan.add_step(call.name, call.arguments)
         return message, step is None
+
+    # ── 应用级工具 ──────────────────────────────────────────────────────
+    def _add_action(self, label: str, route: str) -> None:
+        if all(a.route != route for a in self._actions):
+            self._actions.append(ReplyAction(label, route))
+
+    async def _check_update(self) -> str:
+        from core.version import app_version
+        from services import update_service
+        st = await update_service.check()
+        current = app_version()
+        channel = "测试版" if update_service.update_channel() == "beta" else "正式版"
+        if st.status == "error":
+            return f"检查更新失败：{st.error}。当前版本 {current}。"
+        rel = st.release
+        if st.status in ("available", "ready", "manual", "downloading", "installing") and rel:
+            self._add_action(f"去更新到 {rel.version}", "/settings")
+            done = "，安装包已下载好，重启即可完成更新" if st.status in ("ready", "manual") else ""
+            return (f"当前版本 {current}，有新版本 {rel.version}（{rel.published_at} 发布，更新渠道：{channel}）"
+                    f"{done}。已在回复里放了「去更新」按钮，用户点开设置页即可下载安装。")
+        latest = rel.version if rel else current
+        return f"当前版本 {current}，已是最新（更新渠道：{channel}，最新 {latest}）。"
+
+    def _open_page(self, args: dict) -> tuple[str, bool]:
+        key = args.get("page") if isinstance(args, dict) else None
+        if key not in PAGES:
+            return f"参数错误：page 只能是 {'、'.join(PAGES)} 之一。", True
+        title, route, _ = PAGES[key]
+        label = str(args.get("label") or "").strip()[:20] or f"打开{title}"
+        self._add_action(label, route)
+        return f"已在回复里放了「{label}」按钮。", False
 
     # ── 执行 ────────────────────────────────────────────────────────────
     def task_dir(self) -> Path:

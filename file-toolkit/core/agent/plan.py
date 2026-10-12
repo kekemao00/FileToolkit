@@ -113,7 +113,10 @@ class Plan:
         inputs = raw.get("inputs")
         if isinstance(inputs, str):
             inputs = [inputs]
-        if not isinstance(inputs, list) or not inputs or not all(isinstance(i, str) for i in inputs):
+        if inputs is None and tool.min_inputs == 0:
+            inputs = []
+        if (not isinstance(inputs, list) or (not inputs and tool.min_inputs)
+                or not all(isinstance(i, str) for i in inputs)):
             return None, "错误：inputs 必须是非空的文件编号数组，如 [\"f1\"] 或 [\"s1\"]。"
         inputs = [i.strip().lower() for i in inputs]
         args, err = validate_args(tool, raw)
@@ -193,6 +196,8 @@ class Plan:
                 files.extend(sorted(f for f in p.rglob("*") if f.is_file()))
             else:
                 files.append(p)
+        if not files and step.tool.min_inputs == 0:
+            return [], None
         missing = [p for p in files if not p.exists()]
         if missing:
             return [], f"文件不存在：{missing[0]}"

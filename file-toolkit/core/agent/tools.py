@@ -5,6 +5,7 @@
   - 参数 schema（发给模型；本地 validate_args() 也按它校验并补默认值）
   - 产物类型预测 outputs(args, input_exts)：规划阶段用它检查下一步能否接上
   - run(files, args, out_dir, progress_callback) -> TaskResult：执行阶段真正调用 core 函数
+  - network：执行时会把内容发到网络服务（如 AI 出图），界面据此提示用户
 
 工具只读传入的文件、只往 out_dir 写，不修改源文件。
 """
@@ -50,6 +51,7 @@ class ToolSpec:
     min_inputs: int = 1
     accepts_folders: bool = False
     check: Callable[[Args], str | None] | None = None
+    network: bool = False
 
     def accepts_ext(self, ext: str) -> bool:
         if ext == FOLDER:
@@ -68,7 +70,8 @@ class ToolSpec:
                 "type": "array",
                 "items": {"type": "string"},
                 "description": "要处理的文件编号：附件或已生成文件用 f 编号（如 f1），"
-                               "本次方案中前面步骤的产物用 s 编号（如 s1）",
+                               "本次方案中前面步骤的产物用 s 编号（如 s1）"
+                               + ("。可以为空数组" if self.min_inputs == 0 else ""),
             },
         }
         for key, spec in self.params.items():
@@ -76,7 +79,7 @@ class ToolSpec:
         return {
             "type": "object",
             "properties": props,
-            "required": ["inputs", *self.required],
+            "required": (["inputs"] if self.min_inputs else []) + list(self.required),
             "additionalProperties": False,
         }
 
@@ -434,6 +437,47 @@ def _l(v: Any) -> str:
     return _LABELS.get(str(v), str(v).upper() if isinstance(v, str) and len(v) <= 5 else str(v))
 
 
+
+# ── AI 出图（联网）────────────────────────────────────────────────────────
+def _check_image_service(_a: Args) -> str | None:
+    from services import prompt_image_service
+    if not prompt_image_service.is_configured():
+        return "还没有配置 AI 生图服务，请让用户先在「设置 → AI 生图」填写 API Key"
+    return None
+
+
+def _run_coroutine(coro):
+    """在工作线程里跑一个协程；调用方线程已有事件循环时（如测试里同步执行）换个线程跑。"""
+    import asyncio
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(1) as pool:
+        return pool.submit(asyncio.run, coro).result()
+
+
+def _generate_image(files: list[Path], a: Args, out: Path, cb) -> TaskResult:
+    from core.task_control import check_cancelled
+    from services import prompt_image_service as svc
+    if cb:
+        cb(0, 1, "正在生成图片，通常需要几十秒到几分钟…")
+    if files:
+        coro = svc.edit_image(a["prompt"], files, size=a["size"], quality=a["quality"])
+    else:
+        coro = svc.generate_image(a["prompt"], size=a["size"], quality=a["quality"])
+    result = _run_coroutine(coro)
+    check_cancelled()  # 等待期间取消了就不再保存
+    if not result.get("success"):
+        return TaskResult(status=TaskStatus.FAILED, error_message=result.get("error") or "生成失败")
+    path = unique_path(out / _output_name(a.get("output_name", ""), "AI出图", "png"))
+    path.write_bytes(result["image_bytes"])
+    if cb:
+        cb(1, 1, "完成")
+    return TaskResult(status=TaskStatus.SUCCESS, output_files=[path], output_dir=out)
+
+
 TOOLS: list[ToolSpec] = [
     ToolSpec(
         "pdf_merge", "PDF 合并", "把多个 PDF 按 inputs 的顺序合并成一个 PDF。", "/pdf?func=merge", PDF,
@@ -595,6 +639,20 @@ TOOLS: list[ToolSpec] = [
         "/markdown?func=from_md", MARKDOWN,
         {"target": _enum(["docx", "pdf", "html"], "目标格式", "docx")},
         _markdown_export, _arg("target"), lambda a: f"转为 {_l(a['target'])}",
+    ),
+    ToolSpec(
+        "generate_image", "AI 出图", "按提示词用 AI 生成一张图片（png）；inputs 可以给 0 到多张参考图（图生图）。"
+        "需要联网，会把提示词和参考图发给用户在设置里配置的生图服务。每调用一次生成一张。",
+        "/prompt-image", IMAGES,
+        {"prompt": _str("完整的画面描述：主体、场景、风格、构图、光线等，越具体越好"),
+         "size": _enum(["1024x1024", "1024x1536", "1536x1024", "auto"],
+                       "尺寸：1024x1024 方图，1024x1536 竖图，1536x1024 横图", "1024x1024"),
+         "quality": _enum(["low", "medium", "high", "auto"], "质量，越高越慢", "high"),
+         "output_name": _str("输出文件名（可选，不含扩展名）", "")},
+        _generate_image, _const("png"),
+        lambda a: (a["prompt"][:40] + ("…" if len(a["prompt"]) > 40 else "")) + f" · {a['size']}",
+        required=("prompt",), min_inputs=0, network=True,
+        check=lambda a: _check_name("output_name")(a) or _check_image_service(a),
     ),
 ]
 
