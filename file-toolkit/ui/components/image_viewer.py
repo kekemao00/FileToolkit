@@ -70,18 +70,9 @@ class ViewerItem:
             return 0
 
 
-def _quiet(handler: Callable) -> Callable:
-    """包一层事件处理：处理完不触发 Flet 的自动刷新。
-
-    Flet 在每个事件处理完后会自动 update 最近的隔离祖先，看图器挂在 page.overlay 上，
-    等于每次都对整页（含底下的提示词出图页）做一次 diff，实测约 30ms。
-    鼠标移动每 30ms 就来一个事件，Python 一直忙着 diff，点击排在后面，按钮就「不跟手」
-    甚至像点不动。看图器里需要刷新的地方都自己调了 update，所以这里一律关掉自动刷新。
-    """
-    def wrapper(e=None):
-        ft.context.disable_auto_update()
-        return handler(e)
-    return wrapper
+# 看图器挂在 page.overlay 上，鼠标移动每 30ms 就来一个事件，每次整页 diff 会让按钮不跟手；
+# 需要刷新的地方都自己调了 update，所以这里一律关掉自动刷新
+_quiet = s.quiet
 
 
 def fit_ratio(img: tuple[int, int], view: tuple[float, float]) -> float:

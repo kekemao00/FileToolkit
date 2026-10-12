@@ -61,7 +61,7 @@ class HistoryPage(ft.Column):
         self._search_field = s.text_field(
             hint="搜索文件名、模块或操作",
             prefix_icon=ft.Icons.SEARCH_OUTLINED,
-            on_change=self._on_search_change,
+            on_change=s.debounced(self._on_search_change),
             width=300,
         )
 

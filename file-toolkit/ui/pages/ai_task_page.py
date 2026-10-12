@@ -163,7 +163,7 @@ class AiTaskPage(ft.Column):
             dense=True,
             content_padding=ft.Padding.symmetric(horizontal=4, vertical=6),
             on_submit=self._on_submit,
-            on_change=self._on_input_change,
+            on_change=s.quiet(self._on_input_change),   # 只记草稿，不用每个字都整页刷新
             on_focus=lambda e: self._focus_console(True),
             on_blur=lambda e: self._focus_console(False),
         )
@@ -218,6 +218,8 @@ class AiTaskPage(ft.Column):
     def _on_key(self, e: ft.KeyboardEvent) -> None:
         if e.key == "Escape":
             self._stop()
+        else:
+            ft.context.disable_auto_update()   # 打字时每个键都会来，别每次都整页刷新
 
     # ── 布局 ────────────────────────────────────────────────────────────
     def _render(self) -> None:
